@@ -1,21 +1,18 @@
-// import Joi from "joi";
-import { validationResult, body } from "express-validator";
+import { body, validationResult } from "express-validator";
 import ResponseHelper from "../helpers/response-helper.js";
 
 class ValidationMiddleware {
   /**
-   * Validates request body against Joi schema.
+   * Validate request body against Joi schema.
    * @param {Object} schema - Joi validation schema.
    */
   static validate(schema) {
     return (req, res, next) => {
-      const options = {
+      const { error, value } = schema.validate(req.body, {
         abortEarly: false,
         allowUnknown: false,
         stripUnknown: true,
-      };
-
-      const { error, value } = schema.validate(req.body, options);
+      });
 
       if (error) {
         const errorMessages = error.details.map((err) => err.message);
@@ -28,7 +25,7 @@ class ValidationMiddleware {
   }
 
   /**
-   * Sanitizes user inputs using express-validator.
+   * Sanitize user inputs using express-validator.
    */
   static sanitizeUserInputs() {
     return [

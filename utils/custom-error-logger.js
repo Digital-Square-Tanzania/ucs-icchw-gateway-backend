@@ -20,7 +20,7 @@ class CustomErrorLogger {
     // Define the log format for Winston logger instance (info and error)
     const logFormat = winston.format.combine(
       winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
-      winston.format.printf(({ timestamp, level, message, _stack }) => {
+      winston.format.printf(({ timestamp, level, message, stack }) => {
         return `${timestamp} [${level.toUpperCase()}]: ${message} ${stack ? "\nStack: " + stack : ""}`;
       })
     );

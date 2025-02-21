@@ -5,8 +5,9 @@ class AuthController {
   static async login(req, res) {
     try {
       const { email, password } = req.body;
-      const { token } = await AuthService.login(email, password);
-      return ResponseHelper.success(res, "Authentication successful", { token });
+      const { accessToken, refreshToken } = await AuthService.login(email, password);
+
+      return ResponseHelper.success(res, "Authentication successful", { accessToken, refreshToken });
     } catch (error) {
       return ResponseHelper.error(res, error.message, 401);
     }
@@ -38,6 +39,24 @@ class AuthController {
       return ResponseHelper.success(res, "User details retrieved", user);
     } catch (error) {
       return ResponseHelper.error(res, error.message, 500);
+    }
+  }
+
+  /**
+   * Handle Refresh Token and Issue New Access Token
+   */
+  static async refreshToken(req, res) {
+    try {
+      const { refreshToken } = req.body;
+      if (!refreshToken) {
+        return ResponseHelper.error(res, "Refresh token is required.", 400);
+      }
+
+      const { accessToken } = await AuthService.refreshAccessToken(refreshToken);
+
+      return ResponseHelper.success(res, "New access token issued.", { accessToken });
+    } catch (error) {
+      return ResponseHelper.error(res, error.message, 401);
     }
   }
 }
