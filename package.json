@@ -1,0 +1,51 @@
+{
+  "name": "ucs-hps-user-management-backend",
+  "version": "1.0.0",
+  "description": "A backend for linking ucs user management frontend with OpenMRS API.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "test": "test",
+    "start": "node index.js",
+    "start:dev": "nodemon index.js --verbose",
+    "dev": "nodemon index.js --verbose",
+    "migrate": "npx prisma migrate dev",
+    "generate": "npx prisma generate",
+    "seed": "node prisma/seed.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/Digital-Square-Tanzania/ucs-hps-user-management-backend.git"
+  },
+  "keywords": [
+    "ucs",
+    "user",
+    "admin",
+    "management",
+    "backend",
+    "opensrp",
+    "moh",
+    "tanzania"
+  ],
+  "author": "Kizito M.",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Digital-Square-Tanzania/ucs-hps-user-management-backend/issues"
+  },
+  "homepage": "https://github.com/Digital-Square-Tanzania/ucs-hps-user-management-backend#readme",
+  "dependencies": {
+    "@prisma/client": "^6.3.1",
+    "bcryptjs": "^3.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "express-async-errors": "^3.1.1",
+    "express-rate-limit": "^7.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "prisma": "^6.3.1",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

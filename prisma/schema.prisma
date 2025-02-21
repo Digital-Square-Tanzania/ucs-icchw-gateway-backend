@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  seed     = env("DATABASE_SEED") // Autorun on migration
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String             @id @default(uuid())
+  firstName        String             @map("first_name")
+  middleName       String?            @map("middle_name")
+  lastName         String             @map("last_name")
+  email            String             @unique
+  password         String
+  phoneNumber      String?            @unique @map("phone_number")
+  avatar           String?
+  joinDate         DateTime           @default(now()) @map("join_date")
+  lastLogin        DateTime?          @map("last_login")
+  status           UserStatus         @default(ACTIVE)
+  roleId           Int                @map("role_id")
+  role             Role               @relation(fields: [roleId], references: [id])
+  isDeleted        Boolean            @default(false) @map("is_deleted")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  deletedAt        DateTime?          @map("deleted_at")
+  UserToken        UserToken?
+  BlacklistedToken BlacklistedToken[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        RoleType @unique
+  description String
+  users       User[]
+
+  @@map("roles")
+}
+
+enum RoleType {
+  UCS_DEVELOPER
+  MOH_ADMIN
+  COUNCIL_COORDINATOR
+  FACILITY_PROVIDER
+  VILLAGE_CHW
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+model UserToken {
+  id          String   @id @default(uuid())
+  userId      String   @unique @map("user_id")
+  user        User     @relation(fields: [userId], references: [id])
+  resetToken  String?  @map("reset_token")
+  verifyToken String?  @map("verify_token")
+  expiresAt   DateTime @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([resetToken])
+  @@index([verifyToken])
+  @@map("user_tokens")
+}
+
+model BlacklistedToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("blacklisted_tokens")
+}
+
+model RequestLog {
+  id        String   @id @default(uuid())
+  ip        String
+  path      String
+  method    String
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("request_logs")
+}
