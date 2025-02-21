@@ -25,7 +25,7 @@ class ErrorHandler {
       let message = "Internal Server Error";
       let details = null;
 
-      // Handle Joi validation errors
+      // Handle Joi validation errors (hapa tushapiga final task kwa validation issue)
       if (err.isJoi) {
         statusCode = 400;
         message = "Validation Error";
