@@ -6,6 +6,7 @@ import "express-async-errors";
 import ErrorHandler from "./helpers/error-handler.js";
 import AuthRouter from "./modules/auth/auth-router.js";
 import UserRouter from "./modules/user/user-router.js";
+import SecurityMiddleware from "./middlewares/security-middleware.js";
 
 class AppServer {
   constructor() {
@@ -21,11 +22,17 @@ class AppServer {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: false }));
     this.app.use(cors());
+    this.app.use(SecurityMiddleware.applyHelmet());
   }
 
   initializeRoutes() {
     this.app.use("/api/v1/auth", AuthRouter);
     this.app.use("/api/v1/users", UserRouter);
+
+    // health-checker kwa ajili ya kudhibitisha kama server iko up
+    this.app.get("/health", (req, res, next) => {
+      res.status(200).json({ status: "UP" });
+    });
   }
 
   initializeErrorHandling() {
@@ -33,11 +40,6 @@ class AppServer {
     // Global error handler
     this.app.use((err, req, res, next) => {
       errorHandlerInstance.handleError(err, req, res, next);
-    });
-
-    // health-checker kwa ajili ya kudhibitisha kama server iko up
-    this.app.get("/health", (req, res, next) => {
-      res.status(200).json({ status: "UP" });
     });
   }
 

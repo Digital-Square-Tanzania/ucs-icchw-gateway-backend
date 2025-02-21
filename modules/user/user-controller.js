@@ -1,6 +1,6 @@
 import UserService from "./user-service.js";
 import ResponseHelper from "../../helpers/response-helper.js";
-import CustomError from "../../helpers/custom-error.js";
+import CustomError from "../../utils/custom-error.js";
 
 class UserController {
   static async createUser(req, res, next) {
