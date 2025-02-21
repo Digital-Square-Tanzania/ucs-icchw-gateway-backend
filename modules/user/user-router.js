@@ -15,16 +15,17 @@ router.get(
   searchUserRateLimiter,
   UserController.getAllUsers
 );
+
 router.get("/:id", AuthMiddleware.authenticate, UserController.getUserById);
 
-// Create Route: MOH_ADMIN, COUNCIL_COORDINATOR and FACILITY_PROVIDER can create users
+// Create Route: MOH_ADMIN, COUNCIL_COORDINATOR, and FACILITY_PROVIDER can create users
 router.post(
   "/",
   AuthMiddleware.authenticate,
   AuthMiddleware.authorizeRoles("MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   createUserRateLimiter,
-  ValidationMiddleware.sanitizeUserInputs(),
-  ValidationMiddleware.validate(UserValidation.createUserSchema()),
+  ...ValidationMiddleware.sanitizeUserInputs(), // Spread the array of sanitization middleware
+  ValidationMiddleware.validate(UserValidation.createUserSchema()), // Joi validation
   UserController.createUser
 );
 
