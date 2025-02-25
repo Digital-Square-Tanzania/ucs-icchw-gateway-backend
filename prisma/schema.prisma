@@ -1,12 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-  seed     = env("DATABASE_SEED") // Autorun on migration
+  seed     = "(function)"
 }
 
 datasource db {
@@ -16,24 +10,24 @@ datasource db {
 
 model User {
   id               String             @id @default(uuid())
-  firstName        String             @map("first_name")
-  middleName       String?            @map("middle_name")
-  lastName         String             @map("last_name")
   email            String             @unique
   password         String
-  phoneNumber      String?            @unique @map("phone_number")
   avatar           String?
-  joinDate         DateTime           @default(now()) @map("join_date")
-  lastLogin        DateTime?          @map("last_login")
   status           UserStatus         @default(ACTIVE)
-  roleId           Int                @map("role_id")
-  role             Role               @relation(fields: [roleId], references: [id])
-  isDeleted        Boolean            @default(false) @map("is_deleted")
   createdAt        DateTime           @default(now()) @map("created_at")
-  updatedAt        DateTime           @updatedAt @map("updated_at")
   deletedAt        DateTime?          @map("deleted_at")
-  UserToken        UserToken?
+  firstName        String             @map("first_name")
+  isDeleted        Boolean            @default(false) @map("is_deleted")
+  joinDate         DateTime           @default(now()) @map("join_date")
+  lastName         String             @map("last_name")
+  middleName       String?            @map("middle_name")
+  phoneNumber      String?            @unique @map("phone_number")
+  roleId           Int                @map("role_id")
+  updatedAt        DateTime           @updatedAt @map("updated_at")
+  lastLogin        DateTime?          @map("last_login")
   BlacklistedToken BlacklistedToken[]
+  UserToken        UserToken?
+  role             Role               @relation(fields: [roleId], references: [id])
 
   @@index([email])
   @@map("users")
@@ -46,6 +40,42 @@ model Role {
   users       User[]
 
   @@map("roles")
+}
+
+model UserToken {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now()) @map("created_at")
+  expiresAt   DateTime @map("expires_at")
+  resetToken  String?  @map("reset_token")
+  userId      String   @unique @map("user_id")
+  verifyToken String?  @map("verify_token")
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([resetToken])
+  @@index([verifyToken])
+  @@map("user_tokens")
+}
+
+model BlacklistedToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("blacklisted_tokens")
+}
+
+model RequestLog {
+  id        String   @id @default(uuid())
+  ip        String
+  path      String
+  method    String
+  timestamp DateTime @default(now())
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("request_logs")
 }
 
 enum RoleType {
@@ -62,38 +92,92 @@ enum UserStatus {
   SUSPENDED
 }
 
-model UserToken {
-  id          String   @id @default(uuid())
-  userId      String   @unique @map("user_id")
-  user        User     @relation(fields: [userId], references: [id])
-  resetToken  String?  @map("reset_token")
-  verifyToken String?  @map("verify_token")
-  expiresAt   DateTime @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
+model Location {
+  location_id     Int       @id @default(autoincrement())
+  name            String
+  description     String?
+  address1        String?
+  address2        String?
+  city_village    String?
+  state_province  String?
+  postal_code     String?
+  country         String?
+  latitude        String?
+  longitude       String?
+  creator         Int
+  date_created    DateTime
+  county_district String?
+  address3        String?
+  address4        String?
+  address5        String?
+  address6        String?
+  retired         Boolean   @default(false)
+  retired_by      Int?
+  date_retired    DateTime?
+  retire_reason   String?
+  parent_location Int?
+  uuid            String    @unique
+  changed_by      Int?
+  date_changed    DateTime?
+  address7        String?
+  address8        String?
+  address9        String?
+  address10       String?
+  address11       String?
+  address12       String?
+  address13       String?
+  address14       String?
+  address15       String?
 
-  @@index([resetToken])
-  @@index([verifyToken])
-  @@map("user_tokens")
+  // ✅ Corrected Relation to LocationTagMap
+  locationTagMaps LocationTagMap[]
+
+  @@map("location")
 }
 
-model BlacklistedToken {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now()) @map("created_at")
+model LocationTag {
+  location_tag_id Int       @id @default(autoincrement())
+  name            String
+  description     String?
+  creator         Int
+  date_created    DateTime
+  retired         Boolean   @default(false)
+  retired_by      Int?
+  date_retired    DateTime?
+  retire_reason   String?
+  uuid            String    @unique
+  changed_by      Int?
+  date_changed    DateTime?
 
-  @@index([userId])
-  @@map("blacklisted_tokens")
+  // ✅ Corrected Relation to LocationTagMap
+  locationTagMaps LocationTagMap[]
+
+  @@map("location_tag")
 }
 
-model RequestLog {
-  id        String   @id @default(uuid())
-  ip        String
-  path      String
-  method    String
-  timestamp DateTime @default(now())
-  createdAt DateTime @default(now()) @map("created_at")
+model LocationTagMap {
+  location_id     Int
+  location_tag_id Int
 
-  @@map("request_logs")
+  // ✅ Corrected Relations
+  location    Location    @relation(fields: [location_id], references: [location_id])
+  locationTag LocationTag @relation(fields: [location_tag_id], references: [location_tag_id])
+
+  @@id([location_id, location_tag_id])
+  @@map("location_tag_map")
+}
+
+model LocationHierarchyView {
+  index    Int     @id @map("index")
+  uuid     String  @map("uuid")
+  country  String? @map("country")
+  zone     String? @map("zone")
+  region   String? @map("region")
+  district String? @map("district")
+  council  String? @map("council")
+  ward     String? @map("ward")
+  name     String  @map("name")
+  type     String  @map("type")
+
+  @@map("location_hierarchy_view") // Maps to the materialized view
 }
