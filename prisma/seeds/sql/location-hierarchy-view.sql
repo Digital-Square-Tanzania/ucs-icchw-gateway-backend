@@ -1,6 +1,6 @@
 -- Drop the existing regular view
-DROP TABLE IF EXISTS location_hierarchy_view;
-DROP VIEW IF EXISTS location_hierarchy_view;
+-- DROP TABLE IF EXISTS location_hierarchy_view;
+DROP MATERIALIZED VIEW IF EXISTS location_hierarchy_view;
 
 -- Create as a Materialized View
 CREATE MATERIALIZED VIEW location_hierarchy_view AS

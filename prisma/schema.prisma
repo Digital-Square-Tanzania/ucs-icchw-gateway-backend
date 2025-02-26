@@ -181,3 +181,16 @@ model LocationHierarchyView {
 
   @@map("location_hierarchy_view") // Maps to the materialized view
 }
+
+model TeamRole {
+  id         Int      @id @default(autoincrement())
+  uuid       String   @unique
+  identifier String   @unique
+  display    String
+  name       String
+  members    Int      @default(0)
+  creator    Json
+  createdAt  DateTime @default(now())
+
+  @@map("team_roles")
+}

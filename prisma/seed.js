@@ -2,6 +2,7 @@ import RoleSeeder from "./seeds/role-seeder.js";
 import UserSeeder from "./seeds/user-seeder.js";
 import RawFileSeeder from "./seeds/raw-file-seeder.js";
 import MaterializedViewSeeder from "./seeds/materialized-view-seeder.js";
+import urlSyncSeeder from "./seeds/url-sync-seeder.js";
 
 async function main() {
   console.log("🌱 Running database seeders...");
@@ -29,6 +30,9 @@ async function main() {
 
   // Refresh the materialized view
   await MaterializedViewSeeder.refreshLocationHierarchyView();
+
+  // Run URL Sync Seeder
+  await urlSyncSeeder.seedAll();
 
   console.log("✅ Seeding completed!");
 }
