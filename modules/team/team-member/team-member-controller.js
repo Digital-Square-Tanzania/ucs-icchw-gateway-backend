@@ -1,6 +1,9 @@
 import TeamMemberService from "./team-member-service.js";
 import ResponseHelper from "../../../helpers/response-helper.js";
 
+/*
+ * Controller for handling team member related operations
+ */
 class TeamMemberController {
   static async syncTeamMembers(req, res, next) {
     try {
