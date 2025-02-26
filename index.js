@@ -7,7 +7,8 @@ import ErrorHandler from "./helpers/error-handler.js";
 import AuthRouter from "./modules/auth/auth-router.js";
 import UserRouter from "./modules/user/user-router.js";
 import LocationRouter from "./modules/location/location-router.js";
-import TeamRouter from "./modules/team/team-role/team-role-router.js";
+import TeamRoleRouter from "./modules/team/team-role/team-role-router.js";
+import TeamRouter from "./modules/team/team/team-router.js";
 import SecurityMiddleware from "./middlewares/security-middleware.js";
 
 class AppServer {
@@ -31,7 +32,8 @@ class AppServer {
     this.app.use("/api/v1/auth", AuthRouter);
     this.app.use("/api/v1/user", UserRouter);
     this.app.use("/api/v1/location", LocationRouter);
-    this.app.use("/api/v1/team/teamrole", TeamRouter);
+    this.app.use("/api/v1/team/teamrole", TeamRoleRouter);
+    this.app.use("/api/v1/team/team", TeamRouter);
 
     // health-checker kwa ajili ya kudhibitisha kama server iko up
     this.app.get("/health", (req, res, next) => {

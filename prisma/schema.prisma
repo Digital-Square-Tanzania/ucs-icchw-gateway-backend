@@ -194,3 +194,11 @@ model TeamRole {
 
   @@map("team_roles")
 }
+
+model Team {
+  id   Int    @id @default(autoincrement())
+  uuid String @unique
+  name String
+
+  @@map("teams")
+}
