@@ -3,7 +3,7 @@ import TeamRoleRepository from "./team-role-repository.js";
 import CustomError from "../../../utils/custom-error.js";
 
 class TeamRoleService {
-  static async fetchTeamRolesFromOpenMRS() {
+  static async syncTeamRolesFromOpenMRS() {
     try {
       const url = process.env.OPENMRS_API_URL + "team/teamrole?v=full";
       const response = await axios.get(url, {

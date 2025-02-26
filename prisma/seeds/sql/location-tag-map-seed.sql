@@ -1,4 +1,4 @@
-INSERT INTO location_tag_map (location_id, location_tag_id) VALUES
+INSERT INTO openmrs_location_tag_map (location_id, location_tag_id) VALUES
 (1,	1),
 (2,	2),
 (1451,	2),

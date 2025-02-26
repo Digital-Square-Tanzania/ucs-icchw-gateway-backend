@@ -13,8 +13,8 @@ class TeamService {
 
       const response = await axios.get(url, {
         auth: {
-          username: process.env.OPENMRS_USERNAME,
-          password: process.env.OPENMRS_PASSWORD,
+          username: process.env.OPENMRS_API_USERNAME,
+          password: process.env.OPENMRS_API_PASSWORD,
         },
       });
 
