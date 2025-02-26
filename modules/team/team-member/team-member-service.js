@@ -43,7 +43,7 @@ class TeamMemberService {
       await TeamMemberRepository.upsertTeamMembers(formattedMembers);
       console.log("✅ Team members sync completed.");
     } catch (error) {
-      throw new CustomError("Failed to sync team members.\n" + error.stack, 500);
+      throw new CustomError("Failed to sync team members.\n" + error.message, 500);
     }
   }
 

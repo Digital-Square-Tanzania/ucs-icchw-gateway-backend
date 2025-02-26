@@ -40,7 +40,7 @@ class URLSyncSeeder {
       await teamMemberService.syncTeamMembers();
       console.log("✅ Team Members sync completed.");
     } catch (error) {
-      console.error("❌ Error syncing Team Members:", error.message + "\nERROR STACK:\n" + error.stack);
+      console.error("❌ Error syncing Team Members:", error.message);
     }
 
     console.log("✅ OpenMRS sync completed.");
