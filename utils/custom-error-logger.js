@@ -57,7 +57,7 @@ class CustomErrorLogger {
       message: err.message,
       name: err.name,
       statusCode: err.statusCode || 500,
-      stack: err.stack,
+      // stack: err.stack,
     };
 
     this.errorLogger.error(JSON.stringify(errorDetails, null, 2));
