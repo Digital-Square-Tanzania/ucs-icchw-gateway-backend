@@ -1,4 +1,4 @@
-INSERT INTO location_tag (location_tag_id, name, description, creator, date_created, retired, retired_by, date_retired, retire_reason, uuid, changed_by, date_changed)
+INSERT INTO openmrs_location_tag (location_tag_id, name, description, creator, date_created, retired, retired_by, date_retired, retire_reason, uuid, changed_by, date_changed)
 VALUES
   (1, 'Country', 'Country', 1, '2020-08-09 08:40:12', FALSE, NULL, NULL, NULL, '373988ef-2db8-4733-ae10-144381d432b1', NULL, NULL),
   (2, 'Zone', 'Zone', 1, '2020-08-09 08:40:25', FALSE, NULL, NULL, NULL, '92a2fcf4-78e5-4f10-b620-2ca6bc82a2f0', NULL, NULL),

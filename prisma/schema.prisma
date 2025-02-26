@@ -132,7 +132,7 @@ model Location {
   // ✅ Corrected Relation to LocationTagMap
   locationTagMaps LocationTagMap[]
 
-  @@map("location")
+  @@map("openmrs_location")
 }
 
 model LocationTag {
@@ -152,7 +152,7 @@ model LocationTag {
   // ✅ Corrected Relation to LocationTagMap
   locationTagMaps LocationTagMap[]
 
-  @@map("location_tag")
+  @@map("openmrs_location_tag")
 }
 
 model LocationTagMap {
@@ -164,7 +164,7 @@ model LocationTagMap {
   locationTag LocationTag @relation(fields: [location_tag_id], references: [location_tag_id])
 
   @@id([location_id, location_tag_id])
-  @@map("location_tag_map")
+  @@map("openmrs_location_tag_map")
 }
 
 model LocationHierarchyView {
@@ -192,7 +192,7 @@ model TeamRole {
   creator    Json
   createdAt  DateTime @default(now())
 
-  @@map("team_roles")
+  @@map("openmrs_team_roles")
 }
 
 model Team {
@@ -200,5 +200,40 @@ model Team {
   uuid String @unique
   name String
 
-  @@map("teams")
+  @@map("openmrs_teams")
+}
+
+model UserRole {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique
+  name        String
+  display     String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("openmrs_user_roles")
+}
+
+model TeamMember {
+  id                  String   @id @default(uuid())
+  identifier          String   @unique
+  firstName           String
+  middleName          String?
+  lastName            String
+  username            String   @unique
+  personUuid          String   @unique
+  userUuid            String?  @unique
+  openMrsUuid         String   @unique
+  teamUuid            String?
+  teamName            String?
+  teamIdentifier      String?
+  locationUuid        String?
+  locationName        String?
+  locationDescription String?
+  openmrsObject       Json // Store full OpenMRS JSON response
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("team_members")
 }

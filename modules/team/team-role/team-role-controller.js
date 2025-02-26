@@ -11,7 +11,7 @@ class TeamRoleController {
    */
   static async syncTeamRoles(_req, res, next) {
     try {
-      const result = await TeamRoleService.fetchTeamRolesFromOpenMRS();
+      const result = await TeamRoleService.syncTeamRolesFromOpenMRS();
       ResponseHelper.success(res, "Roles fetched successfully.", result, 200);
     } catch (error) {
       next(error);

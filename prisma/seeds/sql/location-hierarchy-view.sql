@@ -1,6 +1,6 @@
 -- Drop the existing regular view
-DROP MATERIALIZED VIEW IF EXISTS location_hierarchy_view;
 DROP TABLE IF EXISTS location_hierarchy_view;
+DROP MATERIALIZED VIEW IF EXISTS location_hierarchy_view;
 
 -- Create as a Materialized View
 CREATE MATERIALIZED VIEW location_hierarchy_view AS
@@ -13,9 +13,9 @@ WITH RECURSIVE location_tree AS (
         lt.name AS tag_name,
         ARRAY[l.name] AS path_names,
         ARRAY[lt.name] AS path_tags
-    FROM location l
-    JOIN location_tag_map ltm ON l.location_id = ltm.location_id
-    JOIN location_tag lt ON ltm.location_tag_id = lt.location_tag_id
+    FROM openmrs_location l
+    JOIN openmrs_location_tag_map ltm ON l.location_id = ltm.location_id
+    JOIN openmrs_location_tag lt ON ltm.location_tag_id = lt.location_tag_id
     WHERE lt.name = 'Country'
 
     UNION ALL
@@ -28,9 +28,9 @@ WITH RECURSIVE location_tree AS (
         child_tag.name AS tag_name,
         parent.path_names || child.name,
         parent.path_tags || child_tag.name
-    FROM location child
-    JOIN location_tag_map child_ltm ON child.location_id = child_ltm.location_id
-    JOIN location_tag child_tag ON child_ltm.location_tag_id = child_tag.location_tag_id
+    FROM openmrs_location child
+    JOIN openmrs_location_tag_map child_ltm ON child.location_id = child_ltm.location_id
+    JOIN openmrs_location_tag child_tag ON child_ltm.location_tag_id = child_tag.location_tag_id
     JOIN location_tree parent ON child.parent_location = parent.location_id
 )
 SELECT
