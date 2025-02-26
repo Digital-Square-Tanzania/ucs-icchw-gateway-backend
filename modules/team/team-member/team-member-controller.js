@@ -14,6 +14,7 @@ class TeamMemberController {
     }
   }
 
+  // Get team member by UUID
   static async getTeamMemberByUuid(req, res, next) {
     try {
       const { uuid } = req.params;
@@ -24,6 +25,7 @@ class TeamMemberController {
     }
   }
 
+  // Create a new team member
   static async createTeamMember(req, res, next) {
     try {
       const teamMemberData = req.body;
