@@ -269,8 +269,8 @@ model Dhis2User {
   id          String   @id @default(uuid())
   uuid        String   @unique
   username    String   @unique
-  firstName   String
-  lastName    String
+  firstName   String?
+  lastName    String?
   email       String?
   phoneNumber String?
   disabled    Boolean  @default(false)
@@ -278,8 +278,8 @@ model Dhis2User {
   updatedAt   DateTime @updatedAt
 
   // Storing DHIS2 references as strings without relations
-  orgUnitUuid String? // Org Unit UUID
-  roleUuids   Json // Store multiple Role UUIDs as JSON array
+  orgUnitUuids Json // Org Unit UUID
+  roleUuids    Json // Store multiple Role UUIDs as JSON array
 
   @@map("dhis2_users")
 }
