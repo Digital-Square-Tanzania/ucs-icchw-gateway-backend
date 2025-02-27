@@ -237,3 +237,61 @@ model TeamMember {
 
   @@map("team_members")
 }
+
+model Dhis2OrgUnit {
+  id          String   @id @default(uuid())
+  uuid        String   @unique
+  name        String
+  code        String?  @unique
+  level       Int
+  latitude    Float? // Use Double for precise geographic coordinates
+  longitude   Float? // Use Double for precise geographic coordinates
+  parentUuid  String? // Store Parent Org Unit UUID as a string (no relation)
+  parentName  String?
+  parentLevel Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("dhis2_org_units")
+}
+
+model Dhis2Role {
+  id        String   @id @default(uuid())
+  uuid      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("dhis2_roles")
+}
+
+model Dhis2User {
+  id          String   @id @default(uuid())
+  uuid        String   @unique
+  username    String   @unique
+  firstName   String?
+  lastName    String?
+  email       String?
+  phoneNumber String?
+  disabled    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Storing DHIS2 references as strings without relations
+  orgUnitUuids Json // Org Unit UUID
+  roleUuids    Json // Store multiple Role UUIDs as JSON array
+
+  @@map("dhis2_users")
+}
+
+model Dhis2SyncLog {
+  id         String   @id @default(uuid())
+  entityType String // "orgUnit" | "role" | "user"
+  entityUuid String // UUID of the synchronized entity
+  action     String // "CREATE" | "UPDATE" | "DELETE"
+  status     String // "SUCCESS" | "FAILED"
+  details    Json? // Store additional info, errors, etc.
+  createdAt  DateTime @default(now())
+
+  @@map("dhis2_sync_logs")
+}
