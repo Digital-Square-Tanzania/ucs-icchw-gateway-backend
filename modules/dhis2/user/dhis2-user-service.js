@@ -30,30 +30,48 @@ class DHIS2UserService {
         },
         firstName: userData.firstName,
         surname: userData.lastName,
-        email: userData.email,
+        email: userData.email || null,
         userRoles: userData.roles.map((roleId) => ({ id: roleId })),
         organisationUnits: userData.orgUnits.map((orgUnitId) => ({ id: orgUnitId })),
       };
 
-      // Send to DHIS2 API
+      // Send request to DHIS2 API
       const response = await DHIS2ApiClient.post("/users", payload);
+      if (!response.response || !response.response.uid) {
+        throw new Error("DHIS2 did not return a user UID.");
+      }
 
-      // Save to local DB
-      await DHIS2UserRepository.createUser({
+      // Format user data for local database
+      const newUser = {
         uuid: response.response.uid,
         username: userData.username,
         firstName: userData.firstName,
         lastName: userData.lastName,
-        displayName: `${userData.firstName} ${userData.lastName}`,
-        email: userData.email,
-        roles: userData.roles,
-      });
+        // displayName: `${userData.firstName} ${userData.lastName}`,
+        email: userData.email || null,
+        phoneNumber: userData.phoneNumber || null,
+        roleUuids: userData.roles,
+        orgUnitUuids: userData.orgUnits,
+      };
 
-      console.log("✅ User successfully created in DHIS2.");
+      // Save to local DB
+      await DHIS2UserRepository.createUser(newUser);
+
+      console.log(`✅ User ${userData.username} successfully created in DHIS2.`);
       return response;
     } catch (error) {
-      console.error("❌ Failed to create DHIS2 user:", error.stack);
-      throw new Error("Failed to create user in DHIS2.");
+      console.error("❌ Failed to create DHIS2 user:", error.message);
+      throw new Error("Failed to create user in DHIS2. " + error.message);
+    }
+  }
+
+  static deleteUser(userId) {
+    try {
+      console.log(`🔄 Deleting user with ID: ${userId}...`);
+      return DHIS2ApiClient.delete(`/users/${userId}`);
+    } catch (error) {
+      console.error("❌ Failed to delete DHIS2 user:", error.message);
+      throw new Error("Failed to delete user in DHIS2. " + error.message);
     }
   }
 }

@@ -29,6 +29,16 @@ class DHIS2UserController {
       next(error);
     }
   }
+
+  static async deleteUser(req, res, next) {
+    try {
+      const userId = req.params.id;
+      await DHIS2UserService.deleteUser(userId);
+      ResponseHelper.success(res, "User deleted successfully from DHIS2.");
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default DHIS2UserController;

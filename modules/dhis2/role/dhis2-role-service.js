@@ -9,8 +9,8 @@ class DHIS2RoleService {
       await DHIS2RoleRepository.upsertRoles(roles.userRoles);
       console.log("✅ DHIS2 Roles Sync Completed.");
     } catch (error) {
-      console.error("❌ DHIS2 Role Sync Error:", error.stack);
-      throw new Error("Failed to sync DHIS2 Roles.");
+      console.error("❌ DHIS2 Role Sync Error:", error.message);
+      throw new Error(error.message);
     }
   }
 
