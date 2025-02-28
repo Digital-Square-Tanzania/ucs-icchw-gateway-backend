@@ -7,7 +7,7 @@ class DHIS2UserRepository {
       username: user.username,
       firstName: user.firstName,
       lastName: user.surname,
-      phoneNumber: user.whatsAppNumber || null,
+      phoneNumber: user.phoneNumber || user.whatsApp || null,
       email: user.email || null,
       roleUuids: user.userRoles?.map((role) => role.id) || [],
       orgUnitUuids: user.organisationUnits?.map((orgUnit) => orgUnit.id) || [],
@@ -25,6 +25,10 @@ class DHIS2UserRepository {
 
   static async getUsers() {
     return await prisma.dhis2User.findMany();
+  }
+
+  static async deleteUser(userId) {
+    return await prisma.dhis2User.delete({ where: { uuid: userId } });
   }
 }
 
