@@ -54,6 +54,21 @@ class DHIS2Service {
   static async getOrgUnits() {
     return await DHIS2Repository.getOrgUnits();
   }
+
+  /**
+   * Fetch Level 4 Org Units grouped by Parent Name (Level 3)
+   */
+  static async getGroupedOrgUnits() {
+    try {
+      console.log("🔄 Fetching Level 4 Org Units grouped by Parent...");
+      const groupedUnits = await DHIS2Repository.getGroupedOrgUnits();
+      console.log("✅ Successfully fetched grouped org units.");
+      return groupedUnits;
+    } catch (error) {
+      console.error("❌ Failed to fetch grouped org units:", error.message);
+      throw new Error("Failed to fetch grouped org units. " + error.message);
+    }
+  }
 }
 
 export default DHIS2Service;

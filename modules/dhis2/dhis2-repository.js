@@ -45,6 +45,40 @@ class DHIS2Repository {
       },
     });
   }
+
+  /**
+   * Get Level 4 Org Units grouped by their Parent Name (Level 3)
+   */
+  static async getGroupedOrgUnits() {
+    const level4Units = await prisma.dhis2OrgUnit.findMany({
+      where: { level: 4 },
+      select: {
+        uuid: true,
+        name: true,
+        parentUuid: true,
+        parentName: true,
+      },
+      orderBy: { parentName: "asc" }, // Sort by parent name for ordered grouping
+    });
+
+    // Grouping the results by parentName (Level 3)
+    const groupedOrgUnits = level4Units.reduce((acc, unit) => {
+      const parentName = unit.parentName || "Unknown Parent";
+
+      if (!acc[parentName]) {
+        acc[parentName] = [];
+      }
+
+      acc[parentName].push({
+        uuid: unit.uuid,
+        name: unit.name,
+      });
+
+      return acc;
+    }, {});
+
+    return groupedOrgUnits;
+  }
 }
 
 export default DHIS2Repository;

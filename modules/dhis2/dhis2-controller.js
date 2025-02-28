@@ -24,6 +24,18 @@ class DHIS2Controller {
       next(error);
     }
   }
+
+  /**
+   * Get Grouped Org Units
+   */
+  static async getGroupedOrgUnits(req, res, next) {
+    try {
+      const data = await DHIS2Service.getGroupedOrgUnits();
+      res.json(data);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default DHIS2Controller;
