@@ -17,5 +17,6 @@ router.get("/role", AuthMiddleware.authenticate, DHIS2RoleController.getRoles);
 router.get("/user/sync", AuthMiddleware.authenticate, DHIS2UserController.syncUsers);
 router.get("/user", AuthMiddleware.authenticate, DHIS2UserController.getUsers);
 router.post("/user", AuthMiddleware.authenticate, DHIS2UserController.createUser);
+router.delete("/user/:id", AuthMiddleware.authenticate, DHIS2UserController.deleteUser);
 
 export default router;
