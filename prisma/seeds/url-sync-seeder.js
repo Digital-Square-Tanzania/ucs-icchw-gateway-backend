@@ -1,9 +1,10 @@
 import dotenv from "dotenv";
 import prisma from "../../config/prisma.js";
-import TeamRoleService from "../../modules/team/team-role/team-role-service.js";
-import TeamService from "../../modules/team/team/team-service.js";
-import UserRoleService from "../../modules/team/user-role/user-role-service.js";
-import teamMemberService from "../../modules/team/team-member/team-member-service.js";
+import TeamRoleService from "../../modules/openmrs/team-role/openmrs-team-role-service.js";
+import TeamService from "../../modules/openmrs/team/openmrs-team-service.js";
+import MemberRoleService from "../../modules/openmrs/member-role/openmrs-member-role-service.js";
+import OpenMRSLocationService from "../../modules/openmrs/location/openmrs-location-service.js";
+import DHIS2OrgUnitService from "../../modules/dhis2/org-unit/dhis2-org-unit-service.js";
 
 dotenv.config();
 
@@ -28,9 +29,9 @@ class URLSyncSeeder {
     }
 
     try {
-      console.log("🔄 Syncing User Roles...");
-      await UserRoleService.syncUserRolesFromOpenMRS();
-      console.log("✅ User Roles sync completed.");
+      console.log("🔄 Syncing Member Roles...");
+      await MemberRoleService.syncMemberRolesFromOpenMRS();
+      console.log("✅ Member Roles sync completed.");
     } catch (error) {
       console.error("❌ Error during OpenMRS sync:", error.message);
     }
@@ -41,6 +42,21 @@ class URLSyncSeeder {
       console.log("✅ Team Members sync completed.");
     } catch (error) {
       console.error("❌ Error syncing Team Members:", error.message);
+    }
+
+    try {
+      console.log("🔄 Syncing OpenMRS Locations...");
+      await OpenMRSLocationService.syncLocations(1000);
+      console.log("✅ OpenMRS Locations sync completed.");
+    } catch (error) {
+      console.error("❌ Error syncing OpenMRS Locations:", error.message);
+    }
+    try {
+      console.log("🔄 Syncing DHIS2 Org Units...");
+      await DHIS2OrgUnitService.syncOrgUnits(1000);
+      console.log("✅ DHIS2 Org Units sync completed.");
+    } catch (error) {
+      console.error("❌ Error syncing DHIS2 Org Units:", error.message);
     }
 
     console.log("✅ OpenMRS sync completed.");

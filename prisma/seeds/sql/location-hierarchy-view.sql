@@ -1,40 +1,37 @@
--- Drop the existing regular view
-DROP TABLE IF EXISTS location_hierarchy_view;
-DROP MATERIALIZED VIEW IF EXISTS location_hierarchy_view;
+-- Drop the existing materialized view
+DROP MATERIALIZED VIEW IF EXISTS openmrs_location_hierarchy_view;
 
--- Create as a Materialized View
-CREATE MATERIALIZED VIEW location_hierarchy_view AS
+-- Create the new Materialized View
+CREATE MATERIALIZED VIEW openmrs_location_hierarchy_view AS
 WITH RECURSIVE location_tree AS (
+    -- Base case: Top-level locations (Country level)
     SELECT
         l.location_id,
         l.uuid,
         l.name AS location_name,
-        l.parent_location,
-        lt.name AS tag_name,
+        l.parent AS parent_uuid,
+        l.type AS type,
         ARRAY[l.name] AS path_names,
-        ARRAY[lt.name] AS path_tags
+        ARRAY[l.type] AS path_types
     FROM openmrs_location l
-    JOIN openmrs_location_tag_map ltm ON l.location_id = ltm.location_id
-    JOIN openmrs_location_tag lt ON ltm.location_tag_id = lt.location_tag_id
-    WHERE lt.name = 'Country'
+    WHERE l.type = 'Country' -- Root-level locations
 
     UNION ALL
 
+    -- Recursive case: Join child locations to their parents
     SELECT
         child.location_id,
         child.uuid,
         child.name AS location_name,
-        child.parent_location,
-        child_tag.name AS tag_name,
+        child.parent AS parent_uuid,
+        child.type AS type,
         parent.path_names || child.name,
-        parent.path_tags || child_tag.name
+        parent.path_types || child.type
     FROM openmrs_location child
-    JOIN openmrs_location_tag_map child_ltm ON child.location_id = child_ltm.location_id
-    JOIN openmrs_location_tag child_tag ON child_ltm.location_tag_id = child_tag.location_tag_id
-    JOIN location_tree parent ON child.parent_location = parent.location_id
+    JOIN location_tree parent ON child.parent = parent.uuid
 )
 SELECT
-    ROW_NUMBER() OVER () AS index,
+    ROW_NUMBER() OVER () AS index, -- Generate a unique index
     l.uuid,
     COALESCE(path_names[1], '') AS country,
     COALESCE(path_names[2], '') AS zone,
@@ -43,6 +40,8 @@ SELECT
     COALESCE(path_names[5], '') AS council,
     COALESCE(path_names[6], '') AS ward,
     l.location_name AS name,
-    l.tag_name AS type
+    l.type AS type
 FROM location_tree l
-WHERE l.tag_name IN ('Village', 'Facility', 'Facility_msd_code', 'Testing Lab', 'Addo');
+WHERE l.type IN ('Country', 'Zone', 'Region', 'District', 'Council', 'Ward', 'Village', 'Facility'); 
+
+

@@ -1,6 +1,7 @@
 generator client {
-  provider = "prisma-client-js"
-  seed     = "(function)"
+  provider        = "prisma-client-js"
+  seed            = "(function)"
+  previewFeatures = ["views"]
 }
 
 datasource db {
@@ -82,8 +83,7 @@ enum RoleType {
   UCS_DEVELOPER
   MOH_ADMIN
   COUNCIL_COORDINATOR
-  FACILITY_PROVIDER
-  VILLAGE_CHW
+  EXTERNAL_SYSTEM
 }
 
 enum UserStatus {
@@ -92,82 +92,48 @@ enum UserStatus {
   SUSPENDED
 }
 
-model Location {
-  location_id     Int       @id @default(autoincrement())
-  name            String
-  description     String?
-  address1        String?
-  address2        String?
-  city_village    String?
-  state_province  String?
-  postal_code     String?
-  country         String?
-  latitude        String?
-  longitude       String?
-  creator         Int
-  date_created    DateTime
-  county_district String?
-  address3        String?
-  address4        String?
-  address5        String?
-  address6        String?
-  retired         Boolean   @default(false)
-  retired_by      Int?
-  date_retired    DateTime?
-  retire_reason   String?
-  parent_location Int?
-  uuid            String    @unique
-  changed_by      Int?
-  date_changed    DateTime?
-  address7        String?
-  address8        String?
-  address9        String?
-  address10       String?
-  address11       String?
-  address12       String?
-  address13       String?
-  address14       String?
-  address15       String?
+model OpenMRSLocation {
+  location_id Int       @id @default(autoincrement())
+  name        String
+  description String?
+  latitude    String?
+  longitude   String?
+  retired     Boolean   @default(false)
+  uuid        String    @unique
+  parent      String?
+  type        String?
+  attributes  Json?     @db.JsonB
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime? @updatedAt
 
-  // ✅ Corrected Relation to LocationTagMap
-  locationTagMaps LocationTagMap[]
-
+  @@index([attributes], type: Gin)
   @@map("openmrs_location")
 }
 
-model LocationTag {
-  location_tag_id Int       @id @default(autoincrement())
-  name            String
-  description     String?
-  creator         Int
-  date_created    DateTime
-  retired         Boolean   @default(false)
-  retired_by      Int?
-  date_retired    DateTime?
-  retire_reason   String?
-  uuid            String    @unique
-  changed_by      Int?
-  date_changed    DateTime?
+model OpenMRSLocationTag {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // ✅ Corrected Relation to LocationTagMap
-  locationTagMaps LocationTagMap[]
-
-  @@map("openmrs_location_tag")
+  @@map("openmrs_location_tags")
 }
 
-model LocationTagMap {
-  location_id     Int
-  location_tag_id Int
+model OpenMRSLocationAttributeType {
+  id          Int      @id @default(autoincrement())
+  uuid        String   @unique
+  name        String
+  description String?
+  dataType    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // ✅ Corrected Relations
-  location    Location    @relation(fields: [location_id], references: [location_id])
-  locationTag LocationTag @relation(fields: [location_tag_id], references: [location_tag_id])
-
-  @@id([location_id, location_tag_id])
-  @@map("openmrs_location_tag_map")
+  @@map("openmrs_location_attribute_types")
 }
 
-model LocationHierarchyView {
+view OpenMRSLocationHierarchyView {
   index    Int     @id @map("index")
   uuid     String  @map("uuid")
   country  String? @map("country")
@@ -179,10 +145,10 @@ model LocationHierarchyView {
   name     String  @map("name")
   type     String  @map("type")
 
-  @@map("location_hierarchy_view") // Maps to the materialized view
+  @@map("openmrs_location_hierarchy_view") // Maps to the materialized view
 }
 
-model TeamRole {
+model OpenMRSTeamRole {
   id         Int      @id @default(autoincrement())
   uuid       String   @unique
   identifier String   @unique
@@ -195,7 +161,7 @@ model TeamRole {
   @@map("openmrs_team_roles")
 }
 
-model Team {
+model OpenMRSTeam {
   id   Int    @id @default(autoincrement())
   uuid String @unique
   name String
@@ -203,7 +169,7 @@ model Team {
   @@map("openmrs_teams")
 }
 
-model UserRole {
+model OpenMRSMemberRole {
   id          Int      @id @default(autoincrement())
   uuid        String   @unique
   name        String
@@ -212,17 +178,17 @@ model UserRole {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  @@map("openmrs_user_roles")
+  @@map("openmrs_member_roles")
 }
 
-model TeamMember {
+model OpenMRSTeamMember {
   id                  String   @id @default(uuid())
   identifier          String   @unique
   firstName           String
   middleName          String?
   lastName            String
   username            String   @unique
-  personUuid          String   @unique
+  personUuid          String
   userUuid            String?  @unique
   openMrsUuid         String   @unique
   teamUuid            String?
@@ -231,22 +197,22 @@ model TeamMember {
   locationUuid        String?
   locationName        String?
   locationDescription String?
-  openmrsObject       Json // Store full OpenMRS JSON response
-  createdAt           DateTime @default(now())
+  openmrsObject       Json
+  createdAt           DateTime
   updatedAt           DateTime @updatedAt
 
-  @@map("team_members")
+  @@map("openmrs_team_members")
 }
 
-model Dhis2OrgUnit {
+model DHIS2OrgUnit {
   id          String   @id @default(uuid())
   uuid        String   @unique
   name        String
   code        String?  @unique
   level       Int
-  latitude    Float? // Use Double for precise geographic coordinates
-  longitude   Float? // Use Double for precise geographic coordinates
-  parentUuid  String? // Store Parent Org Unit UUID as a string (no relation)
+  latitude    Float?
+  longitude   Float?
+  parentUuid  String?
   parentName  String?
   parentLevel Int?
   createdAt   DateTime @default(now())
@@ -255,7 +221,7 @@ model Dhis2OrgUnit {
   @@map("dhis2_org_units")
 }
 
-model Dhis2Role {
+model DHIS2Role {
   id        String   @id @default(uuid())
   uuid      String   @unique
   name      String
@@ -265,33 +231,32 @@ model Dhis2Role {
   @@map("dhis2_roles")
 }
 
-model Dhis2User {
-  id          String   @id @default(uuid())
-  uuid        String   @unique
-  username    String   @unique
-  firstName   String?
-  lastName    String?
-  email       String?
-  phoneNumber String?
-  disabled    Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Storing DHIS2 references as strings without relations
-  orgUnitUuids Json // Org Unit UUID
-  roleUuids    Json // Store multiple Role UUIDs as JSON array
+model DHIS2User {
+  id           String   @id @default(uuid())
+  uuid         String   @unique
+  username     String   @unique
+  firstName    String?
+  lastName     String?
+  email        String?
+  phoneNumber  String?
+  disabled     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  orgUnitUuids Json
+  roleUuids    Json
 
   @@map("dhis2_users")
 }
 
-model Dhis2SyncLog {
-  id         String   @id @default(uuid())
-  entityType String // "orgUnit" | "role" | "user"
-  entityUuid String // UUID of the synchronized entity
-  action     String // "CREATE" | "UPDATE" | "DELETE"
-  status     String // "SUCCESS" | "FAILED"
-  details    Json? // Store additional info, errors, etc.
+model SyncLog {
+  id         Int      @id @default(autoincrement())
+  uuid       String   @unique @default(uuid())
+  entityType String   @map("entity_type")
+  entityUuid String?  @map("entity_uuid")
+  action     String
+  status     String
+  details    Json?
   createdAt  DateTime @default(now())
 
-  @@map("dhis2_sync_logs")
+  @@map("sync_logs")
 }

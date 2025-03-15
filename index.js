@@ -6,9 +6,9 @@ import "express-async-errors";
 import ErrorHandler from "./helpers/error-handler.js";
 import AuthRouter from "./modules/auth/auth-router.js";
 import UserRouter from "./modules/user/user-router.js";
-import LocationRouter from "./modules/location/location-router.js";
-import TeamRouter from "./modules/team/team-router.js";
+import OpenMrsRouter from "./modules/openmrs/openmrs-router.js";
 import DHIS2Router from "./modules/dhis2/dhis2-router.js";
+import DashboardRouter from "./modules/dashboard/dashboard-router.js";
 import SecurityMiddleware from "./middlewares/security-middleware.js";
 
 class AppServer {
@@ -18,6 +18,10 @@ class AppServer {
     this.initializeMiddleware();
     this.initializeRoutes();
     this.initializeErrorHandling();
+    BigInt.prototype.toJSON = function () {
+      const int = Number.parseInt(this.toString());
+      return int ?? this.toString();
+    };
   }
 
   initializeMiddleware() {
@@ -31,9 +35,14 @@ class AppServer {
   initializeRoutes() {
     this.app.use("/api/v1/auth", AuthRouter);
     this.app.use("/api/v1/user", UserRouter);
-    this.app.use("/api/v1/location", LocationRouter);
-    this.app.use("/api/v1/team", TeamRouter);
+    this.app.use("/api/v1/openmrs", OpenMrsRouter);
     this.app.use("/api/v1/dhis2", DHIS2Router);
+    this.app.use("/api/v1/dashboard", DashboardRouter);
+
+    // default route for the API
+    this.app.get("/", (req, res, next) => {
+      res.status(200).json({ message: "Welcome to UCS User Management Backend" });
+    });
 
     // health-checker kwa ajili ya kudhibitisha kama server iko up
     this.app.get("/health", (req, res, next) => {

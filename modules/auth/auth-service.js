@@ -7,7 +7,7 @@ class AuthService {
     const user = await AuthRepository.findUserByEmail(email);
 
     if (!user || user.isDeleted) {
-      throw new Error("Authentication failed. User not found.");
+      throw new Error("Authentication failed. Wrong username or password.");
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -46,7 +46,7 @@ class AuthService {
   // 🔹 Fetch user details by ID
   static async getProfile(userId) {
     const user = await AuthRepository.findUserById(userId);
-    if (!user) throw new Error("User not found.");
+    if (!user) throw new Error("Wrong username or password.");
 
     return {
       id: user.id,

@@ -2,7 +2,7 @@ import DHIS2RoleService from "./dhis2-role-service.js";
 import ResponseHelper from "../../../helpers/response-helper.js";
 
 class DHIS2RoleController {
-  static async syncRoles(req, res, next) {
+  static async syncRoles(_req, res, next) {
     try {
       await DHIS2RoleService.syncRoles();
       ResponseHelper.success(res, "DHIS2 Roles synced successfully.");

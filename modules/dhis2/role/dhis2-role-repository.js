@@ -7,14 +7,14 @@ class DHIS2RoleRepository {
       name: role.displayName,
     }));
 
-    await prisma.dhis2Role.createMany({
+    await prisma.dHIS2Role.createMany({
       data: formattedRoles,
       skipDuplicates: true,
     });
   }
 
   static async getRoles() {
-    return await prisma.dhis2Role.findMany();
+    return await prisma.dHIS2Role.findMany();
   }
 }
 

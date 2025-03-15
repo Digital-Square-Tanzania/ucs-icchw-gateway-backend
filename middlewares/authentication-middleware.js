@@ -51,6 +51,16 @@ class AuthMiddleware {
     };
   }
 
+  static authRoles(...allowedRoles) {
+    return (req, res, next) => {
+      const userRole = req.user?.role;
+
+      if (!allowedRoles.includes(userRole)) {
+        res.status(403).json({ success: false, message: "Access denied. Insufficient permissions.", data: null });
+      }
+    };
+  }
+
   /**
    * Verify Refresh Token and issue a new Access Token.
    */

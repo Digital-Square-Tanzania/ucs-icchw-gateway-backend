@@ -6,8 +6,7 @@ class RoleSeeder {
     { name: RoleType.UCS_DEVELOPER, description: "Develops & maintains the system" },
     { name: RoleType.MOH_ADMIN, description: "Manages Ministry of Health data" },
     { name: RoleType.COUNCIL_COORDINATOR, description: "Manages council-level health data" },
-    { name: RoleType.FACILITY_PROVIDER, description: "Health facility provider" },
-    { name: RoleType.VILLAGE_CHW, description: "Community Health Worker" },
+    { name: RoleType.EXTERNAL_SYSTEM, description: "An external system that integrates with UCS" },
   ];
 
   static async seed() {
