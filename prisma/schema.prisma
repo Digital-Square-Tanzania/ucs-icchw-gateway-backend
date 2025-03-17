@@ -197,7 +197,8 @@ model OpenMRSTeamMember {
   locationUuid        String?
   locationName        String?
   locationDescription String?
-  openmrsObject       Json
+  roleUuid            String?
+  roleName            String?
   createdAt           DateTime
   updatedAt           DateTime @updatedAt
 

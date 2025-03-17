@@ -105,46 +105,6 @@ class DashboardRepository {
   /**
    * Get Team Members grouped by Zones (based on OpenMRS Location Type)
    */
-  // static async getTeamMembersByZone() {
-  //   const teamsByZone = await prisma.openMRSTeamMember.groupBy({
-  //     by: ["teamUuid", "teamName", "locationUuid"],
-  //     _count: { id: true }, // Count members in each team
-  //     orderBy: { locationUuid: "asc" },
-  //   });
-
-  //   // Fetch Zone types from openmrs_location
-  //   const locations = await prisma.openMRSLocation.findMany({
-  //     select: { uuid: true, type: true },
-  //   });
-
-  //   // Create a mapping of locationUuid -> Zone Type
-  //   const locationZoneMap = locations.reduce((acc, loc) => {
-  //     acc[loc.uuid] = loc.type || "Unknown"; // Default to "Unknown" if no type
-  //     return acc;
-  //   }, {});
-
-  //   // Format the grouped data with Zone as the key
-  //   const groupedTeams = teamsByZone.reduce((acc, team) => {
-  //     const zone = locationZoneMap[team.locationUuid] || "Unknown";
-  //     if (!acc[zone]) {
-  //       acc[zone] = [];
-  //     }
-
-  //     acc[zone].push({
-  //       teamUuid: team.teamUuid,
-  //       teamName: team.teamName,
-  //       membersCount: team._count.id,
-  //     });
-
-  //     return acc;
-  //   }, {});
-
-  //   return groupedTeams;
-  // }
-
-  /**
-   * Get Team Members grouped by Zones (based on OpenMRS Location Type)
-   */
   static async getTeamMembersByZone() {
     return await prisma.$queryRaw`
     WITH RECURSIVE location_hierarchy AS (
@@ -154,19 +114,18 @@ class DashboardRepository {
             l.parent AS parent_uuid,
             l.type AS location_type,
             l.name AS zone_name,
-            l.uuid AS zone_uuid -- Zone itself is its own parent
+            l.uuid AS zone_uuid
         FROM openmrs_location l
         WHERE l.type = 'Zone'
 
         UNION ALL
 
-        -- Recursively join all child locations, ensuring they inherit the Zone
         SELECT
             child.uuid AS location_uuid,
             child.parent AS parent_uuid,
             child.type AS location_type,
-            parent.zone_name, -- Inherit Zone name
-            parent.zone_uuid -- Propagate Zone UUID downward
+            parent.zone_name,
+            parent.zone_uuid
         FROM openmrs_location child
         JOIN location_hierarchy parent ON child.parent = parent.location_uuid
     )
@@ -177,7 +136,7 @@ class DashboardRepository {
         COUNT(t.id) AS members_count
     FROM openmrs_team_members t
     JOIN location_hierarchy z ON t."locationUuid" = z.location_uuid
-    WHERE z.location_type = 'Facility' -- Only count Facilities
+    WHERE z.location_type = 'Facility'
     GROUP BY z.zone_name
     ORDER BY members_count DESC;
   `;
@@ -195,7 +154,7 @@ class DashboardRepository {
               l.parent AS parent_uuid,
               l.type AS location_type,
               l.name AS location_name,
-              l.uuid AS zone_uuid -- Zone itself is its own parent
+              l.uuid AS zone_uuid
           FROM openmrs_location l
           WHERE l.type = 'Zone'
   
@@ -207,7 +166,7 @@ class DashboardRepository {
               child.parent AS parent_uuid,
               child.type AS location_type,
               child.name AS location_name,
-              parent.zone_uuid -- Propagate Zone UUID downward
+              parent.zone_uuid
           FROM openmrs_location child
           JOIN location_hierarchy parent ON child.parent = parent.location_uuid
       )
@@ -218,7 +177,7 @@ class DashboardRepository {
           COUNT(DISTINCT t."teamUuid") AS teams_count
       FROM openmrs_team_members t
       JOIN location_hierarchy loc ON t."locationUuid" = loc.location_uuid
-      JOIN location_hierarchy z ON loc.zone_uuid = z.location_uuid -- Ensure we map to the correct Zone
+      JOIN location_hierarchy z ON loc.zone_uuid = z.location_uuid
       GROUP BY z.zone_uuid, z.location_name
       ORDER BY z.location_name;
     `;
@@ -229,9 +188,9 @@ class DashboardRepository {
     SELECT 
         COUNT(*) AS team_count,
         CASE 
-            WHEN member_count < 2 THEN '1 members'
-            WHEN member_count BETWEEN 2 AND 3 THEN '2 to 3 members'
-            ELSE '4+ members'
+            WHEN member_count < 2 THEN 'Single Member Teams'
+            WHEN member_count BETWEEN 2 AND 3 THEN '2 to 3 Member Teams'
+            ELSE '4+ Member Teams'
         END AS team_size_category
     FROM (
         SELECT t."uuid", COUNT(m.id) AS member_count

@@ -14,7 +14,7 @@ class OpenMRSApiClient {
       },
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
+        Accept: "*/*",
       },
     });
   }
@@ -28,7 +28,7 @@ class OpenMRSApiClient {
       return response.data;
     } catch (error) {
       console.error(`❌ OpenMRS GET Error (${endpoint}):`, error.response?.data || error.message);
-      throw new CustomError(`❌ Failed to fetch data from OpenMRS (${endpoint}) ` + error.response?.data || error.message);
+      throw new CustomError(`❌ Failed to fetch data from OpenMRS (${endpoint})` + error.response?.data || error.message);
     }
   }
 
@@ -42,6 +42,19 @@ class OpenMRSApiClient {
     } catch (error) {
       console.error(`❌ OpenMRS POST Error (${endpoint}):`, error.response?.data || error.message);
       throw new CustomError(`Failed to send data to OpenMRS (${endpoint})`);
+    }
+  }
+
+  /**
+   * PUT request to update data
+   */
+  async put(endpoint, data) {
+    try {
+      const response = await this.client.put(endpoint, data);
+      return response.data;
+    } catch (error) {
+      console.error(`❌ OpenMRS PUT Error (${endpoint}):`, error.response?.data || error.message);
+      throw new CustomError(`Failed to update data on OpenMRS (${endpoint})`);
     }
   }
 

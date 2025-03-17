@@ -5,17 +5,6 @@ class TeamMemberRepository {
     return prisma.openMRSTeamMember.findMany();
   }
 
-  // static async upsertTeamMembers(teamMembers) {
-  //   const upsertPromises = teamMembers.map((member) =>
-  //     prisma.openMRSTeamMember.upsert({
-  //       where: { openMrsUuid: member.openMrsUuid },
-  //       update: member,
-  //       create: member,
-  //     })
-  //   );
-  //   return Promise.all(upsertPromises);
-  // }
-
   static async upsertTeamMembers(teamMembers) {
     const upsertPromises = teamMembers.map((member) =>
       prisma.openMRSTeamMember.upsert({
@@ -32,7 +21,6 @@ class TeamMemberRepository {
           locationUuid: member.locationUuid,
           locationName: member.locationName,
           locationDescription: member.locationDescription,
-          openmrsObject: member.openmrsObject, // Store full OpenMRS object
         },
         create: member, // Create if not exists
       })

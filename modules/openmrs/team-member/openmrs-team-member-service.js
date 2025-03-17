@@ -1,8 +1,7 @@
-import axios from "axios";
 import dotenv from "dotenv";
 import CustomError from "../../../utils/custom-error.js";
 import TeamMemberRepository from "./openmrs-team-member-repository.js";
-import OpenMRSApiClient from "../openmrs-api-client.js";
+import openmrsApiClient from "../openmrs-api-client.js";
 
 dotenv.config();
 
@@ -30,8 +29,8 @@ class TeamMemberService {
         console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
 
         // Fetch the current batch using OpenMRSApiClient
-        const response = await OpenMRSApiClient.get("team/teammember", {
-          v: "custom:(uuid,identifier,dateCreated,person:(uuid,preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
+        const response = await openmrsApiClient.get("team/teammember", {
+          v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
           startIndex: fetchedRecords,
           limit: pageSize,
         });
@@ -60,7 +59,8 @@ class TeamMemberService {
           locationName: member.team?.location?.name || null,
           locationDescription: member.team?.location?.description || null,
           createdAt: new Date(member.dateCreated),
-          openmrsObject: member, // Store full OpenMRS object
+          roleUuid: member.teamRole?.uuid || null,
+          roleName: member.teamRole?.name || null,
         }));
 
         // Store the batch in the database
@@ -74,7 +74,7 @@ class TeamMemberService {
 
       console.log("✅ OpenMRS Team Members Sync Completed.");
     } catch (error) {
-      throw new CustomError("❌ OpenMRS Team Members Sync Error: " + error.stack);
+      throw new CustomError("❌ OpenMRS Team Members Sync Error: " + error.message);
     }
   }
 
@@ -91,7 +91,7 @@ class TeamMemberService {
       console.log("🔄 Creating team member in OpenMRS...");
 
       // Send request to OpenMRS
-      const openMrsResponse = await axios.post(this.baseUrl, teamMemberData, { auth: this.auth });
+      const openMrsResponse = await openmrsApiClient.post(this.baseUrl, teamMemberData, { auth: this.auth });
 
       if (!openMrsResponse.data || !openMrsResponse.data.uuid) {
         throw new CustomError("Failed to create team member in OpenMRS.", 500);
@@ -113,7 +113,8 @@ class TeamMemberService {
         locationName: teamMemberData.locations?.[0]?.name || null,
         locationDescription: teamMemberData.locations?.[0]?.description || null,
         createdAt: new Date(openMrsResponse.data.dateCreated),
-        openmrsObject: openMrsResponse.data, // Store full OpenMRS response
+        roleUuid: teamMemberData.teamRole?.uuid || null,
+        roleName: teamMemberData.teamRole?.name || null,
       };
 
       const savedTeamMember = await TeamMemberRepository.createTeamMember(formattedData);
@@ -129,7 +130,7 @@ class TeamMemberService {
       console.log("🔄 Updating team member in OpenMRS...");
 
       // Send update request to OpenMRS
-      await axios.put(`${this.baseUrl}/${uuid}`, updateData, { auth: this.auth });
+      await openmrsApiClient.put(`${this.baseUrl}/${uuid}`, updateData, { auth: this.auth });
 
       // Update locally
       const updatedTeamMember = await TeamMemberRepository.updateTeamMember(uuid, updateData);

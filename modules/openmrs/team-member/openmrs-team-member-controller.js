@@ -6,9 +6,10 @@ import ResponseHelper from "../../../helpers/response-helper.js";
  */
 class TeamMemberController {
   // Get all team members
-  static async getTeamMembers(_req, res, next) {
+  static async getTeamMembers(req, res, next) {
     try {
-      const teamMembers = await TeamMemberService.getTeamMembers();
+      const { page = 1, pageSize = 10 } = req.query;
+      const teamMembers = await TeamMemberService.getTeamMembers(parseInt(page), parseInt(pageSize));
       return ResponseHelper.success(res, "Team members retrieved successfully", teamMembers);
     } catch (error) {
       next(error);
