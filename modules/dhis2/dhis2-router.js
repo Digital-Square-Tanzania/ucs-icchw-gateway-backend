@@ -1,13 +1,15 @@
 import express from "express";
-import DHIS2Controller from "./dhis2-controller.js";
+import DHIS2OrgUnitController from "./org-unit/dhis2-org-unit-controller.js";
 import DHIS2RoleController from "./role/dhis2-role-controller.js";
 import DHIS2UserController from "./user/dhis2-user-controller.js";
 import AuthMiddleware from "../../middlewares/authentication-middleware.js";
 
 const router = express.Router();
 
-router.get("/org-unit/sync", AuthMiddleware.authenticate, DHIS2Controller.syncOrgUnits);
-router.get("/org-unit", AuthMiddleware.authenticate, DHIS2Controller.getOrgUnits);
+// **Org Units**
+router.get("/org-unit/sync", AuthMiddleware.authenticate, DHIS2OrgUnitController.syncOrgUnits);
+router.get("/org-unit", AuthMiddleware.authenticate, DHIS2OrgUnitController.getOrgUnits);
+router.get("/org-unit/grouped", AuthMiddleware.authenticate, DHIS2OrgUnitController.getGroupedOrgUnits);
 
 // **Roles**
 router.get("/role/sync", AuthMiddleware.authenticate, DHIS2RoleController.syncRoles);

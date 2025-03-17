@@ -13,22 +13,22 @@ class DHIS2UserRepository {
       orgUnitUuids: user.organisationUnits?.map((orgUnit) => orgUnit.id) || [],
     }));
 
-    await prisma.dhis2User.createMany({
+    await prisma.dHIS2User.createMany({
       data: formattedUsers,
       skipDuplicates: true,
     });
   }
 
   static async createUser(user) {
-    return await prisma.dhis2User.create({ data: user });
+    return await prisma.dHIS2User.create({ data: user });
   }
 
   static async getUsers() {
-    return await prisma.dhis2User.findMany();
+    return await prisma.dHIS2User.findMany();
   }
 
   static async deleteUser(userId) {
-    return await prisma.dhis2User.delete({ where: { uuid: userId } });
+    return await prisma.dHIS2User.delete({ where: { uuid: userId } });
   }
 }
 

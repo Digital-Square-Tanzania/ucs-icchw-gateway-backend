@@ -132,3 +132,6 @@ dist
 
 # Ignore Rest-Client files
 *.rest
+
+# Ignore backup folders
+backup/
