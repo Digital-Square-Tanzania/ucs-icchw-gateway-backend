@@ -43,10 +43,10 @@ class OpenMRSLocationController {
   }
 
   // Fetch a location by ID
-  static async getLocationById(req, res, next) {
+  static async getLocationByUuid(req, res, next) {
     try {
-      const { id } = req.params;
-      const location = await OpenMRSLocationService.getLocationById(parseInt(id));
+      const { uuid } = req.params;
+      const location = await OpenMRSLocationService.getLocationByUuid(uuid);
 
       if (!location) {
         throw new CustomError("Location not found", 404);

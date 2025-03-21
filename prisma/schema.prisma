@@ -9,20 +9,44 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// model NewUser {
+//   id                         String     @id @default(uuid())
+//   username                   String     @unique
+//   password                   String
+//   firstName                  String     @map("first_name")
+//   middleName                 String?    @map("middle_name")
+//   lastName                   String     @map("last_name")
+//   email                      String     @unique
+//   phoneNumber                String?    @unique @map("phone_number")
+//   avatar                     String?
+//   status                     UserStatus @default(ACTIVE)
+//   openmrsPersonUuid          String?
+//   openmrsUserUuid            String?    @unique
+//   openmrsTeamMemberUuid      String?    @unique
+//   openmrsTeamUuid            String?
+//   openmrsTeamName            String?
+//   openmrsTeamIdentifier      String?
+//   openmrsLocationUuid        String?
+//   openmrsLocationName        String?
+//   openmrsLocationDescription String?
+//   roleUuid                   String?
+//   roleName                   String?
+// }
+
 model User {
   id               String             @id @default(uuid())
-  email            String             @unique
   password         String
+  firstName        String             @map("first_name")
+  middleName       String?            @map("middle_name")
+  lastName         String             @map("last_name")
+  email            String             @unique
+  phoneNumber      String?            @unique @map("phone_number")
   avatar           String?
   status           UserStatus         @default(ACTIVE)
   createdAt        DateTime           @default(now()) @map("created_at")
   deletedAt        DateTime?          @map("deleted_at")
-  firstName        String             @map("first_name")
   isDeleted        Boolean            @default(false) @map("is_deleted")
   joinDate         DateTime           @default(now()) @map("join_date")
-  lastName         String             @map("last_name")
-  middleName       String?            @map("middle_name")
-  phoneNumber      String?            @unique @map("phone_number")
   roleId           Int                @map("role_id")
   updatedAt        DateTime           @updatedAt @map("updated_at")
   lastLogin        DateTime?          @map("last_login")
@@ -93,20 +117,20 @@ enum UserStatus {
 }
 
 model OpenMRSLocation {
-  location_id Int       @id @default(autoincrement())
-  name        String
-  description String?
-  latitude    String?
-  longitude   String?
-  retired     Boolean   @default(false)
-  uuid        String    @unique
-  parent      String?
-  type        String?
-  attributes  Json?     @db.JsonB
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime? @updatedAt
+  locationId   Int       @id @default(autoincrement()) @map("location_id")
+  name         String
+  description  String?
+  latitude     String?
+  longitude    String?
+  retired      Boolean   @default(false)
+  uuid         String?   @unique @default(uuid())
+  parent       String?
+  type         String?
+  hfrCode      String?   @map("hfr_code")
+  locationCode String?   @map("location_code")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime? @updatedAt @map("updated_at")
 
-  @@index([attributes], type: Gin)
   @@map("openmrs_location")
 }
 
@@ -162,9 +186,20 @@ model OpenMRSTeamRole {
 }
 
 model OpenMRSTeam {
-  id   Int    @id @default(autoincrement())
-  uuid String @unique
-  name String
+  id             Int      @id @default(autoincrement())
+  uuid           String   @unique
+  name           String
+  display        String?
+  identifier     String?
+  supervisorName String?  @map("supervisor_name")
+  supervisorUuid String?  @map("supervisor_uuid")
+  voided         Boolean  @default(false)
+  voidReason     String?  @map("void_reason")
+  members        Int?
+  locationName   String?  @map("location_name")
+  locationUuid   String?  @map("location_uuid")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
 
   @@map("openmrs_teams")
 }
@@ -184,25 +219,41 @@ model OpenMRSMemberRole {
 model OpenMRSTeamMember {
   id                  String   @id @default(uuid())
   identifier          String   @unique
-  firstName           String
-  middleName          String?
-  lastName            String
+  firstName           String   @map("first_name")
+  middleName          String?  @map("middle_name")
+  lastName            String   @map("last_name")
+  NIN                 String?  @map("nin")
+  phoneNumber         String?  @map("phone_number")
+  email               String?
   username            String   @unique
   personUuid          String
-  userUuid            String?  @unique
-  openMrsUuid         String   @unique
-  teamUuid            String?
-  teamName            String?
-  teamIdentifier      String?
-  locationUuid        String?
-  locationName        String?
-  locationDescription String?
-  roleUuid            String?
-  roleName            String?
-  createdAt           DateTime
-  updatedAt           DateTime @updatedAt
+  userUuid            String?  @unique @map("user_uuid")
+  openMrsUuid         String   @unique @map("openmrs_uuid")
+  teamUuid            String?  @map("team_uuid")
+  teamName            String?  @map("team_name")
+  teamIdentifier      String?  @map("team_identifier")
+  locationUuid        String?  @map("location_uuid")
+  locationName        String?  @map("location_name")
+  locationDescription String?  @map("location_description")
+  roleUuid            String?  @map("role_uuid")
+  roleName            String?  @map("role_name")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
 
   @@map("openmrs_team_members")
+}
+
+model OpenMRSPersonAttribute {
+  uuid              String   @id @default(uuid())
+  personUuid        String   @map("peron_uuid")
+  attributeTypeUuid String   @map("attribute_type_uuid")
+  attributeName     String   @map("attribute_name")
+  attributeValue    String   @map("attribute_value")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@unique([personUuid, attributeName])
+  @@map("openmrs_person_attributes")
 }
 
 model DHIS2OrgUnit {

@@ -1,8 +1,15 @@
 import prisma from "../../../config/prisma.js";
 
 class TeamMemberRepository {
-  static async getTeamMembers() {
-    return prisma.openMRSTeamMember.findMany();
+  static async getTeamMembers(page = 1, pageSize = 10) {
+    const openmrsTeamMembersCount = await prisma.openMRSTeamMember.count();
+    const skip = (page - 1) * pageSize;
+    const teamMembers = await prisma.openMRSTeamMember.findMany({
+      skip: skip,
+      take: pageSize,
+    });
+
+    return { users: teamMembers, total: openmrsTeamMembersCount };
   }
 
   static async upsertTeamMembers(teamMembers) {
@@ -21,6 +28,10 @@ class TeamMemberRepository {
           locationUuid: member.locationUuid,
           locationName: member.locationName,
           locationDescription: member.locationDescription,
+          NIN: member.nin,
+          email: member.email,
+          phoneNumber: member.phoneNumber,
+          updatedAt: new Date(),
         },
         create: member, // Create if not exists
       })
@@ -46,6 +57,31 @@ class TeamMemberRepository {
       where: { openMrsUuid: uuid },
       data: updateData,
     });
+  }
+
+  static async upsertPersonAttributes(attributes) {
+    const upsertPromises = attributes.map((attribute) =>
+      prisma.openMRSPersonAttribute.upsert({
+        where: {
+          personUuid_attributeName: {
+            personUuid: attribute.personUuid,
+            attributeName: attribute.attributeName,
+          },
+        },
+        update: {
+          attributeTypeUuid: attribute.attributeTypeUuid,
+          attributeValue: attribute.attributeValue,
+        },
+        create: {
+          personUuid: attribute.personUuid,
+          attributeTypeUuid: attribute.attributeTypeUuid,
+          attributeName: attribute.attributeName,
+          attributeValue: attribute.attributeValue,
+        },
+      })
+    );
+
+    return Promise.all(upsertPromises);
   }
 }
 

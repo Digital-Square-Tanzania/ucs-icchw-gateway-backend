@@ -1,5 +1,6 @@
 import DHIS2ApiClient from "../dhis2-api-client.js";
 import DHIS2UserRepository from "./dhis2-user-repository.js";
+import CustomError from "../../../utils/custom-error.js";
 
 class DHIS2UserService {
   static async syncUsers() {
@@ -14,8 +15,18 @@ class DHIS2UserService {
     }
   }
 
-  static async getUsers() {
-    return await DHIS2UserRepository.getUsers();
+  static async getUsers({ page, pageSize }) {
+    try {
+      const pageNum = Number(page) || 1;
+      const pageSizeNum = Number(pageSize) || 10;
+
+      const offset = (pageNum - 1) * pageSizeNum;
+      const users = await DHIS2UserRepository.getUsers(offset, pageSizeNum);
+      return users;
+    } catch (error) {
+      console.error("❌ Failed to get DHIS2 users:", error.message);
+      throw new CustomError("Failed to get users from DHIS2. " + error.message, 500);
+    }
   }
 
   static async createUser(userData) {

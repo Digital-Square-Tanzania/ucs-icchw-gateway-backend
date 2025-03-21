@@ -11,9 +11,10 @@ class DHIS2UserController {
     }
   }
 
-  static async getUsers(_req, res, next) {
+  static async getUsers(req, res, next) {
     try {
-      const users = await DHIS2UserService.getUsers();
+      const { page = 1, pageSize = 10 } = req.query;
+      const users = await DHIS2UserService.getUsers({ page, pageSize });
       ResponseHelper.success(res, "DHIS2 Users retrieved successfully.", users);
     } catch (error) {
       next(error);
