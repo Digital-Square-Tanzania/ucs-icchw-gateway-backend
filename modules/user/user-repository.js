@@ -31,6 +31,7 @@ class UserRepository {
         select: {
           id: true,
           firstName: true,
+          middleName: true,
           lastName: true,
           email: true,
           phoneNumber: true,

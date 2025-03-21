@@ -1,11 +1,35 @@
 import prisma from "../../../config/prisma.js";
 
 class TeamRepository {
-  static async createOrUpdateTeam(uuid, name) {
+  static async upsertTeam(team) {
     return prisma.openMRSTeam.upsert({
-      where: { uuid },
-      update: { name },
-      create: { uuid, name },
+      where: { uuid: team.uuid },
+      update: {
+        display: team.display,
+        name: team.teamName,
+        identifier: team.teamIdentifier,
+        supervisorName: team.supervisor,
+        supervisorUuid: team.supervisorUuid,
+        voided: team.voided,
+        voidReason: team.voidReason,
+        members: team.members,
+        locationName: team.location.name,
+        locationUuid: team.location.uuid,
+      },
+      create: {
+        uuid: team.uuid,
+        display: team.display,
+        name: team.teamName,
+        identifier: team.teamIdentifier,
+        supervisorName: team.supervisor,
+        supervisorUuid: team.supervisorUuid,
+        voided: team.voided,
+        voidReason: team.voidReason,
+        members: team.members,
+        locationName: team.location.name,
+        locationUuid: team.location.uuid,
+        createdAt: new Date(team.dateCreated),
+      },
     });
   }
 

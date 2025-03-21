@@ -8,7 +8,7 @@ dotenv.config();
 class TeamService {
   static async syncTeamsFromOpenMRS() {
     try {
-      const url = process.env.OPENMRS_API_URL + "team/team";
+      const url = process.env.OPENMRS_API_URL + "team/team?v=custom:(uuid,display,teamName,teamIdentifier,supervisor,supervisorUuid,voided,voidReason,members,location:(uuid,name),dateCreated)";
       console.log(`🔄 Fetching teams from: ${url}`);
 
       const response = await axios.get(url, {
@@ -24,12 +24,12 @@ class TeamService {
 
       console.log(`✅ Found ${response.data.results.length} teams. Syncing...`);
       for (const team of response.data.results) {
-        await TeamRepository.createOrUpdateTeam(team.uuid, team.display);
+        await TeamRepository.upsertTeam(team);
       }
 
       return { message: "Teams synchronized successfully." };
     } catch (error) {
-      console.error("❌ Failed to fetch teams:", error.response?.data || error.message);
+      console.error("❌ Failed to fetch teams:", error.response?.data || error.stack);
       throw new CustomError("Failed to fetch teams.", 500);
     }
   }

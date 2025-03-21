@@ -42,9 +42,9 @@ class OpenMRSLocationRepository {
   }
 
   // Fetch a single location by ID
-  static async getLocationById(id) {
+  static async getLocationByUuid(uuid) {
     return await prisma.openMRSLocation.findUnique({
-      where: { location_id: id },
+      where: { uuid: uuid },
     });
   }
 
@@ -123,25 +123,19 @@ class OpenMRSLocationRepository {
   static async upsertLocations(locations) {
     try {
       const mappedLocations = locations.map((location) => {
-        // Extract the first attribute if available
-        const locationAttribute = location.attributes?.length
-          ? (() => {
-              const [type, value] = location.attributes[0].display.split(": ");
-              return { type, value };
-            })()
-          : {};
-
         return {
-          location_id: location.locationId,
-          name: location.name,
-          description: location.description,
-          latitude: location.latitude,
-          longitude: location.longitude,
-          retired: location.retired,
-          uuid: location.uuid,
-          parent: location.parentLocation?.uuid,
-          type: location.tags?.[0]?.name,
-          attributes: locationAttribute,
+          locationId: location.locationId || null,
+          name: location.name || null,
+          description: location.description || null,
+          latitude: location?.latitude || null,
+          longitude: location?.longitude || null,
+          retired: location.retired || false,
+          uuid: location?.uuid || null,
+          parent: location.parentLocation?.uuid || null,
+          type: location.tags?.[0]?.name || null,
+          hfrCode: location?.hfrCode || null,
+          locationCode: location?.locationCode || null,
+          createdAt: location.dateCreated ? new Date(location.dateCreated) : null,
         };
       });
 
@@ -150,7 +144,7 @@ class OpenMRSLocationRepository {
         skipDuplicates: true,
       });
     } catch (error) {
-      throw new CustomError(error.message);
+      throw new CustomError(error.stack);
     }
   }
 
@@ -214,6 +208,16 @@ class OpenMRSLocationRepository {
     } catch (error) {
       throw new CustomError(`Failed to save sync log: ${error.message}`);
     }
+  }
+
+  static async getTeamMembersByLocationHfrCode(hfrCode) {
+    return prisma.openMRSTeamMember.findMany({
+      where: {
+        location: {
+          hfrCode,
+        },
+      },
+    });
   }
 }
 

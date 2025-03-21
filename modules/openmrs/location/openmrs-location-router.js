@@ -13,7 +13,7 @@ router.get("/", AuthMiddleware.authenticate, ValidationMiddleware.validate(OpenM
 router.get("/sync", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), OpenMRSLocationController.syncLocations);
 
 // Get Location by ID
-router.get("/:id", AuthMiddleware.authenticate, OpenMRSLocationController.getLocationById);
+router.get("/:uuid", AuthMiddleware.authenticate, OpenMRSLocationController.getLocationByUuid);
 
 // All Location Tags
 router.get("/tags/all", AuthMiddleware.authenticate, OpenMRSLocationController.getAllLocationTags);

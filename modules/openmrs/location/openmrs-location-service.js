@@ -9,8 +9,8 @@ class OpenMRSLocationService {
   }
 
   // Get a location by ID
-  static async getLocationById(id) {
-    return await OpenMRSLocationRepository.getLocationById(id);
+  static async getLocationByUuid(uuid) {
+    return await OpenMRSLocationRepository.getLocationByUuid(uuid);
   }
 
   // Get locations by tag with pagination
@@ -119,7 +119,7 @@ class OpenMRSLocationService {
 
         // Fetch current batch from OpenMRS
         const response = await OpenMRSApiClient.get("location", {
-          v: "custom:(locationId,name,description,latitude,longitude,retired,uuid,parentLocation:(name,uuid),tags:(name,uuid),attributes:(display))",
+          v: "custom:(locationId,name,description,latitude,longitude,retired,uuid,parentLocation:(name,uuid),tags:(name,uuid),attributes:(display),dateCreated)",
           startIndex: fetchedRecords,
           limit: pageSize,
         });
@@ -131,19 +131,51 @@ class OpenMRSLocationService {
           break;
         }
 
+        const transformedLocations = response.results.map((location) => {
+          let hfrCode = null;
+          let locationCode = null;
+
+          if (Array.isArray(location.attributes)) {
+            for (const attr of location.attributes) {
+              const display = attr.display || "";
+
+              if (display.startsWith("HFR Code:")) {
+                hfrCode = display.split("HFR Code:")[1].trim();
+              } else if (display.startsWith("Code:")) {
+                locationCode = display.split("Code:")[1].trim();
+              }
+            }
+          }
+
+          return {
+            locationId: location.locationId,
+            name: location.name,
+            description: location.description,
+            latitude: location.latitude,
+            longitude: location.longitude,
+            retired: location.retired,
+            uuid: location.uuid || null,
+            parentLocation: location.parentLocation,
+            tags: location.tags || [],
+            hfrCode,
+            locationCode,
+            dateCreated: location.dateCreated,
+          };
+        });
+
         // Store the batch in the database
-        await OpenMRSLocationRepository.upsertLocations(locations);
+        await OpenMRSLocationRepository.upsertLocations(transformedLocations);
 
         // Log each sync operation
         for (const location of locations) {
           await OpenMRSLocationRepository.saveSyncLog("openmrs_location", location.uuid, "SYNC", "SUCCESS", {
             name: location.name,
             retired: location.retired,
-            uuid: location.uuid,
-            parentUuid: location.parentLocation?.uuid || null,
-            parentName: location.parentLocation?.name || null,
-            type: location.tags?.name,
-            attribute: location.attributes?.[0]?.display || null,
+            uuid: location.uuid || null,
+            parentUuid: location.parent || null,
+            type: location.type || null,
+            hfrCode: location.hfrCode || null,
+            locationCode: location.locationCode || null,
           });
         }
 
@@ -155,7 +187,7 @@ class OpenMRSLocationService {
 
       console.log("✅ OpenMRS Location Sync Completed.");
     } catch (error) {
-      throw new CustomError("❌ OpenMRS Location Sync Error: " + error.message);
+      throw new CustomError("❌ OpenMRS Location Sync Error: " + error.stack);
     }
   }
 
