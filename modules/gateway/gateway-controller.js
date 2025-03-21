@@ -1,3 +1,4 @@
+import CustomError from "../../utils/custom-error.js";
 import GatewayService from "./gateway-service.js";
 
 class GatewayController {
@@ -9,7 +10,8 @@ class GatewayController {
       const monthlyStatuses = await GatewayService.getChwMonthlyStatus(req, res, next);
       res.status(200).json(monthlyStatuses);
     } catch (error) {
-      next(error);
+      console.log("ERROR STATUS", error.statusCode);
+      throw new CustomError(error.message, error.statusCode);
     }
   }
 }

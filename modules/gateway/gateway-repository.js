@@ -17,7 +17,7 @@ class GatewayRepository {
       });
 
       if (!location) {
-        throw new Error("Location with provided HFR code not found.");
+        throw new CustomError("Location with provided HFR code not found.", 404);
       }
 
       const teamMembers = await prisma.openMRSTeamMember.findMany({
@@ -36,9 +36,7 @@ class GatewayRepository {
       }));
       return formatted;
     } catch (error) {
-      // console.error("Error fetching team members by location HFR code:", error.message);
-      // throw new CustomError("Error fetching team members by location HFR code:", 500);
-      throw new CustomError(error.message);
+      throw new CustomError(error.message, error.statusCode);
     }
   }
 }

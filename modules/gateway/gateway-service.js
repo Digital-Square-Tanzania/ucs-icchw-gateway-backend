@@ -1,8 +1,8 @@
 import CustomError from "../../utils/custom-error.js";
 import GatewayRepository from "./gateway-repository.js";
 import openSRPApiClient from "../gateway/opensrp-api-client.js";
-import axios from "axios";
 import dotenv from "dotenv";
+import Joi from "joi";
 
 dotenv.config();
 
@@ -14,7 +14,18 @@ class GatewayService {
   static async getStatuses(month, year, teamMembers) {
     try {
       const payload = {};
-      // Fetch team member statys from OpenSRP
+
+      // Validate month and year
+      const schema = Joi.object({
+        month: Joi.number().min(1).max(12).required(),
+        year: Joi.number().max(new Date().getFullYear()).required(),
+      });
+      const { error } = schema.validate({ month, year });
+      if (error) {
+        throw new CustomError(`Validation error: ${error.message}`, 400);
+      }
+
+      // Prepare payload for OpenSRP request
       const opensrpRequestPyload = {
         period: {
           month: month,
@@ -22,20 +33,19 @@ class GatewayService {
         },
         chws: teamMembers,
       };
-      console.log("Making request to OpenSRP API with payload:", opensrpRequestPyload);
-      const chwMonthlyStatusResponse = await axios.post("http://170.187.199.69:9400/chw/monthly-status", opensrpRequestPyload, {
-        auth: {
-          username: process.env.OPENSRP_API_USERNAME,
-          password: process.env.OPENSRP_API_PASSWORD,
-        },
-      });
-      console.log("Request headers:", chwMonthlyStatusResponse.config.headers);
 
-      payload.statuses = chwMonthlyStatusResponse.data;
+      // Fetch team member statys from OpenSRP
+      const chwMonthlyStatusResponse = await openSRPApiClient.post("/chw/monthly-status", opensrpRequestPyload);
+
+      if (chwMonthlyStatusResponse.length === 0) {
+        throw new CustomError("CHW monthly activity statistics not found.", 404);
+      }
+
+      payload.statuses = chwMonthlyStatusResponse;
       payload.messageId = await this.generateMessageId();
       return payload;
     } catch (error) {
-      throw new CustomError(error.message, 500);
+      throw new CustomError(error.message, error.statusCode);
     }
   }
 
