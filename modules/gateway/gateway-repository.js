@@ -13,8 +13,12 @@ class GatewayRepository {
         },
         select: {
           uuid: true,
+          name: true,
+          type: true,
         },
       });
+
+      console.log("Location", location);
 
       if (!location) {
         throw new CustomError("Location with provided HFR code not found.", 404);
@@ -29,6 +33,11 @@ class GatewayRepository {
           NIN: true,
         },
       });
+
+      // Check if team members exist
+      if (teamMembers.length === 0) {
+        throw new CustomError("Team members not found.", 404);
+      }
 
       const formatted = teamMembers.map((m) => ({
         NationalIdentificationNumber: m.NIN ?? "N/A",

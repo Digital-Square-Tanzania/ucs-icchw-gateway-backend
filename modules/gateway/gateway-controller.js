@@ -14,6 +14,18 @@ class GatewayController {
       throw new CustomError(error.message, error.statusCode);
     }
   }
+
+  /**
+   * Register new CHW from HRHIS
+   */
+  static async registerChwFromHrhis(req, res, next) {
+    try {
+      const response = await GatewayService.registerChwFromHrhis(req, res, next);
+      res.status(201).json(response);
+    } catch (error) {
+      throw new CustomError(error.message, error.statusCode);
+    }
+  }
 }
 
 export default GatewayController;

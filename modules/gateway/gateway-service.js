@@ -2,7 +2,7 @@ import CustomError from "../../utils/custom-error.js";
 import GatewayRepository from "./gateway-repository.js";
 import openSRPApiClient from "../gateway/opensrp-api-client.js";
 import dotenv from "dotenv";
-import Joi from "joi";
+import GatewayValidator from "./gateway-validator.js";
 
 dotenv.config();
 
@@ -16,14 +16,7 @@ class GatewayService {
       const payload = {};
 
       // Validate month and year
-      const schema = Joi.object({
-        month: Joi.number().min(1).max(12).required(),
-        year: Joi.number().max(new Date().getFullYear()).required(),
-      });
-      const { error } = schema.validate({ month, year });
-      if (error) {
-        throw new CustomError(`Validation error: ${error.message}`, 400);
-      }
+      GatewayValidator.validateMonthAndYear(month, year);
 
       // Prepare payload for OpenSRP request
       const opensrpRequestPyload = {
@@ -77,7 +70,7 @@ class GatewayService {
     const month = body.month;
     const year = body.year;
 
-    console.log("-> Getting monthly status for team members: ");
+    console.log("--> Getting monthly status for team members: ");
     const payload = await this.getStatuses(month, year, teamMembers);
     const responseHeader = {};
     responseHeader.sender = header.receiver;
@@ -91,6 +84,23 @@ class GatewayService {
     responseObject.signature = signature;
     console.log("Statuses obtained and sent: ==>");
     return responseObject;
+  }
+
+  /*
+   * Register new CHW from HRHIS
+   */
+  static async registerChwFromHrhis(req, _res, _next) {
+    try {
+      const payload = req.body;
+
+      // Validate incoming CHW deployment payload
+      GatewayValidator.validateChwDemographics(payload);
+
+      return { message: "valid" };
+    } catch (error) {
+      // Rethrow with CustomError for the controller to catch
+      throw new CustomError(error.message, error.statusCode || 400);
+    }
   }
 }
 

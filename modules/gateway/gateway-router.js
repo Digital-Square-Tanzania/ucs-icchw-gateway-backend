@@ -7,4 +7,7 @@ const router = Router();
 // Get CHW activity status by HFR code
 router.post("/chw/status", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), OpenMRSGatewayController.checkChwMonthlyStatus);
 
+// Register new CHW from HRHIS
+router.post("/chw/register", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), OpenMRSGatewayController.registerChwFromHrhis);
+
 export default router;
