@@ -3,6 +3,8 @@ import GatewayRepository from "./gateway-repository.js";
 import openSRPApiClient from "../gateway/opensrp-api-client.js";
 import dotenv from "dotenv";
 import GatewayValidator from "./gateway-validator.js";
+import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
+import ResponseHelper from "../../helpers/response-helper.js";
 
 dotenv.config();
 
@@ -96,7 +98,13 @@ class GatewayService {
       // Validate incoming CHW deployment payload
       GatewayValidator.validateChwDemographics(payload);
 
-      return { message: "valid" };
+      // Check if the location exists
+      console.log("------------------> Checking location code: ", payload.message.body[0].locationCode);
+      const location = await OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
+      if (!location) {
+        throw new CustomError("Location not found.", 404);
+      }
+      return location;
     } catch (error) {
       // Rethrow with CustomError for the controller to catch
       throw new CustomError(error.message, error.statusCode || 400);

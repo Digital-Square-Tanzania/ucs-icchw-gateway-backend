@@ -219,6 +219,21 @@ class OpenMRSLocationRepository {
       },
     });
   }
+
+  // Fetch a single location by its locationCode (Code attribute)
+  static async getLocationByCode(code) {
+    const location = await prisma.openMRSLocation.findFirst({
+      where: {
+        locationCode: code,
+      },
+    });
+
+    if (!location) {
+      throw new CustomError(`Location with code '${code}' not found`, 404);
+    }
+
+    return location;
+  }
 }
 
 export default OpenMRSLocationRepository;
