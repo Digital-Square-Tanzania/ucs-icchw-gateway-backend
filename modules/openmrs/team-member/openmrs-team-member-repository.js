@@ -83,6 +83,13 @@ class TeamMemberRepository {
 
     return Promise.all(upsertPromises);
   }
+
+  // Get team member by NIN
+  static async getTeamMemberByNin(nin) {
+    return prisma.openMRSTeamMember.findFirst({
+      where: { NIN: nin },
+    });
+  }
 }
 
 export default TeamMemberRepository;

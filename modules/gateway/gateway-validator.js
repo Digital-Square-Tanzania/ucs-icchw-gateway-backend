@@ -43,13 +43,13 @@ class GatewayValidator {
                 .required(),
               hfrCode: Joi.string()
                 .pattern(/^\d{6}-\d$/)
-                .required()
-                .custom((value, helpers) => {
-                  if (!GatewayValidator.isValidHfrCode(value)) {
-                    return helpers.error("any.invalid");
-                  }
-                  return value;
-                }, "HFR Code Checksum Validation"),
+                .required(),
+              // .custom((value, helpers) => {
+              //   if (!GatewayValidator.isValidHfrCode(value)) {
+              //     return helpers.error("any.invalid");
+              //   }
+              //   return value;
+              // }, "HFR Code Checksum Validation"),
               locationCode: Joi.string().required(),
               locationType: Joi.string().required(),
             })

@@ -28,7 +28,7 @@ class TeamRepository {
         members: team.members,
         locationName: team.location.name,
         locationUuid: team.location.uuid,
-        createdAt: new Date(team.dateCreated),
+        createdAt: new Date(team?.dateCreated || Date.now()),
       },
     });
   }
@@ -49,6 +49,10 @@ class TeamRepository {
 
   static async getTeamByUuid(uuid) {
     return prisma.openMRSTeam.findUnique({ where: { uuid } });
+  }
+
+  static async getTeamByLocationUuid(locationUuid) {
+    return prisma.openMRSTeam.findFirst({ where: { locationUuid } });
   }
 }
 

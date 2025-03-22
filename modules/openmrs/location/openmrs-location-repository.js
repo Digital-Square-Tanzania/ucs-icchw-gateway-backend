@@ -221,10 +221,10 @@ class OpenMRSLocationRepository {
   }
 
   // Fetch a single location by its locationCode (Code attribute)
-  static async getLocationByCode(code) {
+  static async getLocationByHfrCode(hfrCode) {
     const location = await prisma.openMRSLocation.findFirst({
       where: {
-        locationCode: code,
+        hfrCode: hfrCode,
       },
     });
 
