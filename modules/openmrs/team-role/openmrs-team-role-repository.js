@@ -59,6 +59,16 @@ class TeamRoleRepository {
       })
     );
   }
+
+  // Get team role UUID by identifier
+  static async getTeamRoleUuidByIdentifier(identifier) {
+    return await prisma.openMRSTeamRole.findFirst({
+      where: { identifier },
+      select: {
+        uuid: true,
+      },
+    });
+  }
 }
 
 export default TeamRoleRepository;

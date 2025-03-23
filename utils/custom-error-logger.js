@@ -40,7 +40,7 @@ class CustomErrorLogger {
       level: "error",
       format: logFormat,
       transports: [
-        new winston.transports.Console({ level: "error" }), // Console output
+        // new winston.transports.Console({ level: "error" }), // Console output
         new winston.transports.File({ filename: path.join(logDir, "error.log"), level: "error" }), // Error log file
       ],
     });

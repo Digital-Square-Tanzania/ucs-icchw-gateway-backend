@@ -38,10 +38,14 @@ class OpenSRPApiClient {
   async post(endpoint, data) {
     try {
       const response = await this.client.post(endpoint, data);
+
+      if (!response.data) {
+        throw new CustomError("Resource is not available", 404);
+      }
       return response.data;
     } catch (error) {
-      console.error(`❌ OpenSRP POST Error (${endpoint}):`, error.response?.data || error.message);
-      throw new CustomError(`Failed to send data to OpenSRP (${endpoint}): ` + (error.response?.data || error.message));
+      console.error(`❌ OpenSRP POST Error (${endpoint}):`, error.message);
+      throw new CustomError(error.message, error.status);
     }
   }
 
@@ -54,7 +58,7 @@ class OpenSRPApiClient {
       return response.data;
     } catch (error) {
       console.error(`❌ OpenSRP PUT Error (${endpoint}):`, error.response?.data || error.message);
-      throw new CustomError(`Failed to update data on OpenSRP (${endpoint}): ` + (error.response?.data || error.message));
+      throw new CustomError(`Failed to update data on OpenSRP (${endpoint}): ` + (error.response?.data || error.message), 401);
     }
   }
 

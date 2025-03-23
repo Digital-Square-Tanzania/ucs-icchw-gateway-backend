@@ -1,7 +1,8 @@
 import CustomErrorLogger from "../utils/custom-error-logger.js";
 import CustomError from "../utils/custom-error.js";
+import ApiError from "../utils/api-error.js";
 
-class ErrorHandler {
+class ErrorHelper {
   errorLogger;
 
   constructor() {
@@ -17,15 +18,13 @@ class ErrorHandler {
    */
   async handleError(err, req, res, next) {
     try {
-      // Log the error using the custom logger
       await this.errorLogger.logError(err);
 
-      // Determine error type
       let statusCode = 500;
       let message = "Internal Server Error";
       let details = null;
+      let code = 0;
 
-      // Handle Joi validation errors (hapa tushapiga final task kwa validation issue)
       if (err.isJoi) {
         statusCode = 400;
         message = "Validation Error";
@@ -33,44 +32,48 @@ class ErrorHandler {
           field: detail.context.key,
           message: detail.message,
         }));
-      }
-      // Handle express-validator errors (if any)
-      else if (err.errors && Array.isArray(err.errors)) {
+      } else if (err.errors && Array.isArray(err.errors)) {
         statusCode = 400;
         message = "Validation Error";
         details = err.errors.map((error) => ({
           field: error.param,
           message: error.msg,
         }));
-      }
-      // Handle custom errors
-      else if (err instanceof CustomError) {
+      } else if (err instanceof ApiError) {
+        statusCode = err.statusCode || 500;
+        message = err.message || "API error occurred";
+        code = err.customCode || 0;
+      } else if (err instanceof CustomError) {
         statusCode = err.statusCode || 500;
         message = err.message || "An error occurred";
-      }
-      // Fallback for generic errors
-      else {
+      } else {
         message = err.message || message;
       }
 
-      // Create response payload
+      // 🔀 Decide which format to respond with
+      if (err instanceof ApiError) {
+        return res.status(statusCode).json({
+          status: "fail",
+          message,
+          code,
+        });
+      }
+
+      // 👇 Internal (frontend/backend) format
       const payload = {
-        authenticated: req.user ? true : false,
+        authenticated: !!req.user,
         message,
-        details, // Detailed error messages (if any)
-        // stack: err.stack, // Stack trace (for debugging)
+        details,
       };
 
-      // Send the error response
-      res.status(statusCode).json({
+      return res.status(statusCode).json({
         success: false,
         request: req.path,
         payload,
       });
     } catch (internalError) {
-      // Handle errors that occur within the error handler itself
       console.error("Error in ErrorHandler:", internalError);
-      res.status(500).json({
+      return res.status(500).json({
         success: false,
         message: "An unexpected error occurred while handling another error.",
       });
@@ -78,4 +81,4 @@ class ErrorHandler {
   }
 }
 
-export default ErrorHandler;
+export default ErrorHelper;

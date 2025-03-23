@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 import "express-async-errors";
-import ErrorHandler from "./helpers/error-handler.js";
+import ErrorHelper from "./helpers/error-helper.js";
 import AuthRouter from "./modules/auth/auth-router.js";
 import UserRouter from "./modules/user/user-router.js";
 import OpenMrsRouter from "./modules/openmrs/openmrs-router.js";
@@ -53,7 +53,7 @@ class AppServer {
   }
 
   initializeErrorHandling() {
-    const errorHandlerInstance = new ErrorHandler();
+    const errorHandlerInstance = new ErrorHelper();
     // Global error handler
     this.app.use((err, req, res, next) => {
       errorHandlerInstance.handleError(err, req, res, next);

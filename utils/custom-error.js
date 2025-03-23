@@ -1,5 +1,5 @@
 /**
- * @file custon-error.js
+ * @file custom-error.js
  * @description Custom Error class to standardize error handling.
  */
 

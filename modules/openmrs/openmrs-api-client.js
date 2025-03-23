@@ -1,6 +1,7 @@
 import axios from "axios";
 import dotenv from "dotenv";
 import CustomError from "../../utils/custom-error.js";
+import ApiError from "../../utils/api-error.js";
 
 dotenv.config();
 
@@ -28,7 +29,7 @@ class OpenMRSApiClient {
       return response.data;
     } catch (error) {
       console.error(`❌ OpenMRS GET Error (${endpoint}):`, error.response?.data || error.message);
-      throw new CustomError(`❌ Failed to fetch data from OpenMRS (${endpoint})` + error.response?.data || error.message);
+      throw new CustomError(`❌ Failed to fetch data from OpenMRS (${endpoint})` + error.response?.data.error.message || error.message);
     }
   }
 
@@ -41,7 +42,7 @@ class OpenMRSApiClient {
       return response.data;
     } catch (error) {
       console.error(`❌ OpenMRS POST Error (${endpoint}):`, error.response?.data || error.message);
-      throw new CustomError(`Failed to send data to OpenMRS (${endpoint})`);
+      throw new ApiError(error.response?.data.error.message || error.message, 400, 3);
     }
   }
 
@@ -54,7 +55,7 @@ class OpenMRSApiClient {
       return response.data;
     } catch (error) {
       console.error(`❌ OpenMRS PUT Error (${endpoint}):`, error.response?.data || error.message);
-      throw new CustomError(`Failed to update data on OpenMRS (${endpoint})`);
+      throw new CustomError(`Failed to update data on OpenMRS (${endpoint}): ${error.response?.data.error.message || error.message}`);
     }
   }
 
