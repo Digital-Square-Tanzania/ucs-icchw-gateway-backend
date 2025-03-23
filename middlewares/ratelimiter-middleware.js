@@ -47,5 +47,8 @@ export const createUserRateLimiter = rateLimiter.createLimiter(10); // 10 for st
 export const updateUserRateLimiter = rateLimiter.createLimiter(5);
 export const deleteUserRateLimiter = rateLimiter.createLimiter(5);
 export const searchUserRateLimiter = rateLimiter.createLimiter(10); // 10 for standard, 100 for UCS_DEVELOPER
+export const updateChwDemographicsRateLimiter = rateLimiter.createLimiter(2);
+export const checkChwMonthlyStatusRateLimiter = rateLimiter.createLimiter(2);
+export const registerChwFromHrhisRateLimiter = rateLimiter.createLimiter(50);
 
 export default RoleBasedRateLimiter;
