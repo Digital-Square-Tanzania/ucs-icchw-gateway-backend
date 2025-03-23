@@ -38,7 +38,7 @@ class URLSyncSeeder {
 
     try {
       console.log("🔄 Syncing Team Members...");
-      // await teamMemberService.syncTeamMembers();
+      await teamMemberService.syncTeamMembers();
       console.log("✅ Team Members sync completed.");
     } catch (error) {
       console.error("❌ Error syncing Team Members:", error.message);
