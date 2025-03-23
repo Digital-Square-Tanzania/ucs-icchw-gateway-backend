@@ -1,4 +1,4 @@
-import CustomError from "../../utils/custom-error.js";
+import ApiError from "../../utils/api-error.js";
 import GatewayService from "./gateway-service.js";
 
 class GatewayController {
@@ -10,7 +10,7 @@ class GatewayController {
       const monthlyStatuses = await GatewayService.getChwMonthlyStatus(req, res, next);
       res.status(200).json(monthlyStatuses);
     } catch (error) {
-      throw new CustomError(error.message, error.statusCode);
+      throw new ApiError(error.message, error.statusCode);
     }
   }
 
@@ -22,7 +22,7 @@ class GatewayController {
       const response = await GatewayService.registerChwFromHrhis(req, res, next);
       res.status(201).json(response);
     } catch (error) {
-      throw new CustomError(error.message, error.statusCode);
+      throw new ApiError(error.message, error.statusCode);
     }
   }
 }
