@@ -256,6 +256,16 @@ model OpenMRSPersonAttribute {
   @@map("openmrs_person_attributes")
 }
 
+model OpenMRSUsernameCounter {
+  id        Int      @id @default(autoincrement())
+  NIN       String   @unique @map("nin")
+  counter   Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("openmrs_username_counters")
+}
+
 model DHIS2OrgUnit {
   id          String   @id @default(uuid())
   uuid        String   @unique

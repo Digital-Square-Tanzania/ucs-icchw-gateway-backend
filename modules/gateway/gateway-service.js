@@ -194,7 +194,11 @@ class GatewayService {
       // Create a new OpenMRS user
       const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName("iCCHW");
       const userObject = {};
-      userObject.username = payload.message.body[0].phoneNumber.replace("+255", "0");
+      const phone = payload.message.body[0].phoneNumber;
+      const firstName = payload.message.body[0].firstName || "";
+      const lastName = payload.message.body[0].lastName || "";
+
+      userObject.username = phone && phone.startsWith("+255") ? phone.replace("+255", "0") : (firstName.substring(0, 2) + lastName.substring(0, 2)).toLowerCase();
       userObject.password = this.generateSwahiliPassword();
       userObject.roles = [roleUuid];
       userObject.person = {};
@@ -405,6 +409,169 @@ class GatewayService {
       console.log("✅ CHW demographic updates processed.");
       return results;
     } catch (error) {
+      throw new CustomError(error.message, error.statusCode || 400);
+    }
+  }
+
+  /*
+   * Change CHW duty station
+   */
+  static async changeChwDutyStation(req, _res, _next) {
+    console.log("🔄 Changing CHW Duty Station...");
+    try {
+      const payload = req.body;
+
+      // Validate payload (e.g., NIN and new HFR code)
+      GatewayValidator.validateChwDutyStationChange(payload);
+
+      const chw = payload.message.body[0];
+      const existingMember = await TeamMemberRepository.getTeamMemberByNin(chw.NIN);
+      const existingHfrCode = await TeamMemberRepository.getLocationHfrCodeByUuid(existingMember.locationUuid);
+      console.log("EXISTING HFR", existingHfrCode);
+      console.log("INCOMING HFR", chw.newHfrCode);
+      // Check if the HFR code is new
+      if (existingHfrCode === chw.newHfrCode) {
+        throw new ApiError(`This is the current ${existingMember.firstName} ${existingMember.lastName}'s Location. No change!`, 400, 4);
+      }
+
+      const newLocation = await OpenMRSLocationRepository.getLocationByHfrCode(chw.newHfrCode);
+      if (!newLocation) {
+        throw new ApiError(`Invalid HFR code ${chw.newHfrCode}`, 404, 5);
+      }
+
+      if (!existingMember || !existingMember.openMrsUuid) {
+        throw new ApiError(`CHW with NIN ${chw.NIN} not found.`, 404, 6);
+      }
+
+      // 1. Get the existing OpenMRS team member details
+      const currentTeamMember = await openmrsApiClient.get(`team/teammember/${existingMember.openMrsUuid}`, {
+        v: "full",
+      });
+
+      // 2. Void the old team member in OpenMRS
+      await openmrsApiClient.post(`team/teammember/${existingMember.openMrsUuid}?!purge`, {
+        voided: true,
+        voidReason: "Duty-Station-Change",
+      });
+
+      // Step 1: Get existing user by username
+      const phone = existingMember.phoneNumber;
+      const existingUsername =
+        phone && phone.startsWith("+255")
+          ? phone.replace("+255", "0")
+          : (existingMember.firstName?.substring(0, 2) + existingMember.lastName?.substring(0, 2)).toLowerCase() + Math.floor(100 + Math.random() * 900);
+
+      const existingUsers = await openmrsApiClient.get(`user`, {
+        q: existingUsername,
+        v: "custom:(uuid,username,person:(uuid),retired)",
+      });
+
+      const existingUser = existingUsers?.results?.find((user) => user.username === existingUsername);
+
+      // Step 2: Retire the existing user if found and not already retired
+      if (existingUser && !existingUser.retired) {
+        // 1. Retire the user
+        await openmrsApiClient.delete(`user/${existingUser.uuid}?reason=Duty Station Change&purge=true`);
+      }
+
+      // Step 3: Create new user (same username, new password, and same person UUID)
+      const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName("iCCHW");
+
+      let usernameCounter = await TeamMemberRepository.getUsernameCounterByNin(chw.NIN);
+      let counter = usernameCounter?.counter || 0;
+
+      const counterTicker = Number(counter) + 1;
+      console.log("COUNTER TICKER", counterTicker);
+
+      await TeamMemberRepository.updateUsernameCounterStats(chw.NIN, counterTicker);
+
+      const newUserObject = {
+        username: existingUsername + "_" + counterTicker,
+        password: this.generateSwahiliPassword(),
+        roles: [roleUuid],
+        person: {
+          uuid: currentTeamMember.person.uuid,
+        },
+        systemId: existingUsername + "_" + counterTicker,
+      };
+
+      const newUser = await openmrsApiClient.post("user", newUserObject);
+
+      if (!newUser) {
+        throw new ApiError("User could not be created after duty station change", 400, 3);
+      }
+
+      // Step 4. Check if team exists at new location
+      let newTeam = await TeamRepository.getTeamByLocationUuid(newLocation.uuid);
+      if (!newTeam) {
+        const teamName = newLocation.name + " - " + newLocation.hfrCode + " - Team";
+        const teamIdentifier = teamName.replace(/-/g, "").replace(/\s+/g, "").toLowerCase();
+        const teamObject = {
+          location: newLocation.uuid,
+          teamName,
+          teamIdentifier,
+        };
+        newTeam = await openmrsApiClient.post("team/team", teamObject);
+        await TeamRepository.upsertTeam(newTeam);
+      }
+
+      // Step 5. Create new team member using same person UUID and teamRole
+      const newTeamMemberObject = {
+        identifier: existingMember.username + "_" + counterTicker + newLocation.hfrCode.replace("-", ""),
+        locations: [{ uuid: newLocation.uuid }],
+        joinDate: new Date().toISOString().split("T")[0],
+        team: { uuid: newTeam.uuid },
+        // teamRole: { uuid: currentTeamMember.teamRole?.uuid },
+        teamRole: currentTeamMember.teamRole?.uuid,
+        person: { uuid: currentTeamMember.person.uuid },
+        isDataProvider: "false",
+      };
+
+      const newTeamMember = await openmrsApiClient.post("team/teammember", newTeamMemberObject);
+
+      // Step 6. Get updated member details
+      const updatedDetails = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}`, {
+        v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
+      });
+
+      const formatted = {
+        identifier: updatedDetails.identifier,
+        firstName: updatedDetails.person?.preferredName?.givenName,
+        middleName: updatedDetails.person?.preferredName?.middleName,
+        lastName: updatedDetails.person?.preferredName?.familyName,
+        personUuid: updatedDetails.person?.uuid,
+        username: newUser.username,
+        userUuid: newUser.uuid,
+        NIN: existingMember.NIN,
+        phoneNumber: existingMember.phoneNumber,
+        email: existingMember.email,
+        openMrsUuid: updatedDetails.uuid,
+        teamUuid: updatedDetails.team?.uuid,
+        teamName: updatedDetails.team?.teamName,
+        teamIdentifier: updatedDetails.team?.teamIdentifier,
+        locationUuid: updatedDetails.team?.location?.uuid,
+        locationName: updatedDetails.team?.location?.name,
+        locationDescription: updatedDetails.team?.location?.description,
+        roleUuid: updatedDetails.teamRole?.uuid,
+        roleName: updatedDetails.teamRole?.name,
+        updatedAt: new Date(),
+      };
+
+      // Step 7. Update local DB record
+      const localUpdated = await TeamMemberRepository.upsertTeamMember(formatted);
+
+      console.log("✅ Duty station changed successfully.");
+      await EmailService.sendEmail({
+        to: formatted.email,
+        subject: "Kubadili Akaunti ya UCS/WAJA",
+        text: `Tumepokea maombi ya kuhamisha akaunti yako kutoka kituo ulichokuwa awali ${existingMember.teamName} kwenda kwenye kituo chako kipya cha kazi ${formatted.teamName}. Jina la kutumia kwa akaunti hii ni: ${formatted.username}. Tafadhali tumia link hii hapa chini kuhuisha upya akaunti yako mpya: https://ucs.moh.go.tz/user-management/move?username=${formatted.username}`,
+        html: `<p>Tumepokea maombi ya kuhamisha akaunti yako kutoka kituo ulichokuwa awali ${existingMember.teamName} kwenda kwenye kituo chako kipya cha kazi ${formatted.teamName}.</p> <p>Jina la kutumia kwa akaunti hii ni: <em>${formatted.username}</em>.</p> <p>Tafadhali tumia link hii hapa chini kuhuisha upya akaunti yako mpya:</p>
+           <p><a href="https://ucs.moh.go.tz/user-management/move?username=${formatted.username}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Huisha Akaunti</a></p>`,
+      });
+
+      return "CHW duty station changed successfully!";
+    } catch (error) {
+      console.error("❌ Error in changing duty station:", error.stack);
       throw new CustomError(error.message, error.statusCode || 400);
     }
   }

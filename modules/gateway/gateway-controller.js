@@ -33,9 +33,21 @@ class GatewayController {
   static async updateChwDemographics(req, res, next) {
     try {
       const response = await GatewayService.updateChwDemographics(req, res, next);
-      return GatewayHelper.success(req, res, response, 1, 202);
+      return GatewayHelper.success(req, res, response, 1, 200);
     } catch (error) {
       return GatewayHelper.error(req, res, error.message, 3, error.statusCode);
+    }
+  }
+
+  /*
+   * Change CHW duty station
+   */
+  static async changeChwDutyStation(req, res, next) {
+    try {
+      const response = await GatewayService.changeChwDutyStation(req, res, next);
+      return GatewayHelper.success(req, res, response, 1, 200);
+    } catch (error) {
+      return GatewayHelper.error(req, res, error.message, error.customCode || 3, error.statusCode);
     }
   }
 }
