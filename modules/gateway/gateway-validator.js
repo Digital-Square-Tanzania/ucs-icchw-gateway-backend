@@ -121,6 +121,50 @@ class GatewayValidator {
       throw new CustomError(`Validation error in demographic update: ${error.message}`, 400);
     }
   }
+
+  /*
+   * Validate CHW duty station change payload
+   */
+  static validateChwDutyStationChange(payload) {
+    const schema = Joi.object({
+      message: Joi.object({
+        header: Joi.object({
+          sender: Joi.string().required(),
+          receiver: Joi.string().required(),
+          messageType: Joi.string().valid("CHW_DUTY_POST_CHANGE").required(),
+          messageId: Joi.string().required(),
+          createdAt: Joi.date().iso().required(),
+        }).required(),
+        body: Joi.array()
+          .items(
+            Joi.object({
+              NIN: Joi.string()
+                .pattern(/^\d{8}-\d{5}-\d{5}-\d{2}$/)
+                .required()
+                .messages({
+                  "string.pattern.base": "NIN must follow the format: 19570716-42150-00010-77",
+                }),
+              newHfrCode: Joi.string()
+                .pattern(/^\d{6}-\d$/)
+                .required()
+                .messages({
+                  "string.pattern.base": "newHfrCode must follow the format: 100056-9",
+                }),
+            })
+          )
+          .required()
+          .messages({
+            "any.required": "CHW duty station change body is required",
+          }),
+      }).required(),
+    });
+
+    const { error } = schema.validate(payload);
+
+    if (error) {
+      throw new CustomError(`Validation error: ${error.message}`, 400);
+    }
+  }
 }
 
 export default GatewayValidator;

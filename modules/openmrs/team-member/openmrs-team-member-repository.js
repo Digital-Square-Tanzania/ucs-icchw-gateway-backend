@@ -135,6 +135,41 @@ class TeamMemberRepository {
       where: { NIN: nin },
     });
   }
+
+  // Get username counter by NIN
+  static async getUsernameCounterByNin(nin) {
+    return prisma.openMRSUsernameCounter.findFirst({
+      where: { NIN: nin },
+      select: { counter: true },
+    });
+  }
+
+  // Update counter stats
+  static async updateUsernameCounterStats(nin, counter) {
+    return prisma.openMRSUsernameCounter.upsert({
+      where: {
+        NIN: nin,
+      },
+      update: {
+        counter: parseInt(counter),
+        updatedAt: new Date(),
+      },
+      create: {
+        NIN: nin,
+        counter: 1,
+      },
+    });
+  }
+
+  // Get location HFR code by locationUuid
+  static async getLocationHfrCodeByUuid(locationUuid) {
+    const location = await prisma.openMRSLocation.findUnique({
+      where: { uuid: locationUuid },
+      select: { hfrCode: true },
+    });
+
+    return location ? location.hfrCode : null;
+  }
 }
 
 export default TeamMemberRepository;

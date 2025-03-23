@@ -228,10 +228,6 @@ class OpenMRSLocationRepository {
       },
     });
 
-    if (!location) {
-      throw new CustomError(`Location with code '${code}' not found`, 404);
-    }
-
     return location;
   }
 }
