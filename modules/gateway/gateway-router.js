@@ -10,4 +10,7 @@ router.post("/chw/status", AuthMiddleware.authenticate, AuthMiddleware.authorize
 // Register new CHW from HRHIS
 router.post("/chw/register", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), OpenMRSGatewayController.registerChwFromHrhis);
 
+// Update CHW demographics from HRHIS
+router.put("/chw/update", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), OpenMRSGatewayController.updateChwDemographics);
+
 export default router;

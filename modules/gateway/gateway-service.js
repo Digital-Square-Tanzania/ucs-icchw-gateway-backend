@@ -15,14 +15,18 @@ import EmailService from "../../utils/email-service.js";
 dotenv.config();
 
 class GatewayService {
+  /*
+   * Get team members by location HFR code
+   */
   static async getTeamMemberByLocationHfrCode(hfrCode) {
     return await GatewayRepository.getTeamMembersByLocationHfrCode(hfrCode);
   }
 
+  /*
+   * Get CHW monthly activity status
+   */
   static async getStatuses(month, year, teamMembers) {
     try {
-      const payload = {};
-
       // Validate month and year
       GatewayValidator.validateMonthAndYear(month, year);
 
@@ -42,14 +46,15 @@ class GatewayService {
         throw new CustomError("CHW monthly activity statistics not found.", 404);
       }
 
-      payload.statuses = chwMonthlyStatusResponse;
-      payload.messageId = await this.generateMessageId();
-      return payload;
+      return chwMonthlyStatusResponse;
     } catch (error) {
       throw new CustomError(error.message, error.statusCode);
     }
   }
 
+  /*
+   * Generate message ID
+   */
   static async generateMessageId() {
     const now = new Date();
 
@@ -80,18 +85,8 @@ class GatewayService {
 
     console.log("🔄 Getting monthly status for team members...");
     const payload = await this.getStatuses(month, year, teamMembers);
-    const responseHeader = {};
-    responseHeader.sender = header.receiver;
-    responseHeader.receiver = header.sender;
-    responseHeader.messageType = header.messageType.endsWith("_REQUEST") ? header.messageType.replace("_REQUEST", "_RESPONSE") : header.messageType;
-    responseHeader.messageId = payload.messageId;
-    responseHeader.createdAt = new Date().toISOString();
-    const responseObject = {};
-    responseObject.header = responseHeader;
-    responseObject.body = payload.statuses;
-    responseObject.signature = signature;
     console.log("✅ Statuses obtained and sent!");
-    return responseObject;
+    return payload;
   }
 
   /*
@@ -135,8 +130,6 @@ class GatewayService {
 
         // Save the returned object as a new team in the database
         await TeamRepository.upsertTeam(newTeam);
-
-        // return localTeam;
       }
 
       // Create a new person if team member does not exist by NIN
@@ -300,9 +293,9 @@ class GatewayService {
       await EmailService.sendEmail({
         to: formattedMember.email,
         subject: "Kufungua Akaunti ya UCS/WAJA",
-        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi cha kazi (Tablet): https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}`,
-        html: `<p>Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi chako (Tablet):</p>
-           <p><a href="https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}">Fungua Akaunti</a></p>`,
+        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}`,
+        html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
+           <p><a href="https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>`,
       });
 
       return "Facility and personnel details processed successfully.";
@@ -312,6 +305,113 @@ class GatewayService {
     }
   }
 
+  /*
+   * Update CHW demographics from HRHIS
+   */
+  static async updateChwDemographics(req, _res, _next) {
+    try {
+      const payload = req.body;
+
+      // ✅ Validate the payload
+      GatewayValidator.validateChwDemographicUpdate(payload);
+
+      // Normalize to array if single object is provided
+      const chwUpdates = Array.isArray(payload.message.body) ? payload.message.body : [payload.message.body];
+
+      const results = [];
+
+      for (const chw of chwUpdates) {
+        const teamMember = await TeamMemberRepository.getTeamMemberByNin(chw.NIN);
+
+        if (!teamMember || !teamMember.openMrsUuid) {
+          throw new ApiError(`CHW with NIN ${chw.NIN} not found in UCS.`, 404, 6);
+        }
+
+        // Get full team member info to access person uuid
+        const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, {
+          v: "custom:(uuid,person:(uuid))",
+        });
+
+        const personUuid = teamMemberDetails.person?.uuid;
+        if (!personUuid) {
+          throw new ApiError(`Person UUID not found for NIN ${chw.NIN}`, 400, 7);
+        }
+
+        // Fetch the full person details to fallback missing values
+        const existingPerson = await openmrsApiClient.get(`person/${personUuid}`, {
+          v: "full",
+        });
+
+        const personUpdatePayload = {};
+        const updatedFields = [];
+
+        // ✅ Gender
+        if (chw.sex && (chw.sex.toUpperCase() === "MALE" || chw.sex.toUpperCase() === "FEMALE")) {
+          const gender = chw.sex.toUpperCase() === "MALE" ? "M" : "F";
+          if (gender !== existingPerson.gender) {
+            personUpdatePayload.gender = gender;
+            updatedFields.push("sex");
+          }
+        }
+
+        // ✅ Names
+        const existingName = existingPerson.preferredName || {};
+        const nameUpdate = {};
+        const nameFieldsChanged = {};
+
+        if (chw.firstName && chw.firstName !== existingName.givenName) {
+          nameUpdate.givenName = chw.firstName;
+          nameFieldsChanged.firstName = true;
+        }
+        if (chw.middleName !== undefined && chw.middleName !== existingName.middleName) {
+          nameUpdate.middleName = chw.middleName;
+          nameFieldsChanged.middleName = true;
+        }
+        if (chw.lastName && chw.lastName !== existingName.familyName) {
+          nameUpdate.familyName = chw.lastName;
+          nameFieldsChanged.lastName = true;
+        }
+
+        if (Object.keys(nameFieldsChanged).length > 0) {
+          // Ensure required values are always present
+          nameUpdate.givenName = nameUpdate.givenName || existingName.givenName || "";
+          nameUpdate.middleName = nameUpdate.middleName !== undefined ? nameUpdate.middleName : existingName.middleName || null;
+          nameUpdate.familyName = nameUpdate.familyName || existingName.familyName || "";
+
+          personUpdatePayload.names = [nameUpdate];
+
+          updatedFields.push(...Object.keys(nameFieldsChanged));
+        }
+
+        // 🧠 Only update if there is something to update
+        if (Object.keys(personUpdatePayload).length > 0) {
+          await openmrsApiClient.post(`person/${personUuid}`, personUpdatePayload);
+          results.push({
+            message: "CHW demographic updated.",
+            nin: chw.NIN,
+            personUuid,
+            updatedFields,
+          });
+        } else {
+          results.push({
+            message: "No changes detected for CHW.",
+            nin: chw.NIN,
+            personUuid,
+            updatedFields: [],
+          });
+        }
+      }
+
+      console.log("✅ CHW demographic updates processed.");
+      return results;
+    } catch (error) {
+      throw new CustomError(error.message, error.statusCode || 400);
+    }
+  }
+
+  /*
+   * Extract date from NIN
+   */
   static extractDateFromNIN(nin) {
     // Ensure NIN is in the expected format
     const match = nin.match(/^(\d{8})-\d{5}-\d{5}-\d{2}$/);
@@ -327,7 +427,9 @@ class GatewayService {
     return `${year}-${month}-${day}`;
   }
 
-  // Random password generator
+  /*
+   * Random password generator
+   */
   static generateRandomPassword() {
     const length = 8;
     const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -338,7 +440,9 @@ class GatewayService {
     return retVal;
   }
 
-  // Swahili password generator
+  /*
+   * Swahili password generator
+   */
   static generateSwahiliPassword() {
     const rawWords = process.env.SWAHILI_WORDS || "";
     const swahiliWords = rawWords
@@ -356,6 +460,25 @@ class GatewayService {
     const number = Math.floor(100 + Math.random() * 900); // 3-digit number
 
     return `${word1}${word2}${number}`;
+  }
+
+  /*
+   * Generate HRHIS Response Parts
+   */
+
+  static async generateHrhisReponseParts(req) {
+    const header = req.body.message.header;
+    const signature = req.body.signature;
+    const responseHeader = {};
+    responseHeader.sender = header.receiver;
+    responseHeader.receiver = header.sender;
+    responseHeader.messageType = header.messageType.endsWith("_REQUEST") ? header.messageType.replace("_REQUEST", "_RESPONSE") : header.messageType + "_RESPONSE";
+    responseHeader.messageId = this.generateMessageId;
+    responseHeader.createdAt = new Date().toISOString();
+    const responseObject = {};
+    responseObject.header = responseHeader;
+    responseObject.signature = signature;
+    return responseObject;
   }
 }
 

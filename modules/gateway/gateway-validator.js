@@ -36,7 +36,7 @@ class GatewayValidator {
               NIN: Joi.string()
                 .pattern(/^\d{8}-\d{5}-\d{5}-\d{2}$/)
                 .required(),
-              sex: Joi.string().valid("MALE", "FEMALE").required(),
+              sex: Joi.string().valid("MALE", "FEMALE", "Male", "Female").required(),
               email: Joi.string().email().required(),
               phoneNumber: Joi.string()
                 .pattern(/^\+255[67]\d{8}$/)
@@ -65,6 +65,9 @@ class GatewayValidator {
     }
   }
 
+  /*
+   * Validate HFR Code
+   */
   static isValidHfrCode(code) {
     const match = code.match(/^(\d{6})-(\d)$/);
     if (!match) return false;
@@ -78,6 +81,45 @@ class GatewayValidator {
     const checkDigit = parseInt(checkDigitStr, 10);
 
     return mod === checkDigit;
+  }
+
+  /**
+   * Validate CHW demographic update payload
+   */
+  static validateChwDemographicUpdate(payload) {
+    const chwSchema = Joi.object({
+      NIN: Joi.string()
+        .pattern(/^\d{8}-\d{5}-\d{5}-\d{2}$/)
+        .required(),
+      firstName: Joi.string().min(2),
+      middleName: Joi.string().allow(null, "").optional(),
+      lastName: Joi.string().min(2),
+      sex: Joi.string().valid("MALE", "FEMALE", "Male", "Female"),
+    });
+
+    const schema = Joi.object({
+      message: Joi.object({
+        header: Joi.object({
+          sender: Joi.string().required(),
+          receiver: Joi.string().required(),
+          messageType: Joi.string().valid("CHW_DEMOGRAPHIC_UPDATE").required(),
+          messageId: Joi.string().required(),
+          createdAt: Joi.date().iso().required(),
+        }).required(),
+        body: Joi.alternatives()
+          .try(
+            chwSchema, // for single object
+            Joi.array().items(chwSchema).min(1) // for multiple objects
+          )
+          .required(),
+      }).required(),
+    });
+
+    const { error } = schema.validate(payload, { abortEarly: false });
+
+    if (error) {
+      throw new CustomError(`Validation error in demographic update: ${error.message}`, 400);
+    }
   }
 }
 
