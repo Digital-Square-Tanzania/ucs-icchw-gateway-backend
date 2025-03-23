@@ -18,12 +18,11 @@ class GatewayRepository {
         },
       });
 
-      console.log("Location", location);
-
       if (!location) {
         throw new CustomError("Location with provided HFR code not found.", 404);
       }
 
+      // Step 2: Find team members by location UUID
       const teamMembers = await prisma.openMRSTeamMember.findMany({
         where: {
           locationUuid: location.uuid,
@@ -34,7 +33,7 @@ class GatewayRepository {
         },
       });
 
-      // Check if team members exist
+      // Step 3: Format response
       if (teamMembers.length === 0) {
         throw new CustomError("Team members not found.", 404);
       }
@@ -43,6 +42,8 @@ class GatewayRepository {
         NationalIdentificationNumber: m.NIN ?? "N/A",
         OpenmrsProviderId: m.username,
       }));
+
+      // Step 4: Return response
       return formatted;
     } catch (error) {
       throw new CustomError(error.message, error.statusCode);

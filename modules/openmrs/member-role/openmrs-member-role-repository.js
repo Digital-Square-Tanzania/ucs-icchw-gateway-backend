@@ -46,6 +46,16 @@ class MemberRoleRepository {
       },
     });
   }
+
+  // Get member roles by role name
+  static async getRoleUuidByRoleName(name) {
+    return await prisma.openMRSMemberRole.findFirst({
+      where: { name },
+      select: {
+        uuid: true,
+      },
+    });
+  }
 }
 
 export default MemberRoleRepository;

@@ -37,8 +37,6 @@ class OpenSRPApiClient {
    */
   async post(endpoint, data) {
     try {
-      console.log("➡️  OpenSRP API POST:", this.client.defaults.baseURL + endpoint);
-
       const response = await this.client.post(endpoint, data);
 
       if (!response.data) {

@@ -8,6 +8,8 @@ import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repo
 import TeamRepository from "../openmrs/team/openmrs-openmrs-team-repository.js";
 import openmrsApiClient from "../openmrs/openmrs-api-client.js";
 import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-repository.js";
+import MemberRoleRepository from "../openmrs/member-role/openmrs-member-role-repository.js";
+import TeamRoleRepository from "../openmrs/team-role/openmrs-team-role-repository.js";
 
 dotenv.config();
 
@@ -75,7 +77,7 @@ class GatewayService {
     const month = body.month;
     const year = body.year;
 
-    console.log("--> Getting monthly status for team members: ");
+    console.log("🔄 Getting monthly status for team members...");
     const payload = await this.getStatuses(month, year, teamMembers);
     const responseHeader = {};
     responseHeader.sender = header.receiver;
@@ -87,7 +89,7 @@ class GatewayService {
     responseObject.header = responseHeader;
     responseObject.body = payload.statuses;
     responseObject.signature = signature;
-    console.log("Statuses obtained and sent: ==>");
+    console.log("✅ Statuses obtained and sent!");
     return responseObject;
   }
 
@@ -95,6 +97,7 @@ class GatewayService {
    * Register new CHW from HRHIS
    */
   static async registerChwFromHrhis(req, _res, _next) {
+    console.log("🔄 Registering CHW from HRHIS...");
     try {
       const payload = req.body;
 
@@ -130,11 +133,10 @@ class GatewayService {
         const newTeam = await openmrsApiClient.post("team/team", teamObject);
 
         // Save the returned object as a new team in the database
-        const localTeam = await TeamRepository.upsertTeam(newTeam);
+        await TeamRepository.upsertTeam(newTeam);
 
-        return localTeam;
+        // return localTeam;
       }
-      // return team;
 
       // Create a new person if team member does not exist by NIN
       const personObject = {};
@@ -152,7 +154,151 @@ class GatewayService {
       // Create the person in OpenMRS
       const newPerson = await openmrsApiClient.post("person", personObject);
 
-      return newPerson;
+      // Safely construct attributes
+      const personAttributes = [
+        {
+          attributeType: process.env.NIN_ATTRIBUTE_TYPE_UUID,
+          value: payload.message.body[0].NIN,
+          label: "NIN",
+        },
+        {
+          attributeType: process.env.EMAIL_ATTRIBUTE_TYPE_UUID,
+          value: payload.message.body[0].email,
+          label: "Email",
+        },
+        {
+          attributeType: process.env.PHONE_NUMBER_ATTRIBUTE_TYPE_UUID,
+          value: payload.message.body[0].phoneNumber,
+          label: "Phone Number",
+        },
+      ];
+
+      // Validate all attributeType UUIDs exist
+      for (const attr of personAttributes) {
+        if (!attr.attributeType) {
+          throw new ApiError(`Missing environment variable for ${attr.label} attribute type UUID`, 500, 10);
+        }
+      }
+
+      // Loop through and add each attribute
+      for (const attr of personAttributes) {
+        try {
+          const payload = {
+            attributeType: attr.attributeType,
+            value: attr.value,
+          };
+          if (!attr.attributeType) {
+            throw new ApiError(`Missing attributeType UUID for attribute with value: ${attr.value}`, 500, 10);
+          }
+          await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, payload);
+        } catch (error) {
+          console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
+          throw new ApiError(`Error saving person ${attr.label} attribute: ${error.message}`, 500, 5);
+        }
+      }
+
+      // Create a new OpenMRS user
+      const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName("iCCHW");
+      const userObject = {};
+      userObject.username = payload.message.body[0].phoneNumber.replace("+255", "0");
+      userObject.password = this.generateSwahiliPassword();
+      userObject.roles = [roleUuid];
+      userObject.person = {};
+      userObject.person.uuid = newPerson.uuid;
+      userObject.systemId = userObject.username;
+
+      // Create the user in OpenMRS
+      const newUser = await openmrsApiClient.post("user", userObject);
+
+      if (!newUser) {
+        throw new ApiError(`User could not be created: +${error.message}`, 400, 3);
+      }
+
+      // Create a new team member in OpenMRS
+      const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier("waja");
+      const teamMemberObject = {
+        identifier: newUser.username + location.hfrCode.replace("-", ""),
+        locations: [
+          {
+            uuid: location.uuid,
+          },
+        ],
+        joinDate: new Date().toISOString().split("T")[0],
+        team: {
+          uuid: team.uuid,
+        },
+        teamRole: {
+          uuid: identifierRole.uuid,
+        },
+        person: {
+          uuid: newPerson.uuid,
+        },
+        isDataProvider: "false",
+      };
+
+      // Create the team member in OpenMRS
+      const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
+
+      const newTeamMemberDetails = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}`, {
+        v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
+      });
+
+      let formattedMember = {};
+
+      // Extract attributes for NIN, email, and phoneNumber
+      let nin = null;
+      let email = null;
+      let phoneNumber = null;
+
+      if (newTeamMemberDetails.person?.attributes?.length) {
+        for (const attr of newTeamMemberDetails.person.attributes) {
+          if (attr.attributeType?.display === "NIN") {
+            nin = attr.value;
+          } else if (attr.attributeType?.display === "email") {
+            email = attr.value;
+          } else if (attr.attributeType?.display === "phoneNumber") {
+            phoneNumber = attr.value;
+          }
+        }
+      }
+
+      // Format team member data
+      formattedMember = {
+        identifier: newTeamMemberDetails.identifier,
+        firstName: newTeamMemberDetails.person?.preferredName?.givenName || "",
+        middleName: newTeamMemberDetails.person?.preferredName?.middleName || null,
+        lastName: newTeamMemberDetails.person?.preferredName?.familyName || "",
+        username: newUser.username,
+        userUuid: newUser.uuid,
+        personUuid: newTeamMemberDetails.person?.uuid,
+        openMrsUuid: newTeamMemberDetails.uuid,
+        teamUuid: newTeamMemberDetails.team?.uuid || null,
+        teamName: newTeamMemberDetails.team?.teamName || null,
+        teamIdentifier: newTeamMemberDetails.team?.teamIdentifier || null,
+        locationUuid: newTeamMemberDetails.team?.location?.uuid || null,
+        locationName: newTeamMemberDetails.team?.location?.name || null,
+        locationDescription: newTeamMemberDetails.team?.location?.description || null,
+        roleUuid: newTeamMemberDetails.teamRole?.uuid || null,
+        roleName: newTeamMemberDetails.teamRole?.name || null,
+        NIN: nin,
+        email,
+        phoneNumber,
+        createdAt: new Date(newTeamMemberDetails.dateCreated),
+      };
+
+      // Save the returned object as a new team member in the database
+      const localTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
+      console.log("✅ CHW from HRHIS registered successfuly.");
+
+      // TODO: Send email to the CHW with their login credentials
+      // Send email to the CHW with their login credentials
+      const emailData = {
+        to: formattedMember.email,
+        subject: "iCCHW Account Activation",
+        message: `Hello ${formattedMember.firstName},\n\nYour iCCHW account has been created successfully. Please use the following credentials to login:\n\nUsername: ${formattedMember.username}\nPassword: ${newUser.password}\n\nThank you.`,
+      };
+      await EmailService.sendEmail(emailData);
+      return localTeamMember;
     } catch (error) {
       // Rethrow with CustomError for the controller to catch
       throw new CustomError(error.message, error.statusCode || 400);
@@ -172,6 +318,37 @@ class GatewayService {
     const day = birthSegment.slice(6, 8);
 
     return `${year}-${month}-${day}`;
+  }
+
+  // Random password generator
+  static generateRandomPassword() {
+    const length = 8;
+    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let retVal = "";
+    for (let i = 0, n = charset.length; i < length; ++i) {
+      retVal += charset.charAt(Math.floor(Math.random() * n));
+    }
+    return retVal;
+  }
+
+  // Swahili password generator
+  static generateSwahiliPassword() {
+    const rawWords = process.env.SWAHILI_WORDS || "";
+    const swahiliWords = rawWords
+      .split(",")
+      .map((w) => w.trim())
+      .filter(Boolean);
+
+    const getRandomWord = () => {
+      const word = swahiliWords[Math.floor(Math.random() * swahiliWords.length)];
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    };
+
+    const word1 = getRandomWord();
+    const word2 = getRandomWord();
+    const number = Math.floor(100 + Math.random() * 900); // 3-digit number
+
+    return `${word1}${word2}${number}`;
   }
 }
 

@@ -1,6 +1,12 @@
 import prisma from "../../../config/prisma.js";
 
 class TeamMemberRepository {
+  /**
+   * Get team members
+   * @param {number} page - Page number
+   * @param {number} pageSize - Number of items per page
+   * @returns {Promise<Object>} - Team members and total count
+   */
   static async getTeamMembers(page = 1, pageSize = 10) {
     const openmrsTeamMembersCount = await prisma.openMRSTeamMember.count();
     const skip = (page - 1) * pageSize;
@@ -12,6 +18,11 @@ class TeamMemberRepository {
     return { users: teamMembers, total: openmrsTeamMembersCount };
   }
 
+  /**
+   * Upsert team members
+   * @param {Array} teamMembers - Array of team members
+   * @returns {Promise<Array>} - Upserted team members
+   */
   static async upsertTeamMembers(teamMembers) {
     const upsertPromises = teamMembers.map((member) =>
       prisma.openMRSTeamMember.upsert({
@@ -40,6 +51,35 @@ class TeamMemberRepository {
     return Promise.all(upsertPromises);
   }
 
+  /**
+   * Upsert team member
+   * @param {Object} teamMember - Team member object
+   * @returns {Promise<Object>} - Upserted team member object
+   */
+  static async upsertTeamMember(teamMember) {
+    return prisma.openMRSTeamMember.upsert({
+      where: { openMrsUuid: teamMember.openMrsUuid },
+      update: {
+        firstName: teamMember.firstName,
+        middleName: teamMember.middleName,
+        lastName: teamMember.lastName,
+        username: teamMember.username,
+        personUuid: teamMember.personUuid,
+        teamUuid: teamMember.teamUuid,
+        teamName: teamMember.teamName,
+        teamIdentifier: teamMember.teamIdentifier,
+        locationUuid: teamMember.locationUuid,
+        locationName: teamMember.locationName,
+        locationDescription: teamMember.locationDescription,
+        NIN: teamMember.nin,
+        email: teamMember.email,
+        phoneNumber: teamMember.phoneNumber,
+        updatedAt: new Date(),
+      },
+      create: teamMember, // Create if not exists
+    });
+  }
+
   static async findByUuid(uuid) {
     return prisma.openMRSTeamMember.findUnique({
       where: { openMrsUuid: uuid },
@@ -59,6 +99,11 @@ class TeamMemberRepository {
     });
   }
 
+  /*
+   * Get team members by location HFR code
+   * @param {string} hfrCode - Location HFR code
+   * @returns {Promise<Array>} - Array of team members
+   */
   static async upsertPersonAttributes(attributes) {
     const upsertPromises = attributes.map((attribute) =>
       prisma.openMRSPersonAttribute.upsert({
