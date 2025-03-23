@@ -40,7 +40,7 @@ class CustomErrorLogger {
       level: "error",
       format: logFormat,
       transports: [
-        // new winston.transports.Console({ level: "error" }), // Console output
+        new winston.transports.Console({ level: "error" }), // Console output
         new winston.transports.File({ filename: path.join(logDir, "error.log"), level: "error" }), // Error log file
       ],
     });
@@ -57,7 +57,7 @@ class CustomErrorLogger {
       message: err.message,
       name: err.name,
       statusCode: err.statusCode || 500,
-      // stack: err.stack,
+      stack: err.stack,
     };
 
     this.errorLogger.error(JSON.stringify(errorDetails, null, 2));
