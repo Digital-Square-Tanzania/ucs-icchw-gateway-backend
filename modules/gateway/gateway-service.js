@@ -10,6 +10,7 @@ import openmrsApiClient from "../openmrs/openmrs-api-client.js";
 import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-repository.js";
 import MemberRoleRepository from "../openmrs/member-role/openmrs-member-role-repository.js";
 import TeamRoleRepository from "../openmrs/team-role/openmrs-team-role-repository.js";
+import EmailService from "../../utils/email-service.js";
 
 dotenv.config();
 
@@ -290,15 +291,21 @@ class GatewayService {
       const localTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("✅ CHW from HRHIS registered successfuly.");
 
-      // TODO: Send email to the CHW with their login credentials
       // Send email to the CHW with their login credentials
       const emailData = {
         to: formattedMember.email,
         subject: "iCCHW Account Activation",
-        message: `Hello ${formattedMember.firstName},\n\nYour iCCHW account has been created successfully. Please use the following credentials to login:\n\nUsername: ${formattedMember.username}\nPassword: ${newUser.password}\n\nThank you.`,
       };
-      await EmailService.sendEmail(emailData);
-      return localTeamMember;
+
+      await EmailService.sendEmail({
+        to: formattedMember.email,
+        subject: "Kufungua Akaunti ya UCS/WAJA",
+        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi cha kazi (Tablet): https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}`,
+        html: `<p>Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi chako (Tablet):</p>
+           <p><a href="https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}">Fungua Akaunti</a></p>`,
+      });
+
+      return "Facility and personnel details processed successfully.";
     } catch (error) {
       // Rethrow with CustomError for the controller to catch
       throw new CustomError(error.message, error.statusCode || 400);

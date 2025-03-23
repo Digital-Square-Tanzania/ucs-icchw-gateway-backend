@@ -1,6 +1,7 @@
 import ApiError from "../../utils/api-error.js";
 import CustomError from "../../utils/custom-error.js";
 import GatewayService from "./gateway-service.js";
+import GatewayHelper from "../../helpers/gateway-helper.js";
 
 class GatewayController {
   /**
@@ -21,7 +22,8 @@ class GatewayController {
   static async registerChwFromHrhis(req, res, next) {
     try {
       const response = await GatewayService.registerChwFromHrhis(req, res, next);
-      res.status(201).json(response);
+      return GatewayHelper.success(res, response, 1, 201);
+      // res.status(201).json(response);
     } catch (error) {
       throw new ApiError(error.message, error.statusCode, 3);
       // if (error instanceof ApiError) {
