@@ -1,6 +1,7 @@
 import CustomError from "./custom-error.js";
 import prisma from "../config/prisma.js";
-import { log } from "winston";
+import winston from "winston";
+const { log } = winston;
 
 class ApiLogger {
   static async logApi(req, res, next) {
