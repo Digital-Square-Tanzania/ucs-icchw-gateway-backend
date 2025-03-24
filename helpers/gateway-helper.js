@@ -11,7 +11,7 @@ class GatewayHelper {
     const responseObject = await GatewayService.generateHrhisReponseParts(req);
     responseObject.body = {
       code: code,
-      status: "sucess",
+      status: "success",
       message: message,
     };
     return this.send(res, responseObject, statusCode);

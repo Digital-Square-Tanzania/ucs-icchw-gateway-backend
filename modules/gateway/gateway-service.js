@@ -48,7 +48,7 @@ class GatewayService {
 
       return chwMonthlyStatusResponse;
     } catch (error) {
-      throw new CustomError(error.stack, error.statusCode);
+      throw new CustomError(error.message, error.statusCode);
     }
   }
 
@@ -290,8 +290,6 @@ class GatewayService {
         createdAt: new Date(newTeamMemberDetails.dateCreated),
       };
 
-      console.log("FORMATTED MEMBER", formattedMember);
-
       // Save the returned object as a new team member in the database
       await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("✅ CHW from HRHIS registered successfuly.");
@@ -310,7 +308,7 @@ class GatewayService {
       return "Facility and personnel details processed successfully.";
     } catch (error) {
       // Rethrow with CustomError for the controller to catch
-      throw new CustomError(error.stack, error.statusCode || 400);
+      throw new CustomError(error.message, error.statusCode || 400);
     }
   }
 
@@ -576,7 +574,7 @@ class GatewayService {
 
       return "CHW duty station changed successfully!";
     } catch (error) {
-      console.error("❌ Error in changing duty station:", error.stack);
+      console.error("❌ Error in changing duty station:", error.message);
       throw new CustomError(error.message, error.statusCode || 400);
     }
   }
