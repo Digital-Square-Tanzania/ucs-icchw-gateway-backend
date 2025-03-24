@@ -28,8 +28,8 @@ class GatewayService {
    */
   static async getStatuses(month, year, teamMembers) {
     try {
-      // Validate month and year
-      GatewayValidator.validateMonthAndYear(month, year);
+      // Validate month and year TODO: Validate current month to be max for current year
+      // GatewayValidator.validateMonthAndYear(month, year);
 
       // Prepare payload for OpenSRP request
       const opensrpRequestPyload = {
@@ -72,17 +72,16 @@ class GatewayService {
   }
 
   static async getChwMonthlyStatus(req, res, next) {
-    const { header, body } = req.body.message;
-    const signature = req.body.signature;
+    const body = req.body.message.body;
+    const month = body.month;
+    const year = body.year;
+    GatewayValidator.validateMonthAndYear(month, year);
     const hfrCode = body.FacilityCode;
     const teamMembers = await this.getTeamMemberByLocationHfrCode(hfrCode);
 
     if (!teamMembers) {
       throw new CustomError("CHW monthly activity statistics not found.", 404);
     }
-
-    const month = body.month;
-    const year = body.year;
 
     console.log("🔄 Getting monthly status for team members...");
     const payload = await this.getStatuses(month, year, teamMembers);
@@ -118,7 +117,7 @@ class GatewayService {
         throw new ApiError("Invalid locationCode or locationType.", 404, 4);
       }
 
-      // TODO: teamMemberLocation by location Code attribute
+      // GET teamMemberLocation by location Code attribute
       const teamMemberLocation = await OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
       if (!teamMemberLocation) {
         throw new ApiError("Invalid locationCode or locationType.", 404, 4);
