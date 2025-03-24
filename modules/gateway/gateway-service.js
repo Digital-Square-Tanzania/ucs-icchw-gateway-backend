@@ -123,6 +123,8 @@ class GatewayService {
       // Check if a team exists without location
       const team = await TeamRepository.getTeamByLocationUuid(location.uuid);
 
+      console.log("TEAM", team);
+
       if (!team) {
         // create team
         const teamObject = {};
