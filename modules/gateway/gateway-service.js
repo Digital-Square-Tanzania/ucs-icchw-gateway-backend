@@ -89,7 +89,7 @@ class GatewayService {
     console.log("✅ Statuses obtained and sent!");
 
     // Log the action
-    ApiLogger.logApi(req, res, next);
+    // ApiLogger.logApi(req, res, next);
 
     return payload;
   }
