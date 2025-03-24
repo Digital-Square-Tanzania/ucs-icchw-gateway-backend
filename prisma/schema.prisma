@@ -225,6 +225,8 @@ model OpenMRSTeamMember {
   NIN                 String?  @map("nin")
   phoneNumber         String?  @map("phone_number")
   email               String?
+  username            String?
+  userUuid            String?  @map("user_uuid")
   personUuid          String
   openMrsUuid         String   @unique @map("openmrs_uuid")
   teamUuid            String?  @map("team_uuid")
