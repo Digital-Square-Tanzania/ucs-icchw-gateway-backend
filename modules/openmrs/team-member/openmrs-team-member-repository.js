@@ -26,7 +26,7 @@ class TeamMemberRepository {
   static async upsertTeamMembers(teamMembers) {
     const upsertPromises = teamMembers.map((member) =>
       prisma.openMRSTeamMember.upsert({
-        where: { openMrsUuid: member.openMrsUuid },
+        where: { identifier: member.identifier },
         update: {
           firstName: member.firstName,
           middleName: member.middleName,
