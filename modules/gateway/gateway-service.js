@@ -114,7 +114,8 @@ class GatewayService {
       }
 
       // TODO: teamMemberLocation by location Code attribute
-      const teamMemberLocation = OpenMRSLocationRepository.getTeamMembersByCode(payload.body[0].locationCode);
+      const teamMemberLocation = OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
+      console.log("TEAM MEMBER LOCATION", teamMemberLocation);
       if (!teamMemberLocation) {
         throw new ApiError("Invalid locationCode or locationType.", 404, 4);
       }
@@ -306,7 +307,7 @@ class GatewayService {
       return "Facility and personnel details processed successfully.";
     } catch (error) {
       // Rethrow with CustomError for the controller to catch
-      throw new CustomError(error.message, error.statusCode || 400);
+      throw new CustomError(error.stack, error.statusCode || 400);
     }
   }
 
