@@ -114,7 +114,7 @@ class GatewayService {
       }
 
       // TODO: teamMemberLocation by location Code attribute
-      const teamMemberLocation = OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
+      const teamMemberLocation = await OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
       console.log("TEAM MEMBER LOCATION", teamMemberLocation);
       if (!teamMemberLocation) {
         throw new ApiError("Invalid locationCode or locationType.", 404, 4);
