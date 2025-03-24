@@ -11,6 +11,7 @@ import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-rep
 import MemberRoleRepository from "../openmrs/member-role/openmrs-member-role-repository.js";
 import TeamRoleRepository from "../openmrs/team-role/openmrs-team-role-repository.js";
 import EmailService from "../../utils/email-service.js";
+import ApiLogger from "../../utils/api-logger.js";
 
 dotenv.config();
 
@@ -86,6 +87,10 @@ class GatewayService {
     console.log("🔄 Getting monthly status for team members...");
     const payload = await this.getStatuses(month, year, teamMembers);
     console.log("✅ Statuses obtained and sent!");
+
+    // Log the action
+    ApiLogger.logApi(req, res, next);
+
     return payload;
   }
 
