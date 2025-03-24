@@ -117,7 +117,7 @@ class GatewayService {
       const team = await TeamRepository.getTeamByLocationUuid(location.uuid);
 
       if (!team) {
-        // Do not throw error here, create team
+        // create team
         const teamObject = {};
         const teamName = location.name + " - " + location.hfrCode + " - Team";
         const teamIdentifier = (location.name + " - " + location.hfrCode + " - Team").replace(/-/g, "").replace(/\s+/g, "").toLowerCase();
@@ -192,7 +192,7 @@ class GatewayService {
       }
 
       // Create a new OpenMRS user
-      const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName("iCCHW");
+      const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName(process.env.DEFAULT_ICCHW_ROLE_NAME);
       const userObject = {};
       const phone = payload.message.body[0].phoneNumber;
       const firstName = payload.message.body[0].firstName || "";
@@ -213,7 +213,7 @@ class GatewayService {
       }
 
       // Create a new team member in OpenMRS
-      const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier("waja");
+      const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.DEFAULT_ICCHW_TEAM_ROLE_IDENTIFIER);
       const teamMemberObject = {
         identifier: newUser.username + location.hfrCode.replace("-", ""),
         locations: [
@@ -285,21 +285,16 @@ class GatewayService {
       };
 
       // Save the returned object as a new team member in the database
-      const localTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
+      await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("✅ CHW from HRHIS registered successfuly.");
 
       // Send email to the CHW with their login credentials
-      const emailData = {
-        to: formattedMember.email,
-        subject: "iCCHW Account Activation",
-      };
-
       await EmailService.sendEmail({
         to: formattedMember.email,
         subject: "Kufungua Akaunti ya UCS/WAJA",
-        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}`,
+        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}. Majaribio: tumia password hii kwenye UAT: ${newUser.password}`,
         html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
-           <p><a href="https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>`,
+           <p><a href="https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p><br><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${newUser.password}</span></small>`,
       });
 
       return "Facility and personnel details processed successfully.";
