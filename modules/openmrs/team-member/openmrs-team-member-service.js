@@ -67,7 +67,6 @@ class TeamMemberService {
               firstName: member.person?.preferredName?.givenName || "",
               middleName: member.person?.preferredName?.middleName || null,
               lastName: member.person?.preferredName?.familyName || "",
-              username: member.identifier,
               personUuid: member.person?.uuid,
               openMrsUuid: member.uuid,
               teamUuid: member.team?.uuid || null,

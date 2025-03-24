@@ -63,7 +63,6 @@ class TeamMemberRepository {
         firstName: teamMember.firstName,
         middleName: teamMember.middleName,
         lastName: teamMember.lastName,
-        username: teamMember.username,
         personUuid: teamMember.personUuid,
         teamUuid: teamMember.teamUuid,
         teamName: teamMember.teamName,
