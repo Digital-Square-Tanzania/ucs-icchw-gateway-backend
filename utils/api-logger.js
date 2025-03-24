@@ -1,6 +1,5 @@
 import CustomError from "./custom-error.js";
 import prisma from "../config/prisma.js";
-import logger from "./logger.js";
 
 class ApiLogger {
   static async logApi(req, res, next) {
@@ -17,6 +16,7 @@ class ApiLogger {
       const response = { status: res.statusCode, body: res.body };
 
       await prisma.apiLog.create({ data: { request, response } });
+      await prisma.api;
 
       next();
     } catch (error) {
@@ -34,7 +34,7 @@ class ApiLogger {
       const request = { method, url, body, query, params, headers };
       const response = { status, body: responseBody };
 
-      await prisma.apiLogger.create({ data: { request, response } });
+      await prisma.apiLog.create({ data: { request, response } });
     } catch (err) {
       logger.error(`❌ Failed to log request internally: ${err.message}`);
     }
