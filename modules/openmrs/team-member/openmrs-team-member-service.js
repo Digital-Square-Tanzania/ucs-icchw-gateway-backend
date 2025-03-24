@@ -166,4 +166,4 @@ class TeamMemberService {
   }
 }
 
-export default new TeamMemberService();
+export default TeamMemberService();

@@ -5,6 +5,7 @@ import TeamService from "../../modules/openmrs/team/openmrs-team-service.js";
 import MemberRoleService from "../../modules/openmrs/member-role/openmrs-member-role-service.js";
 import OpenMRSLocationService from "../../modules/openmrs/location/openmrs-location-service.js";
 import DHIS2OrgUnitService from "../../modules/dhis2/org-unit/dhis2-org-unit-service.js";
+// import TeamMemberService from "../../modules/openmrs/team-member/openmrs-team-member-service.js";
 
 dotenv.config();
 
@@ -38,7 +39,7 @@ class URLSyncSeeder {
 
     try {
       console.log("🔄 Syncing Team Members...");
-      await teamMemberService.syncTeamMembers();
+      // await TeamMemberService.syncTeamMembers();
       console.log("✅ Team Members sync completed.");
     } catch (error) {
       console.error("❌ Error syncing Team Members:", error.message);
