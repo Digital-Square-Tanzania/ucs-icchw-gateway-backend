@@ -48,7 +48,7 @@ class GatewayService {
 
       return chwMonthlyStatusResponse;
     } catch (error) {
-      throw new CustomError(error.message, error.statusCode);
+      throw new CustomError(error.stack, error.statusCode);
     }
   }
 
