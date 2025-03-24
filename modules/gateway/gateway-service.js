@@ -115,15 +115,12 @@ class GatewayService {
 
       // TODO: teamMemberLocation by location Code attribute
       const teamMemberLocation = await OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
-      console.log("TEAM MEMBER LOCATION", teamMemberLocation);
       if (!teamMemberLocation) {
         throw new ApiError("Invalid locationCode or locationType.", 404, 4);
       }
 
       // Check if a team exists without location
       const team = await TeamRepository.getTeamByLocationUuid(location.uuid);
-
-      console.log("TEAM", team);
 
       if (!team) {
         // create team
@@ -292,6 +289,8 @@ class GatewayService {
         phoneNumber,
         createdAt: new Date(newTeamMemberDetails.dateCreated),
       };
+
+      console.log("FORMATTED MEMBER", formattedMember);
 
       // Save the returned object as a new team member in the database
       await TeamMemberRepository.upsertTeamMember(formattedMember);
