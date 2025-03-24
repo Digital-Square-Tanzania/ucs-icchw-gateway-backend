@@ -28,7 +28,6 @@ class TeamMemberService {
       while (true) {
         console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
 
-        // Fetch batch from OpenMRS
         const response = await openmrsApiClient.get("team/teammember", {
           v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
           startIndex: fetchedRecords,
@@ -40,65 +39,88 @@ class TeamMemberService {
 
         if (fetchedCount === 0) {
           console.log(`✅ No more team members to fetch. Total synced: ${totalFetched}`);
-          break; // Stop loop if no more members
+          break;
         }
 
-        let formattedMembers = [];
+        const formattedMembers = [];
 
         for (const member of teamMembers) {
-          // Extract attributes for NIN, email, and phoneNumber
-          let nin = null;
-          let email = null;
-          let phoneNumber = null;
+          try {
+            if (!member.identifier || !member.uuid || !member.person) {
+              throw new Error("Missing identifier or person data");
+            }
 
-          if (member.person?.attributes?.length) {
-            for (const attr of member.person.attributes) {
-              if (attr.attributeType?.display === "NIN") {
-                nin = attr.value;
-              } else if (attr.attributeType?.display === "email") {
-                email = attr.value;
-              } else if (attr.attributeType?.display === "phoneNumber") {
-                phoneNumber = attr.value;
+            let nin = null;
+            let email = null;
+            let phoneNumber = null;
+
+            if (member.person.attributes?.length) {
+              for (const attr of member.person.attributes) {
+                if (attr.attributeType?.display === "NIN") nin = attr.value;
+                if (attr.attributeType?.display === "email") email = attr.value;
+                if (attr.attributeType?.display === "phoneNumber") phoneNumber = attr.value;
               }
             }
-          }
 
-          // Format team member data
-          formattedMembers.push({
-            identifier: member.identifier,
-            firstName: member.person?.preferredName?.givenName || "",
-            middleName: member.person?.preferredName?.middleName || null,
-            lastName: member.person?.preferredName?.familyName || "",
-            username: member.identifier,
-            personUuid: member.person?.uuid,
-            openMrsUuid: member.uuid,
-            teamUuid: member.team?.uuid || null,
-            teamName: member.team?.teamName || null,
-            teamIdentifier: member.team?.teamIdentifier || null,
-            locationUuid: member.team?.location?.uuid || null,
-            locationName: member.team?.location?.name || null,
-            locationDescription: member.team?.location?.description || null,
-            roleUuid: member.teamRole?.uuid || null,
-            roleName: member.teamRole?.name || null,
-            NIN: nin,
-            email,
-            phoneNumber,
-            createdAt: new Date(member.dateCreated),
-          });
+            formattedMembers.push({
+              identifier: member.identifier,
+              firstName: member.person?.preferredName?.givenName || "",
+              middleName: member.person?.preferredName?.middleName || null,
+              lastName: member.person?.preferredName?.familyName || "",
+              username: member.identifier,
+              personUuid: member.person?.uuid,
+              openMrsUuid: member.uuid,
+              teamUuid: member.team?.uuid || null,
+              teamName: member.team?.teamName || null,
+              teamIdentifier: member.team?.teamIdentifier || null,
+              locationUuid: member.team?.location?.uuid || null,
+              locationName: member.team?.location?.name || null,
+              locationDescription: member.team?.location?.description || null,
+              roleUuid: member.teamRole?.uuid || null,
+              roleName: member.teamRole?.name || null,
+              NIN: nin,
+              email,
+              phoneNumber,
+              createdAt: new Date(member.dateCreated),
+            });
+          } catch (err) {
+            console.warn(`⚠️ Skipping team member due to error: ${err.message} (UUID: ${member?.uuid || "N/A"})`);
+          }
         }
 
-        // Store team members in DB
-        await TeamMemberRepository.upsertTeamMembers(formattedMembers);
+        const uniqueMembers = [];
+        const seenIdentifiers = new Set();
+
+        for (const member of formattedMembers) {
+          if (!seenIdentifiers.has(member.identifier)) {
+            seenIdentifiers.add(member.identifier);
+            uniqueMembers.push(member);
+          } else {
+            console.warn(`⚠️ Duplicate identifier in batch: ${member.identifier}, skipping...`);
+          }
+        }
+
+        for (const member of uniqueMembers) {
+          try {
+            await TeamMemberRepository.upsertTeamMember(member);
+          } catch (err) {
+            if (err.code === "P2002") {
+              console.warn(`⚠️ Skipping duplicate identifier: ${member.identifier}`);
+              continue;
+            }
+            console.error(`❌ Error upserting member ${member.identifier}:`, err.message);
+          }
+        }
 
         totalFetched += fetchedCount;
         fetchedRecords += fetchedCount;
 
-        console.log(`✅ Synced ${fetchedCount} team members, Total synced: ${totalFetched}`);
+        console.log(`✅ Synced ${formattedMembers.length} valid team members (Fetched: ${fetchedCount})`);
       }
 
       console.log("✅ OpenMRS Team Members Sync Completed.");
     } catch (error) {
-      throw new CustomError("❌ OpenMRS Team Members Sync Error: " + error.message);
+      throw new CustomError("❌ OpenMRS Team Members Sync Error: " + error.stack);
     }
   }
 
