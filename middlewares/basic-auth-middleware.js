@@ -5,14 +5,15 @@ dotenv.config();
 
 class BasicAuthMiddleware {
   constructor(validUsername, validPassword) {
+    this.validUsername = validUsername || process.env.BASIC_AUTH_USERNAME;
+    this.validPassword = validPassword || process.env.BASIC_AUTH_PASSWORD;
+
     // Binding class method so `this` stays correct
     this.authenticate = this.authenticate.bind(this);
   }
 
   authenticate(req, _res, next) {
     const authHeader = req.headers.authorization;
-    console.log("Valid Username: ", this.validUsername);
-    console.log("Valid Password: ", this.validPassword);
 
     if (!authHeader || !authHeader.startsWith("Basic ")) {
       return next(new CustomError("Missing or invalid Authorization header", 401));

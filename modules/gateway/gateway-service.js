@@ -194,7 +194,7 @@ class GatewayService {
           await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, payload);
         } catch (error) {
           console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
-          console.log("ERROR:", error.stack);
+          console.log("ERROR:", error.message);
           throw new ApiError(`Error saving person ${attr.label} attribute: ${error.message}`, 500, 5);
         }
       }
