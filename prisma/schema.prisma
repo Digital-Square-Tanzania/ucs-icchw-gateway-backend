@@ -323,10 +323,12 @@ model SyncLog {
   @@map("sync_logs")
 }
 
-model ApiLogger {
+model ApiLog {
   id        Int      @id @default(autoincrement())
   uuid      String   @unique @default(uuid())
   request   Json
   response  Json
   createdAt DateTime @default(now())
+
+  @@map("api_logs")
 }
