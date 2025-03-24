@@ -28,9 +28,6 @@ class GatewayService {
    */
   static async getStatuses(month, year, teamMembers) {
     try {
-      // Validate month and year TODO: Validate current month to be max for current year
-      // GatewayValidator.validateMonthAndYear(month, year);
-
       // Prepare payload for OpenSRP request
       const opensrpRequestPyload = {
         period: {
