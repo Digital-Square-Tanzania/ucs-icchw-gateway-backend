@@ -47,9 +47,11 @@ export const createUserRateLimiter = rateLimiter.createLimiter(10); // 10 for st
 export const updateUserRateLimiter = rateLimiter.createLimiter(5);
 export const deleteUserRateLimiter = rateLimiter.createLimiter(5);
 export const searchUserRateLimiter = rateLimiter.createLimiter(10);
-export const updateChwDemographicsRateLimiter = rateLimiter.createLimiter(2);
-export const checkChwMonthlyStatusRateLimiter = rateLimiter.createLimiter(2);
-export const registerChwFromHrhisRateLimiter = rateLimiter.createLimiter(50);
-export const changeChwDutyStationRateLimiter = rateLimiter.createLimiter(1);
+
+// FIXME: Revert these limiters to 10x less in prod
+export const updateChwDemographicsRateLimiter = rateLimiter.createLimiter(20);
+export const checkChwMonthlyStatusRateLimiter = rateLimiter.createLimiter(20);
+export const registerChwFromHrhisRateLimiter = rateLimiter.createLimiter(500);
+export const changeChwDutyStationRateLimiter = rateLimiter.createLimiter(10);
 
 export default RoleBasedRateLimiter;
