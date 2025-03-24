@@ -69,25 +69,30 @@ class GatewayService {
   }
 
   static async getChwMonthlyStatus(req, res, next) {
-    const body = req.body.message.body;
-    const month = body.month;
-    const year = body.year;
-    GatewayValidator.validateMonthAndYear(month, year);
-    const hfrCode = body.FacilityCode;
-    const teamMembers = await this.getTeamMemberByLocationHfrCode(hfrCode);
+    try {
+      const body = req.body.message.body;
+      const month = body.month;
+      const year = body.year;
 
-    if (!teamMembers) {
-      throw new CustomError("CHW monthly activity statistics not found.", 404);
+      GatewayValidator.validateMonthAndYear(month, year);
+      const hfrCode = body.FacilityCode;
+      const teamMembers = await this.getTeamMemberByLocationHfrCode(hfrCode);
+
+      if (!teamMembers) {
+        throw new CustomError("CHW monthly activity statistics not found.", 404);
+      }
+
+      console.log("🔄 Getting monthly status for team members...");
+      const payload = await this.getStatuses(month, year, teamMembers);
+      console.log("✅ Statuses obtained and sent!");
+
+      await ApiLogger.log(req, payload);
+
+      return payload;
+    } catch (error) {
+      await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
+      throw new CustomError(error.message, error.statusCode);
     }
-
-    console.log("🔄 Getting monthly status for team members...");
-    const payload = await this.getStatuses(month, year, teamMembers);
-    console.log("✅ Statuses obtained and sent!");
-
-    // Log the action
-    // ApiLogger.logApi(req, res, next);
-
-    return payload;
   }
 
   /*
