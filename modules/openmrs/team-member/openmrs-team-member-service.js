@@ -14,11 +14,11 @@ class TeamMemberService {
     };
   }
 
-  async getTeamMembers(page = 1, limit = 10) {
+  static async getTeamMembers(page = 1, limit = 10) {
     return await TeamMemberRepository.getTeamMembers(page, limit);
   }
 
-  async syncTeamMembers(pageSize = 500) {
+  static async syncTeamMembers(pageSize = 500) {
     try {
       console.log("🔄 Syncing Team Members from OpenMRS in batches...");
 
@@ -102,7 +102,7 @@ class TeamMemberService {
     }
   }
 
-  async getTeamMemberByUuid(uuid) {
+  static async getTeamMemberByUuid(uuid) {
     const teamMember = await TeamMemberRepository.findByUuid(uuid);
     if (!teamMember) {
       throw new CustomError("Team member not found.", 404);
@@ -110,7 +110,7 @@ class TeamMemberService {
     return teamMember;
   }
 
-  async createTeamMember(teamMemberData) {
+  static async createTeamMember(teamMemberData) {
     try {
       console.log("🔄 Creating team member in OpenMRS...");
 
@@ -149,7 +149,7 @@ class TeamMemberService {
     }
   }
 
-  async updateTeamMember(uuid, updateData) {
+  static async updateTeamMember(uuid, updateData) {
     try {
       console.log("🔄 Updating team member in OpenMRS...");
 
@@ -166,4 +166,4 @@ class TeamMemberService {
   }
 }
 
-export default TeamMemberService();
+export default TeamMemberService;
