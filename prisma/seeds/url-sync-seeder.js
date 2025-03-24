@@ -53,6 +53,13 @@ class URLSyncSeeder {
       console.error("❌ Error syncing OpenMRS Locations:", error.message);
     }
     try {
+      console.log("🔄 Syncing OpenMRS Location Attribute Types...");
+      await OpenMRSLocationService.syncLocationAttributeTypes();
+      console.log("✅ OpenMRS Locations attribute types sync completed.");
+    } catch (error) {
+      console.error("❌ Error syncing OpenMRS location attribute types:", error.message);
+    }
+    try {
       console.log("🔄 Syncing DHIS2 Org Units...");
       await DHIS2OrgUnitService.syncOrgUnits(1000);
       console.log("✅ DHIS2 Org Units sync completed.");

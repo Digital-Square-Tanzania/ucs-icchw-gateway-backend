@@ -113,6 +113,12 @@ class GatewayService {
         throw new ApiError("Invalid locationCode or locationType.", 404, 4);
       }
 
+      // TODO: teamMemberLocation by location Code attribute
+      const teamMemberLocation = OpenMRSLocationRepository.getTeamMembersByCode(payload.body[0].locationCode);
+      if (!teamMemberLocation) {
+        throw new ApiError("Invalid locationCode or locationType.", 404, 4);
+      }
+
       // Check if a team exists without location
       const team = await TeamRepository.getTeamByLocationUuid(location.uuid);
 
@@ -218,7 +224,7 @@ class GatewayService {
         identifier: newUser.username + location.hfrCode.replace("-", ""),
         locations: [
           {
-            uuid: location.uuid,
+            uuid: teamMemberLocation.uuid,
           },
         ],
         joinDate: new Date().toISOString().split("T")[0],

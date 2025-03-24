@@ -169,6 +169,8 @@ class TeamMemberRepository {
 
     return location ? location.hfrCode : null;
   }
+
+  // Get locationUuid by location AttributeTyp
 }
 
 export default TeamMemberRepository;
