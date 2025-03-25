@@ -7,23 +7,25 @@ class GatewayHelper {
     });
   }
 
-  static async success(req, res, message = "null", code = 1, statusCode = 200) {
+  static async success(req, res, message = "null", code = 1, statusCode = 200, signature) {
     const responseObject = await GatewayService.generateHrhisReponseParts(req);
     responseObject.body = {
       code: code,
       status: "success",
       message: message,
     };
+    responseObject.signature = signature;
     return this.send(res, responseObject, statusCode);
   }
 
-  static async error(req, res, message, code = 3, statusCode = 500) {
+  static async error(req, res, message, code = 3, statusCode = 500, signature) {
     const responseObject = await GatewayService.generateHrhisReponseParts(req);
     responseObject.body = {
       code: code,
       status: "fail",
       message: message,
     };
+    responseObject.signature = signature;
     return this.send(res, responseObject, statusCode);
   }
 }

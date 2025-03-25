@@ -9,9 +9,9 @@ class GatewayController {
   static async checkChwMonthlyStatus(req, res, next) {
     try {
       const monthlyStatuses = await GatewayService.getChwMonthlyStatus(req, res, next);
-      return GatewayHelper.success(req, res, monthlyStatuses, 1, 200);
+      return GatewayHelper.success(req, res, monthlyStatuses, 1, 200, req.signature);
     } catch (error) {
-      return GatewayHelper.error(req, res, error.message, 3, error.statusCode);
+      return GatewayHelper.error(req, res, error.message, 3, error.statusCode, null);
     }
   }
 
@@ -21,9 +21,9 @@ class GatewayController {
   static async registerChwFromHrhis(req, res, next) {
     try {
       const response = await GatewayService.registerChwFromHrhis(req, res, next);
-      return GatewayHelper.success(req, res, response, 1, 201);
+      return GatewayHelper.success(req, res, response, 1, 201, req.signature);
     } catch (error) {
-      return GatewayHelper.error(req, res, error.message, 3, error.statusCode);
+      return GatewayHelper.error(req, res, error.message, 3, error.statusCode, null);
     }
   }
 
@@ -33,9 +33,9 @@ class GatewayController {
   static async updateChwDemographics(req, res, next) {
     try {
       const response = await GatewayService.updateChwDemographics(req, res, next);
-      return GatewayHelper.success(req, res, response, 1, 200);
+      return GatewayHelper.success(req, res, response, 1, 200, req.signature);
     } catch (error) {
-      return GatewayHelper.error(req, res, error.message, 3, error.statusCode);
+      return GatewayHelper.error(req, res, error.message, 3, error.statusCode, null);
     }
   }
 

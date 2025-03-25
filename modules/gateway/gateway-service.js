@@ -654,7 +654,7 @@ class GatewayService {
     responseHeader.createdAt = new Date().toISOString();
     const responseObject = {};
     responseObject.header = responseHeader;
-    responseObject.signature = signature;
+    req.signature = signature;
     return responseObject;
   }
 }
