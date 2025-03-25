@@ -15,7 +15,7 @@ class GatewayHelper {
       status: "success",
       message: message,
     };
-    return this.send(res, responseObject, statusCode);
+    return this.send(req, res, responseObject, statusCode);
   }
 
   static async error(req, res, message, code = 3, statusCode = 500) {
@@ -25,7 +25,7 @@ class GatewayHelper {
       status: "fail",
       message: message,
     };
-    return this.send(res, responseObject, statusCode);
+    return this.send(req, res, responseObject, statusCode);
   }
 }
 
