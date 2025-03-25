@@ -655,6 +655,7 @@ class GatewayService {
     const responseObject = {};
     responseObject.header = responseHeader;
     req.signature = signature;
+
     return responseObject;
   }
 }
