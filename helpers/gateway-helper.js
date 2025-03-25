@@ -1,31 +1,31 @@
 import GatewayService from "../modules/gateway/gateway-service.js";
 
 class GatewayHelper {
-  static send(res, message, statusCode, signature) {
+  static send(res, responseObject, statusCode) {
     return res.status(statusCode).json({
-      message: message,
-      signature: signature,
+      message: responseObject,
+      signature: req.signature,
     });
   }
 
-  static async success(req, res, message = "null", code = 1, statusCode = 200, signature) {
-    const message = await GatewayService.generateHrhisReponseParts(req);
-    message.body = {
+  static async success(req, res, message = "null", code = 1, statusCode = 200) {
+    const responseObject = await GatewayService.generateHrhisReponseParts(req);
+    responseObject.body = {
       code: code,
       status: "success",
       message: message,
     };
-    return this.send(res, message, statusCode, signature);
+    return this.send(res, responseObject, statusCode);
   }
 
-  static async error(req, res, message, code = 3, statusCode = 500, signature) {
-    const message = await GatewayService.generateHrhisReponseParts(req);
-    message.body = {
+  static async error(req, res, message, code = 3, statusCode = 500) {
+    const responseObject = await GatewayService.generateHrhisReponseParts(req);
+    responseObject.body = {
       code: code,
       status: "fail",
       message: message,
     };
-    return this.send(res, responseObject, statusCode, signature);
+    return this.send(res, responseObject, statusCode);
   }
 }
 
