@@ -1,6 +1,7 @@
 import ApiError from "../../utils/api-error.js";
 import GatewayService from "./gateway-service.js";
 import GatewayHelper from "../../helpers/gateway-helper.js";
+import FfarsHelper from "../../helpers/ffars-helper.js";
 
 class GatewayController {
   /**
@@ -9,9 +10,9 @@ class GatewayController {
   static async checkChwMonthlyStatus(req, res, next) {
     try {
       const monthlyStatuses = await GatewayService.getChwMonthlyStatus(req, res, next);
-      return GatewayHelper.success(req, res, monthlyStatuses, 1, 200, req.signature);
+      return FfarsHelper.success(req, res, monthlyStatuses, 1, 200, req.signature);
     } catch (error) {
-      return GatewayHelper.error(req, res, error.message, 3, error.statusCode, null);
+      return FfarsHelper.error(req, res, error.message, 3, error.statusCode, null);
     }
   }
 
