@@ -1,7 +1,7 @@
 import GatewayService from "../modules/gateway/gateway-service.js";
 
 class GatewayHelper {
-  static send(res, responseObject, statusCode) {
+  static send(req, res, responseObject, statusCode) {
     return res.status(statusCode).json({
       message: responseObject,
       signature: req.signature,
