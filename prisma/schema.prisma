@@ -9,30 +9,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// model NewUser {
-//   id                         String     @id @default(uuid())
-//   username                   String     @unique
-//   password                   String
-//   firstName                  String     @map("first_name")
-//   middleName                 String?    @map("middle_name")
-//   lastName                   String     @map("last_name")
-//   email                      String     @unique
-//   phoneNumber                String?    @unique @map("phone_number")
-//   avatar                     String?
-//   status                     UserStatus @default(ACTIVE)
-//   openmrsPersonUuid          String?
-//   openmrsUserUuid            String?    @unique
-//   openmrsTeamMemberUuid      String?    @unique
-//   openmrsTeamUuid            String?
-//   openmrsTeamName            String?
-//   openmrsTeamIdentifier      String?
-//   openmrsLocationUuid        String?
-//   openmrsLocationName        String?
-//   openmrsLocationDescription String?
-//   roleUuid                   String?
-//   roleName                   String?
-// }
-
 model User {
   id               String             @id @default(uuid())
   password         String
@@ -217,28 +193,29 @@ model OpenMRSMemberRole {
 }
 
 model OpenMRSTeamMember {
-  id                  String   @id @default(uuid())
-  identifier          String   @unique
-  firstName           String   @map("first_name")
-  middleName          String?  @map("middle_name")
-  lastName            String   @map("last_name")
-  NIN                 String?  @map("nin")
-  phoneNumber         String?  @map("phone_number")
+  id                  String             @id @default(uuid())
+  identifier          String             @unique
+  firstName           String             @map("first_name")
+  middleName          String?            @map("middle_name")
+  lastName            String             @map("last_name")
+  NIN                 String?            @map("nin")
+  phoneNumber         String?            @map("phone_number")
   email               String?
   username            String?
-  userUuid            String?  @map("user_uuid")
+  userUuid            String?            @unique @map("user_uuid")
   personUuid          String
-  openMrsUuid         String   @unique @map("openmrs_uuid")
-  teamUuid            String?  @map("team_uuid")
-  teamName            String?  @map("team_name")
-  teamIdentifier      String?  @map("team_identifier")
-  locationUuid        String?  @map("location_uuid")
-  locationName        String?  @map("location_name")
-  locationDescription String?  @map("location_description")
-  roleUuid            String?  @map("role_uuid")
-  roleName            String?  @map("role_name")
-  createdAt           DateTime @default(now()) @map("created_at")
-  updatedAt           DateTime @default(now()) @updatedAt @map("updated_at")
+  openMrsUuid         String             @unique @map("openmrs_uuid")
+  teamUuid            String?            @map("team_uuid")
+  teamName            String?            @map("team_name")
+  teamIdentifier      String?            @map("team_identifier")
+  locationUuid        String?            @map("location_uuid")
+  locationName        String?            @map("location_name")
+  locationDescription String?            @map("location_description")
+  roleUuid            String?            @map("role_uuid")
+  roleName            String?            @map("role_name")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @default(now()) @updatedAt @map("updated_at")
+  AccountActivation   AccountActivation?
 
   @@map("openmrs_team_members")
 }
@@ -331,4 +308,25 @@ model ApiLog {
   createdAt DateTime @default(now())
 
   @@map("api_logs")
+}
+
+enum slugType {
+  ACTIVATION
+  RESET
+}
+
+model AccountActivation {
+  id         Int               @id @default(autoincrement())
+  uuid       String            @unique @default(uuid())
+  userUuid   String            @unique
+  user       OpenMRSTeamMember @relation(fields: [userUuid], references: [userUuid])
+  slug       String            @unique
+  slugType   slugType
+  isUsed     Boolean           @default(false)
+  usedAt     DateTime?
+  expiryDate DateTime
+  createdAt  DateTime          @default(now())
+
+  @@index([slug])
+  @@map("account_activations")
 }

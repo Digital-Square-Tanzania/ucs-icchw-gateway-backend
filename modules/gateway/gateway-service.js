@@ -12,6 +12,7 @@ import MemberRoleRepository from "../openmrs/member-role/openmrs-member-role-rep
 import TeamRoleRepository from "../openmrs/team-role/openmrs-team-role-repository.js";
 import EmailService from "../../utils/email-service.js";
 import ApiLogger from "../../utils/api-logger.js";
+import GenerateActivationSlug from "../../utils/generate-activation-slug.js";
 
 dotenv.config();
 
@@ -301,16 +302,21 @@ class GatewayService {
       await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("✅ CHW from HRHIS registered successfuly.");
 
+      // Generate an activation slug and record
+      const slug = await GenerateActivationSlug.generate(newUser.uuid, "ACTIVATION", 32);
+      const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
+      const activationUrl = `${backendUrl}/api/v1/user/chw/activation/${slug}`;
+
       // Send email to the CHW with their login credentials
       await EmailService.sendEmail({
         to: formattedMember.email,
         subject: "Kufungua Akaunti ya UCS/WAJA",
-        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${userObject.username}). Majaribio: tumia password hii kwenye UAT: ${userObject.password}`,
+        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${userObject.username}).`,
         html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
-           <p><a href="https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
-           <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${userObject.username})</strong>.</p><br>
-           <hr><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${userObject.password}</span></small>`,
+           <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
+           <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${userObject.username})</strong>.</p><br>`,
       });
+      // <hr><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${userObject.password}</span></small>`,
 
       return "Facility and personnel details processed successfully.";
     } catch (error) {
@@ -326,7 +332,7 @@ class GatewayService {
     try {
       const payload = req.body;
 
-      // ✅ Validate the payload
+      // Validate the payload
       GatewayValidator.validateChwDemographicUpdate(payload);
 
       // Normalize to array if single object is provided

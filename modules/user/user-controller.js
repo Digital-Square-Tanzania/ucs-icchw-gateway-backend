@@ -53,6 +53,38 @@ class UserController {
       next(new CustomError(error.message, 500));
     }
   }
+
+  static async renderActivationPage(req, res, next) {
+    try {
+      const slug = await UserService.renderActivationPage(req, res, next);
+      res.render("activate-chw-account", { slug });
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  // Activate new CHW account
+  static async activateChwAccount(req, res, next) {
+    try {
+      const { slug, password, confirmPassword } = req.body;
+      const result = await UserService.activateChwAccount(slug, password, confirmPassword);
+
+      if (result.alert) {
+        return res.render("activate-chw-account", {
+          slug,
+          message: result.message,
+          alert: true,
+        });
+      }
+
+      // Redirect or show success page
+      return res.render("activation-success", {
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default UserController;

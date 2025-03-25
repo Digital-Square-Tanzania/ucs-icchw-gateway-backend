@@ -3,6 +3,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 import "express-async-errors";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 import ErrorHelper from "./helpers/error-helper.js";
 import AuthRouter from "./modules/auth/auth-router.js";
 import UserRouter from "./modules/user/user-router.js";
@@ -23,6 +28,7 @@ class AppServer {
       const int = Number.parseInt(this.toString());
       return int ?? this.toString();
     };
+    this.__dirname = path.dirname(fileURLToPath(import.meta.url));
   }
 
   initializeMiddleware() {
@@ -31,6 +37,9 @@ class AppServer {
     this.app.use(express.urlencoded({ extended: false }));
     this.app.use(cors());
     this.app.use(SecurityMiddleware.applyHelmet());
+    this.app.set("views", path.join(__dirname, "views"));
+    this.app.set("view engine", "pug");
+    this.app.use(express.static(path.join(__dirname, "public")));
   }
 
   initializeRoutes() {
