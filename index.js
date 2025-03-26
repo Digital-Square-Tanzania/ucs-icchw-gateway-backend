@@ -53,6 +53,16 @@ class AppServer {
         originAgentCluster: false,
       })
     );
+    this.app.use((req, res, next) => {
+      if (req.protocol === "https") {
+        return res.redirect("http://" + req.headers.host + req.url);
+      }
+      next();
+    });
+    this.app.use((_req, res, next) => {
+      res.removeHeader("Content-Security-Policy");
+      next();
+    });
   }
 
   initializeRoutes() {
