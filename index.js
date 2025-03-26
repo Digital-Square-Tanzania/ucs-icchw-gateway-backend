@@ -43,7 +43,7 @@ class AppServer {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: false }));
     this.app.use(cors());
-    this.app.use(SecurityMiddleware.applyHelmet());
+    // this.app.use(SecurityMiddleware.applyHelmet());
     this.app.set("views", path.join(__dirname, "views"));
     this.app.set("view engine", "pug");
     this.app.use(express.static(path.join(__dirname, "public")));
