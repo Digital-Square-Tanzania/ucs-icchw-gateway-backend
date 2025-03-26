@@ -56,6 +56,18 @@ class AppServer {
     this.app.set("views", path.join(__dirname, "views"));
     this.app.set("view engine", "pug");
     this.app.use(express.static(path.join(__dirname, "public")));
+    app.use(
+      helmet.contentSecurityPolicy({
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'"],
+          connectSrc: ["'self'", "http://170.187.199.69:3035"],
+          imgSrc: ["'self'", "data:"],
+          objectSrc: ["'none'"],
+        },
+      })
+    );
   }
 
   initializeRoutes() {
