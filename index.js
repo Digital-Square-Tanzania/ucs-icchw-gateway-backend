@@ -42,31 +42,15 @@ class AppServer {
     this.app.disable("x-powered-by");
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: false }));
-    this.app.use(
-      cors({
-        origin: function (origin, callback) {
-          if (!origin || allowedOrigins.includes(origin)) {
-            return callback(null, true);
-          }
-          return callback(new Error("Not allowed by CORS"));
-        },
-        credentials: true,
-      })
-    );
+    this.app.use(cors());
     this.app.use(SecurityMiddleware.applyHelmet());
     this.app.set("views", path.join(__dirname, "views"));
     this.app.set("view engine", "pug");
     this.app.use(express.static(path.join(__dirname, "public")));
-    this.app.use(
-      helmet.contentSecurityPolicy({
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
-          styleSrc: ["'self'"],
-          connectSrc: ["'self'", "http://170.187.199.69:3035"],
-          imgSrc: ["'self'", "data:"],
-          objectSrc: ["'none'"],
-        },
+    app.use(
+      helmet({
+        crossOriginOpenerPolicy: false,
+        originAgentCluster: false,
       })
     );
   }
