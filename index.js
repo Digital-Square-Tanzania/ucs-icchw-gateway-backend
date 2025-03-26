@@ -47,7 +47,7 @@ class AppServer {
     this.app.set("views", path.join(__dirname, "views"));
     this.app.set("view engine", "pug");
     this.app.use(express.static(path.join(__dirname, "public")));
-    app.use(
+    this.app.use(
       helmet({
         crossOriginOpenerPolicy: false,
         originAgentCluster: false,
