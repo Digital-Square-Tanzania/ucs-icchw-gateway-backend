@@ -1,2 +1,4 @@
 #!/bin/bash
-git add . && git commit -m "Added SSR for account activation" && git push
+git add . && \
+git commit -m "MINOR: Bug fixes and refactoring" \
+&& git push
