@@ -5,6 +5,7 @@ dotenv.config();
 import "express-async-errors";
 import path from "path";
 import { fileURLToPath } from "url";
+import helmet from "helmet";
 
 // Allow local dev & production frontend domains
 const allowedOrigins = [
@@ -56,7 +57,7 @@ class AppServer {
     this.app.set("views", path.join(__dirname, "views"));
     this.app.set("view engine", "pug");
     this.app.use(express.static(path.join(__dirname, "public")));
-    app.use(
+    this.app.use(
       helmet.contentSecurityPolicy({
         directives: {
           defaultSrc: ["'self'"],
