@@ -7,6 +7,8 @@ import openmrsApiClient from "../openmrs/openmrs-api-client.js";
 import EmailService from "../../utils/email-service.js";
 import GenerateActivationSlug from "../../utils/generate-activation-slug.js";
 
+const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
+
 class UserService {
   static async createUser(userData) {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
@@ -127,7 +129,12 @@ class UserService {
     return { alert: false, message: "Akaunti ya WAJA/UCS imeundwa. Sasa unaweza kutumia akaunti hiyo kwenye kishkwambi ulichopewa.", login: false };
   }
 
-  // Handle email resending
+  /**
+   * Handle email resend route
+   * @param {Request} req
+   * @param {Response} res
+   * @param {NextFunction} next
+   */
   static async handleResendEmail(req, res, next) {
     try {
       const slug = req.params.slug;
@@ -160,7 +167,6 @@ class UserService {
 
       // Generate an activation slug and record
       const newSlug = await GenerateActivationSlug.generate(activation.userUuid, "ACTIVATION", 64);
-      const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
       const activationUrl = `${backendUrl}/api/v1/user/chw/activate/${newSlug}`;
 
       // Send email to the CHW with their login credentials
@@ -177,6 +183,72 @@ class UserService {
       console.log("🔄 Activation email resent successfully for slug: ", newSlug);
       return { alert: false, message: "Umetumiwa email mpya ya kuunda akaunti ya UCS.", slug: newSlug, login: false };
     } catch (error) {
+      await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
+      throw new CustomError(error.message, error.status || 500);
+    }
+  }
+
+  // Handle forgotten password
+  static async handleForgotPassword(req, res, next) {
+    try {
+      const { username } = req.params;
+      if (!username) throw new CustomError("Username is required", 400);
+
+      const member = await prisma.openMRSTeamMember.findFirst({
+        where: { username },
+      });
+      if (!member) throw new CustomError("User not found", 404);
+
+      // Check if the user has an active activation slug
+      const activationStatus = await prisma.accountActivation.findFirst({
+        where: {
+          userUuid: member.userUuid,
+          slugType: "ACTIVATION",
+          isUsed: false,
+          expiryDate: {
+            gte: new Date(),
+          },
+        },
+      });
+      if (activationStatus) {
+        throw new CustomError("You have an active activation request. Please activate your account first.", 400);
+      }
+      // Check if the user has an active password reset slug
+      const passwordResetStatus = await prisma.accountActivation.findFirst({
+        where: {
+          userUuid: member.userUuid,
+          slugType: "RESET",
+          isUsed: false,
+          expiryDate: {
+            gte: new Date(),
+          },
+        },
+      });
+      if (passwordResetStatus) {
+        throw new CustomError("You have an active password reset request. Please check your email.", 400);
+      }
+
+      // Generate new reset token for the member
+      const resetToken = await GenerateActivationSlug.generate(member.userUuid, "RESET", 32);
+      const resetUrl = `${backendUrl}/api/v1/user/chw/reset/${resetToken}`;
+
+      // Send email to the member with the reset link
+      await EmailService.sendEmail({
+        to: member.email,
+        subject: "Kubadili nenosiri la UCS/WAJA",
+        text: `Kuweka nenosiri jipya la UCS/WAJA, tafadhali fuata linki hii: ${resetUrl}`,
+        html: `<h1><strong>Badili Nenosiri</strong></h1> <p>Ili kubadilisha nenosiri unalotumia kweye UCS/WAJA tafadhali fuata linki hii:</p>
+               <p><a href="${resetUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Badili Nenosiri</a></p>`,
+      });
+
+      // Log the password reset request
+      await ApiLogger.log(req, { statusCode: 200, body: { slug: resetToken, email: member.email } });
+      console.log("🔄 Activation email resent successfully for slug: ", resetToken);
+
+      return "Password reset email sent successfully";
+    } catch (error) {
+      // Log the error
+      console.error("Error in handleForgotPassword: ", error.message);
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
       throw new CustomError(error.message, error.status || 500);
     }

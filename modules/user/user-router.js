@@ -44,4 +44,10 @@ router.post("/chw/activate/:slug", UserController.activateChwAccount);
 // Handle email resend route
 router.get("/chw/resend/:slug", UserController.resendActivationEmail);
 
+// Handle forgotten password
+router.get("/chw/forgot/:username", UserController.forgotPassword);
+
+// Reset password page route
+router.get("/chw/reset/:slug", UserController.renderActivationPage);
+
 export default router;

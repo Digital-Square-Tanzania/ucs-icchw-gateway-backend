@@ -83,6 +83,16 @@ class UserController {
       next(new CustomError(error.message, 500));
     }
   }
+
+  // Handle forgotten password
+  static async forgotPassword(req, res, next) {
+    try {
+      const result = await UserService.handleForgotPassword(req, res, next);
+      return ResponseHelper.success(res, "Password reset email sent successfully");
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
 }
 
 export default UserController;
