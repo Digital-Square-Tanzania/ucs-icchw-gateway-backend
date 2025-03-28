@@ -318,8 +318,13 @@ class GatewayService {
       });
       // <hr><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${userObject.password}</span></small>`,
 
+      // Log the entire brouhaha
+      await ApiLogger.log(req, { member: formattedMember, slug });
       return "Facility and personnel details processed successfully.";
     } catch (error) {
+      await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
+      console.error("❌ Error while registering CHW from HRHIS:", error.message);
+
       // Rethrow with CustomError for the controller to catch
       throw new CustomError(error.message, error.statusCode || 400);
     }

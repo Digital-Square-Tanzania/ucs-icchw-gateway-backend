@@ -56,8 +56,8 @@ class UserController {
 
   static async renderActivationPage(req, res, next) {
     try {
-      const slug = await UserService.renderActivationPage(req, res, next);
-      res.render("activate-chw-account", { slug });
+      const result = await UserService.renderActivationPage(req, res, next);
+      res.render("activate-chw-account", { ...result });
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -68,21 +68,19 @@ class UserController {
     try {
       const { slug, password, confirmPassword } = req.body;
       const result = await UserService.activateChwAccount(slug, password, confirmPassword);
-
-      if (result.alert) {
-        return res.render("activate-chw-account", {
-          slug,
-          message: result.message,
-          alert: true,
-        });
-      }
-
-      // Redirect or show success page
-      return res.render("activation-success", {
-        message: result.message,
-      });
+      return res.render("activate-chw-account", { ...result });
     } catch (error) {
-      next(error);
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  // Resend activation email
+  static async resendActivationEmail(req, res, next) {
+    try {
+      const result = await UserService.handleResendEmail(req, res, next);
+      return res.render("activate-chw-account", { ...result });
+    } catch (error) {
+      next(new CustomError(error.message, 500));
     }
   }
 }

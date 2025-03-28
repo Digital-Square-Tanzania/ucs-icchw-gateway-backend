@@ -215,7 +215,8 @@ model OpenMRSTeamMember {
   roleName            String?            @map("role_name")
   createdAt           DateTime           @default(now()) @map("created_at")
   updatedAt           DateTime           @default(now()) @updatedAt @map("updated_at")
-  AccountActivation   AccountActivation?
+  AccountActivation   AccountActivation? @relation(fields: [accountActivationId], references: [id])
+  accountActivationId Int?
 
   @@map("openmrs_team_members")
 }
@@ -316,16 +317,16 @@ enum slugType {
 }
 
 model AccountActivation {
-  id         Int               @id @default(autoincrement())
-  uuid       String            @unique @default(uuid())
-  userUuid   String            @unique
-  user       OpenMRSTeamMember @relation(fields: [userUuid], references: [userUuid])
-  slug       String            @unique
+  id         Int                 @id @default(autoincrement())
+  uuid       String              @unique @default(uuid())
+  userUuid   String
+  user       OpenMRSTeamMember[]
+  slug       String              @unique
   slugType   slugType
-  isUsed     Boolean           @default(false)
+  isUsed     Boolean             @default(false)
   usedAt     DateTime?
   expiryDate DateTime
-  createdAt  DateTime          @default(now())
+  createdAt  DateTime            @default(now())
 
   @@index([slug])
   @@map("account_activations")

@@ -41,4 +41,7 @@ router.get("/chw/activate/:slug", UserController.renderActivationPage);
 // Handle new Activation route
 router.post("/chw/activate/:slug", UserController.activateChwAccount);
 
+// Handle email resend route
+router.get("/chw/resend/:slug", UserController.resendActivationEmail);
+
 export default router;
