@@ -3,6 +3,18 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 import "express-async-errors";
+import path from "path";
+import { fileURLToPath } from "url";
+import helmet from "helmet";
+
+// Allow local dev & production frontend domains
+const allowedOrigins = [
+  "http://localhost:3015", // dev
+  "http://170.187.199.69:3035", // prod
+];
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 import ErrorHelper from "./helpers/error-helper.js";
 import AuthRouter from "./modules/auth/auth-router.js";
 import UserRouter from "./modules/user/user-router.js";
@@ -23,6 +35,7 @@ class AppServer {
       const int = Number.parseInt(this.toString());
       return int ?? this.toString();
     };
+    this.__dirname = path.dirname(fileURLToPath(import.meta.url));
   }
 
   initializeMiddleware() {
@@ -30,7 +43,26 @@ class AppServer {
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: false }));
     this.app.use(cors());
-    this.app.use(SecurityMiddleware.applyHelmet());
+    // this.app.use(SecurityMiddleware.applyHelmet());
+    this.app.set("views", path.join(__dirname, "views"));
+    this.app.set("view engine", "pug");
+    this.app.use(express.static(path.join(__dirname, "public")));
+    this.app.use(
+      helmet({
+        crossOriginOpenerPolicy: false,
+        originAgentCluster: false,
+      })
+    );
+    this.app.use((req, res, next) => {
+      if (req.protocol === "https") {
+        return res.redirect("http://" + req.headers.host + req.url);
+      }
+      next();
+    });
+    this.app.use((_req, res, next) => {
+      res.removeHeader("Content-Security-Policy");
+      next();
+    });
   }
 
   initializeRoutes() {

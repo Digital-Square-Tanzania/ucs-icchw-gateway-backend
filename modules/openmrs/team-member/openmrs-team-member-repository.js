@@ -33,6 +33,8 @@ class TeamMemberRepository {
           lastName: member.lastName,
           username: member.username,
           personUuid: member.personUuid,
+          userUuid: member.userUuid,
+          username: member.username,
           teamUuid: member.teamUuid,
           teamName: member.teamName,
           teamIdentifier: member.teamIdentifier,
@@ -63,8 +65,9 @@ class TeamMemberRepository {
         firstName: teamMember.firstName,
         middleName: teamMember.middleName,
         lastName: teamMember.lastName,
-        username: teamMember.username,
         personUuid: teamMember.personUuid,
+        username: teamMember.username,
+        userUuid: teamMember.userUuid,
         teamUuid: teamMember.teamUuid,
         teamName: teamMember.teamName,
         teamIdentifier: teamMember.teamIdentifier,
@@ -170,6 +173,8 @@ class TeamMemberRepository {
 
     return location ? location.hfrCode : null;
   }
+
+  // Get locationUuid by location AttributeTyp
 }
 
 export default TeamMemberRepository;

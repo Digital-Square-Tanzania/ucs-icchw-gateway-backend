@@ -11,6 +11,8 @@ import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-rep
 import MemberRoleRepository from "../openmrs/member-role/openmrs-member-role-repository.js";
 import TeamRoleRepository from "../openmrs/team-role/openmrs-team-role-repository.js";
 import EmailService from "../../utils/email-service.js";
+import ApiLogger from "../../utils/api-logger.js";
+import GenerateActivationSlug from "../../utils/generate-activation-slug.js";
 
 dotenv.config();
 
@@ -27,9 +29,6 @@ class GatewayService {
    */
   static async getStatuses(month, year, teamMembers) {
     try {
-      // Validate month and year
-      GatewayValidator.validateMonthAndYear(month, year);
-
       // Prepare payload for OpenSRP request
       const opensrpRequestPyload = {
         period: {
@@ -71,22 +70,30 @@ class GatewayService {
   }
 
   static async getChwMonthlyStatus(req, res, next) {
-    const { header, body } = req.body.message;
-    const signature = req.body.signature;
-    const hfrCode = body.FacilityCode;
-    const teamMembers = await this.getTeamMemberByLocationHfrCode(hfrCode);
+    try {
+      const body = req.body.message.body;
+      const month = body.month;
+      const year = body.year;
 
-    if (!teamMembers) {
-      throw new CustomError("CHW monthly activity statistics not found.", 404);
+      GatewayValidator.validateMonthAndYear(month, year);
+      const hfrCode = body.FacilityCode;
+      const teamMembers = await this.getTeamMemberByLocationHfrCode(hfrCode);
+
+      if (!teamMembers) {
+        throw new CustomError("CHW monthly activity statistics not found.", 404);
+      }
+
+      console.log("🔄 Getting monthly status for team members...");
+      const payload = await this.getStatuses(month, year, teamMembers);
+      console.log("✅ Statuses obtained and sent!");
+
+      await ApiLogger.log(req, payload);
+
+      return payload;
+    } catch (error) {
+      await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
+      throw new CustomError(error.message, error.statusCode);
     }
-
-    const month = body.month;
-    const year = body.year;
-
-    console.log("🔄 Getting monthly status for team members...");
-    const payload = await this.getStatuses(month, year, teamMembers);
-    console.log("✅ Statuses obtained and sent!");
-    return payload;
   }
 
   /*
@@ -113,11 +120,17 @@ class GatewayService {
         throw new ApiError("Invalid locationCode or locationType.", 404, 4);
       }
 
+      // GET teamMemberLocation by location Code attribute
+      const teamMemberLocation = await OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
+      if (!teamMemberLocation) {
+        throw new ApiError("Invalid locationCode or locationType.", 404, 4);
+      }
+
       // Check if a team exists without location
       const team = await TeamRepository.getTeamByLocationUuid(location.uuid);
 
       if (!team) {
-        // Do not throw error here, create team
+        // create team
         const teamObject = {};
         const teamName = location.name + " - " + location.hfrCode + " - Team";
         const teamIdentifier = (location.name + " - " + location.hfrCode + " - Team").replace(/-/g, "").replace(/\s+/g, "").toLowerCase();
@@ -187,12 +200,13 @@ class GatewayService {
           await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, payload);
         } catch (error) {
           console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
+          console.log("ERROR:", error.message);
           throw new ApiError(`Error saving person ${attr.label} attribute: ${error.message}`, 500, 5);
         }
       }
 
       // Create a new OpenMRS user
-      const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName("iCCHW");
+      const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName(process.env.DEFAULT_ICCHW_ROLE_NAME);
       const userObject = {};
       const phone = payload.message.body[0].phoneNumber;
       const firstName = payload.message.body[0].firstName || "";
@@ -213,12 +227,12 @@ class GatewayService {
       }
 
       // Create a new team member in OpenMRS
-      const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier("waja");
+      const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.DEFAULT_ICCHW_TEAM_ROLE_IDENTIFIER);
       const teamMemberObject = {
         identifier: newUser.username + location.hfrCode.replace("-", ""),
         locations: [
           {
-            uuid: location.uuid,
+            uuid: teamMemberLocation.uuid,
           },
         ],
         joinDate: new Date().toISOString().split("T")[0],
@@ -266,9 +280,9 @@ class GatewayService {
         firstName: newTeamMemberDetails.person?.preferredName?.givenName || "",
         middleName: newTeamMemberDetails.person?.preferredName?.middleName || null,
         lastName: newTeamMemberDetails.person?.preferredName?.familyName || "",
+        personUuid: newTeamMemberDetails.person?.uuid,
         username: newUser.username,
         userUuid: newUser.uuid,
-        personUuid: newTeamMemberDetails.person?.uuid,
         openMrsUuid: newTeamMemberDetails.uuid,
         teamUuid: newTeamMemberDetails.team?.uuid || null,
         teamName: newTeamMemberDetails.team?.teamName || null,
@@ -285,25 +299,32 @@ class GatewayService {
       };
 
       // Save the returned object as a new team member in the database
-      const localTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
+      await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("✅ CHW from HRHIS registered successfuly.");
 
-      // Send email to the CHW with their login credentials
-      const emailData = {
-        to: formattedMember.email,
-        subject: "iCCHW Account Activation",
-      };
+      // Generate an activation slug and record
+      const slug = await GenerateActivationSlug.generate(newUser.uuid, "ACTIVATION", 32);
+      const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
+      const activationUrl = `${backendUrl}/api/v1/user/chw/activate/${slug}`;
 
+      // Send email to the CHW with their login credentials
       await EmailService.sendEmail({
         to: formattedMember.email,
         subject: "Kufungua Akaunti ya UCS/WAJA",
-        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}`,
+        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${userObject.username}).`,
         html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
-           <p><a href="https://ucs.moh.go.tz/user-management/activation?username=${formattedMember.username}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>`,
+           <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
+           <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${userObject.username})</strong>.</p><br>`,
       });
+      // <hr><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${userObject.password}</span></small>`,
 
+      // Log the entire brouhaha
+      await ApiLogger.log(req, { member: formattedMember, slug });
       return "Facility and personnel details processed successfully.";
     } catch (error) {
+      await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
+      console.error("❌ Error while registering CHW from HRHIS:", error.message);
+
       // Rethrow with CustomError for the controller to catch
       throw new CustomError(error.message, error.statusCode || 400);
     }
@@ -316,7 +337,7 @@ class GatewayService {
     try {
       const payload = req.body;
 
-      // ✅ Validate the payload
+      // Validate the payload
       GatewayValidator.validateChwDemographicUpdate(payload);
 
       // Normalize to array if single object is provided
@@ -571,7 +592,7 @@ class GatewayService {
 
       return "CHW duty station changed successfully!";
     } catch (error) {
-      console.error("❌ Error in changing duty station:", error.stack);
+      console.error("❌ Error in changing duty station:", error.message);
       throw new CustomError(error.message, error.statusCode || 400);
     }
   }
@@ -644,7 +665,8 @@ class GatewayService {
     responseHeader.createdAt = new Date().toISOString();
     const responseObject = {};
     responseObject.header = responseHeader;
-    responseObject.signature = signature;
+    req.signature = signature;
+
     return responseObject;
   }
 }

@@ -135,3 +135,6 @@ dist
 
 # Ignore backup folders
 backup/
+
+# Ignore all .DS_Store files
+.DS_Store

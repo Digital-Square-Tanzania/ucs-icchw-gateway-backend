@@ -6,7 +6,17 @@ class GatewayValidator {
   static validateMonthAndYear(month, year) {
     const schema = Joi.object({
       month: Joi.number().min(1).max(12).required(),
-      year: Joi.number().max(new Date().getFullYear()).required(),
+      year: Joi.number().min(1900).max(new Date().getFullYear()).required(),
+    }).custom((value, helpers) => {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
+
+      if (value.year === currentYear && value.month > currentMonth) {
+        return helpers.message(`Month cannot be in the future for the current year (${currentYear}).`);
+      }
+
+      return value;
     });
 
     const { error } = schema.validate({ month, year });

@@ -1,0 +1,50 @@
+doctype html
+html
+  head
+    title WAJA/UCS - Huisha akaunti.
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    link(rel="stylesheet", href="/css/styles.css")
+  body
+    div.container
+      div.bg-top
+        img(src="/images/tz.png" alt="Tanzania Coat of Arms" height="100px" width="100px" style="margin-top: 5%; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));")
+        if alert
+          div.alert
+            p ⚠️ #{message}
+
+      div.card
+        if login
+          h1 Anzisha akaunti ya WAJA
+          small <span style="color: #ccc;">Kitambulisho chako cha WAJA ni: <strong>#{username}</strong></span>
+          br
+          form(action=`/api/v1/user/chw/activate/${slug}` method="POST")
+            div#strength-meter
+              - for (let i = 0; i < 5; i++)
+                div.strength-bar
+            input(type="hidden" name="slug" value=slug)
+            input(type="hidden" name="isStrong" id="isStrong" value=false)
+            div.password-group
+              label(for="password") Nenosiri:
+              span.password-error.strength
+            input(type="password" name="password"  id="password" required)
+            div.password-group
+              label(for="confirmPassword") Rudia Nenosiri:
+              span.password-error.match
+            input(type="password" name="confirmPassword" id="confirmPassword" required)
+            button(type="submit" disabled) Hifadhi Nenosiri
+        else
+          if !alert
+            h1 ✅ Umefanikiwa!
+          else
+            h1 ❌ Haujafanikiwa
+          p#message-text #{message}
+          br
+          br
+          hr(style="border: 1px solid #ccc; width: 80%;")
+          br
+          if resend
+            a(href=`/api/v1/user/chw/resend/${slug}`) Tuma Email Mpya
+          else
+            p(style="font-size: 0.9rem; color: gray") Unaweza kuufunga ukurasa huu.
+    script(src="/js/account-activation.js")

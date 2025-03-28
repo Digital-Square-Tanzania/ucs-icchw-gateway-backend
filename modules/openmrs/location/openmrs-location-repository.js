@@ -230,6 +230,15 @@ class OpenMRSLocationRepository {
 
     return location;
   }
+
+  // Get location by locationCode
+  static async getLocationByCode(locationCode) {
+    return prisma.openMRSLocation.findFirst({
+      where: {
+        locationCode: locationCode,
+      },
+    });
+  }
 }
 
 export default OpenMRSLocationRepository;
