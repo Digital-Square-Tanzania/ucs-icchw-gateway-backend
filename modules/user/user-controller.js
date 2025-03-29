@@ -3,6 +3,9 @@ import ResponseHelper from "../../helpers/response-helper.js";
 import CustomError from "../../utils/custom-error.js";
 
 class UserController {
+  /**
+   * Create a new backend user
+   */
   static async createUser(req, res, next) {
     try {
       const newUser = await UserService.createUser(req.body);
@@ -12,6 +15,9 @@ class UserController {
     }
   }
 
+  /**
+   * List all users with pagination
+   */
   static async getAllUsers(req, res, next) {
     try {
       const page = parseInt(req.query.page, 10) || 1;
@@ -24,6 +30,9 @@ class UserController {
     }
   }
 
+  /**
+   * Get user by ID
+   */
   static async getUserById(req, res, next) {
     try {
       const user = await UserService.getUserById(req.params.id);
@@ -36,6 +45,9 @@ class UserController {
     }
   }
 
+  /**
+   * Update user by ID
+   */
   static async updateUser(req, res, next) {
     try {
       const updatedUser = await UserService.updateUser(req.params.id, req.body);
@@ -45,6 +57,9 @@ class UserController {
     }
   }
 
+  /**
+   * Delete user by ID
+   */
   static async deleteUser(req, res, next) {
     try {
       await UserService.deleteUser(req.params.id);
@@ -54,6 +69,9 @@ class UserController {
     }
   }
 
+  /**
+   * Activate user account
+   */
   static async renderActivationPage(req, res, next) {
     try {
       const result = await UserService.renderActivationPage(req, res, next);
@@ -74,7 +92,9 @@ class UserController {
     }
   }
 
-  // Resend activation email
+  /**
+   * Resend activation email
+   */
   static async resendActivationEmail(req, res, next) {
     try {
       const result = await UserService.handleResendEmail(req, res, next);
@@ -84,11 +104,25 @@ class UserController {
     }
   }
 
-  // Handle forgotten password
+  /**
+   * Handle forgotten password
+   */
   static async forgotPassword(req, res, next) {
     try {
       const result = await UserService.handleForgotPassword(req, res, next);
-      return ResponseHelper.success(res, "Password reset email sent successfully");
+      return ResponseHelper.success(res, "Password reset email sent successfully", result, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * Create a new CHW account
+   */
+  static async createChwAccount(req, res, next) {
+    try {
+      const result = await UserService.createChwAccount(req, res, next);
+      return ResponseHelper.success(res, "CHW account created successfully.", result, 201);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }

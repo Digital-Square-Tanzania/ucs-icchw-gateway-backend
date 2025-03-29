@@ -18,6 +18,17 @@ router.get(
 
 router.get("/:id", AuthMiddleware.authenticate, UserController.getUserById);
 
+// Create CHW Route: UCS_DEVELOPER, MOH_ADMIN, and COUNCIL_COORDINATOR can create CHW users
+router.post(
+  "/chw",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
+  createUserRateLimiter,
+  ...ValidationMiddleware.sanitizeUserInputs(), // Spread the array of sanitization middleware
+  ValidationMiddleware.validate(UserValidation.createChwSchema()), // Joi validation
+  UserController.createChwAccount
+);
+
 // Create Route: MOH_ADMIN, COUNCIL_COORDINATOR, and FACILITY_PROVIDER can create users
 router.post(
   "/",

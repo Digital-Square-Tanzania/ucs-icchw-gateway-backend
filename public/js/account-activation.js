@@ -140,3 +140,15 @@ document.addEventListener("DOMContentLoaded", function () {
     return score; // 0 to 5
   }
 });
+
+function togglePasswordVisibility() {
+  const passwordInput = document.getElementById("password");
+  const confirmPasswordInput = document.getElementById("confirmPassword");
+  const showPasswordCheckbox = document.getElementById("showPassword");
+
+  if (passwordInput && confirmPasswordInput && showPasswordCheckbox) {
+    const type = showPasswordCheckbox.checked ? "text" : "password";
+    passwordInput.type = type;
+    confirmPasswordInput.type = type;
+  }
+}

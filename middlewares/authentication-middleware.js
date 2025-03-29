@@ -42,7 +42,6 @@ class AuthMiddleware {
   static authorizeRoles(...allowedRoles) {
     return (req, res, next) => {
       const userRole = req.user?.role;
-
       if (!allowedRoles.includes(userRole)) {
         return ResponseHelper.error(res, "Access denied. Insufficient permissions.", 403);
       }

@@ -6,6 +6,15 @@ import ApiLogger from "../../utils/api-logger.js";
 import openmrsApiClient from "../openmrs/openmrs-api-client.js";
 import EmailService from "../../utils/email-service.js";
 import GenerateActivationSlug from "../../utils/generate-activation-slug.js";
+import OpenMRSPersonHelper from "../openmrs/helpers/openmrs-person-helper.js";
+import OpenMRSUserHelper from "../openmrs/helpers/openmrs-user-helper.js";
+import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
+import FrontendValidator from "../openmrs/helpers/frontend-validator.js";
+import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-repository.js";
+import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
+import TeamRepository from "../openmrs/team/openmrs-openmrs-team-repository.js";
+import GenerateSwahiliPassword from "../../utils/generate-swahili-password.js";
+import TeamService from "../openmrs/team/openmrs-team-service.js";
 
 const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
 
@@ -251,6 +260,83 @@ class UserService {
       console.error("Error in handleForgotPassword: ", error.message);
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
       throw new CustomError(error.message, error.status || 500);
+    }
+  }
+
+  /**
+   * Create a new CHW account
+   */
+  static async createChwAccount(req, _res, _next) {
+    console.log("🔄 Registering CHW from the frontend...");
+    try {
+      const payload = req.body;
+
+      // Validate incoming CHW deployment payload
+      // FrontendValidator.validateCreateChwPayload(payload);
+
+      // Check if the CHW exists in team members by NIN
+      const teamMember = await TeamMemberRepository.getTeamMemberByNin(payload.NIN);
+
+      if (teamMember) {
+        throw new CustomError("Duplicate CHW ID found.", 409);
+      }
+
+      // Check if the location exists
+      const location = await OpenMRSLocationRepository.getLocationByHfrCode(payload.hfrCode);
+      if (!location) {
+        throw new CustomError("Invalid hfrCode.", 404);
+      }
+
+      // GET teamMemberLocation by location Code attribute
+      const teamMemberLocation = await OpenMRSLocationRepository.getLocationByCode(payload.locationCode);
+      if (!teamMemberLocation) {
+        throw new CustomError("Invalid locationCode.", 404);
+      }
+
+      // Check if a team exists without location
+      let team = await TeamRepository.getTeamByLocationUuid(location.uuid);
+
+      if (!team) {
+        // Create a new team and asign it to the team  object
+        const newTeam = await TeamService.createTeam(location);
+        team = newTeam;
+      }
+
+      // Create a new person in OpenMRS if team member does not exist by NIN
+      const newPerson = await OpenMRSPersonHelper.createPersonWithAttributes(payload);
+
+      // Create a new OpenMRS user
+      const newUser = await OpenMRSUserHelper.create(payload, newPerson.uuid);
+
+      // Create a new team member in OpenMRS and in local Repo
+      const newTeamMember = await TeamMemberService.createTeamMember(newUser.username, newUser.uuid, location.hfrCode, teamMemberLocation.uuid, team.uuid, newPerson.uuid);
+      console.log("✅ CHW registered successfuly.");
+
+      // Generate an activation slug and record
+      const slug = await GenerateActivationSlug.generate(newUser.uuid, "ACTIVATION", 32);
+      const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
+      const activationUrl = `${backendUrl}/api/v1/user/chw/activate/${slug}`;
+
+      // Send email to the CHW with their login credentials
+      await EmailService.sendEmail({
+        to: newTeamMember.email,
+        subject: "Kufungua Akaunti ya UCS/WAJA",
+        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${newTeamMember.username}).`,
+        html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
+           <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
+           <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${newTeamMember.username})</strong>.</p><br>`,
+      });
+      // <hr><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${newTeamMember.password}</span></small>`,
+
+      // Log the entire brouhaha
+      await ApiLogger.log(req, { member: newTeamMember, slug });
+      return newTeamMember;
+    } catch (error) {
+      await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
+      console.error("❌ Error while registering CHW from HRHIS:", error.message);
+
+      // Rethrow with CustomError for the controller to catch
+      throw new CustomError(error.message, error.statusCode || 400);
     }
   }
 }

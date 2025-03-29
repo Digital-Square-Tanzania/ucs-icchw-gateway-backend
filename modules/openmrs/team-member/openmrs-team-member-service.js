@@ -1,7 +1,8 @@
 import dotenv from "dotenv";
 import CustomError from "../../../utils/custom-error.js";
-import TeamMemberRepository from "./openmrs-team-member-repository.js";
 import openmrsApiClient from "../openmrs-api-client.js";
+import TeamRoleRepository from "../team-role/openmrs-team-role-repository.js";
+import TeamMemberRepository from "./openmrs-team-member-repository.js";
 
 dotenv.config();
 
@@ -131,42 +132,94 @@ class TeamMemberService {
     return teamMember;
   }
 
-  static async createTeamMember(teamMemberData) {
+  static async createTeamMember(username, userUuid, hfrCode, teamMemberLocationUuid, teamUuid, personUuid) {
     try {
       console.log("🔄 Creating team member in OpenMRS...");
 
-      // Send request to OpenMRS
-      const openMrsResponse = await openmrsApiClient.post(this.baseUrl, teamMemberData, { auth: this.auth });
-
-      if (!openMrsResponse.data || !openMrsResponse.data.uuid) {
-        throw new CustomError("Failed to create team member in OpenMRS.", 500);
-      }
-
-      // Prepare data for local storage
-      const formattedData = {
-        identifier: teamMemberData.identifier,
-        firstName: teamMemberData.person?.preferredName?.givenName || "",
-        middleName: teamMemberData.person?.preferredName?.middleName || null,
-        lastName: teamMemberData.person?.preferredName?.familyName || "",
-        username: teamMemberData.identifier,
-        personUuid: teamMemberData.person?.uuid,
-        openMrsUuid: openMrsResponse.data.uuid,
-        teamUuid: teamMemberData.team?.uuid || null,
-        teamName: teamMemberData.team?.teamName || null,
-        teamIdentifier: teamMemberData.team?.teamIdentifier || null,
-        locationUuid: teamMemberData.locations?.[0]?.uuid || null,
-        locationName: teamMemberData.locations?.[0]?.name || null,
-        locationDescription: teamMemberData.locations?.[0]?.description || null,
-        createdAt: new Date(openMrsResponse.data.dateCreated),
-        roleUuid: teamMemberData.teamRole?.uuid || null,
-        roleName: teamMemberData.teamRole?.name || null,
+      const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.DEFAULT_ICCHW_TEAM_ROLE_IDENTIFIER);
+      const teamMemberObject = {
+        identifier: username + hfrCode.replace("-", ""),
+        locations: [
+          {
+            uuid: teamMemberLocationUuid,
+          },
+        ],
+        joinDate: new Date().toISOString().split("T")[0],
+        team: {
+          uuid: teamUuid,
+        },
+        teamRole: {
+          uuid: identifierRole.uuid,
+        },
+        person: {
+          uuid: personUuid,
+        },
+        isDataProvider: "false",
       };
 
-      const savedTeamMember = await TeamMemberRepository.createTeamMember(formattedData);
+      // Send the request to OpenMRS server using OpenMRS API Client
+      const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
+
+      if (!newTeamMember || !newTeamMember.uuid) {
+        throw new CustomError("Failed to create team member in OpenMRS.", 500);
+      }
+      console.log("New Team Member Created in OpenMRS:");
+
+      // Fetch the newly created team member details
+      const newTeamMemberDetails = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}`, {
+        v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
+      });
+
+      let formattedMember = {};
+
+      // Extract attributes for NIN, email, and phoneNumber
+      let nin = null;
+      let email = null;
+      let phoneNumber = null;
+
+      if (newTeamMemberDetails.person?.attributes?.length) {
+        for (const attr of newTeamMemberDetails.person.attributes) {
+          if (attr.attributeType?.display === "NIN") {
+            nin = attr.value;
+          } else if (attr.attributeType?.display === "email") {
+            email = attr.value;
+          } else if (attr.attributeType?.display === "phoneNumber") {
+            phoneNumber = attr.value;
+          }
+        }
+      }
+
+      // Format team member data
+      formattedMember = {
+        identifier: newTeamMemberDetails.identifier,
+        firstName: newTeamMemberDetails.person?.preferredName?.givenName || "",
+        middleName: newTeamMemberDetails.person?.preferredName?.middleName || null,
+        lastName: newTeamMemberDetails.person?.preferredName?.familyName || "",
+        personUuid: newTeamMemberDetails.person?.uuid,
+        username: username,
+        userUuid: userUuid,
+        openMrsUuid: newTeamMemberDetails.uuid,
+        teamUuid: newTeamMemberDetails.team?.uuid || null,
+        teamName: newTeamMemberDetails.team?.teamName || null,
+        teamIdentifier: newTeamMemberDetails.team?.teamIdentifier || null,
+        locationUuid: newTeamMemberDetails.team?.location?.uuid || null,
+        locationName: newTeamMemberDetails.team?.location?.name || null,
+        locationDescription: newTeamMemberDetails.team?.location?.description || null,
+        roleUuid: newTeamMemberDetails.teamRole?.uuid || null,
+        roleName: newTeamMemberDetails.teamRole?.name || null,
+        NIN: nin,
+        email,
+        phoneNumber,
+        createdAt: new Date(newTeamMemberDetails.dateCreated),
+      };
+
+      // Save the returned object as a new team member in the database
+      const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("✅ Team member created successfully.");
+
       return savedTeamMember;
     } catch (error) {
-      throw new CustomError("Failed to create team member.", 500);
+      throw new CustomError("Failed to create team member." + error.stack, 500);
     }
   }
 
@@ -175,7 +228,7 @@ class TeamMemberService {
       console.log("🔄 Updating team member in OpenMRS...");
 
       // Send update request to OpenMRS
-      await openmrsApiClient.put(`${this.baseUrl}/${uuid}`, updateData, { auth: this.auth });
+      await openmrsApiClient.put(`${this.baseUrl}/${uuid}`, updateData);
 
       // Update locally
       const updatedTeamMember = await TeamMemberRepository.updateTeamMember(uuid, updateData);

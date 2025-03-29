@@ -13,6 +13,8 @@ import TeamRoleRepository from "../openmrs/team-role/openmrs-team-role-repositor
 import EmailService from "../../utils/email-service.js";
 import ApiLogger from "../../utils/api-logger.js";
 import GenerateActivationSlug from "../../utils/generate-activation-slug.js";
+import ExtractDateFromNin from "../../utils/extract-date-from-nin.js";
+import GenerateSwahiliPassword from "../../utils/generate-swahili-password.js";
 
 dotenv.config();
 
@@ -155,7 +157,7 @@ class GatewayService {
         preferred: true,
         prefix: payload.message.body[0].sex.toLowerCase() === "male" ? "Mr" : "Ms",
       });
-      personObject.birthdate = this.extractDateFromNIN(payload.message.body[0].NIN);
+      personObject.birthdate = ExtractDateFromNin(payload.message.body[0].NIN);
       personObject.gender = payload.message.body[0].sex.toLowerCase() === "male" ? "M" : "F";
 
       // Create the person in OpenMRS
@@ -213,7 +215,7 @@ class GatewayService {
       const lastName = payload.message.body[0].lastName || "";
 
       userObject.username = phone && phone.startsWith("+255") ? phone.replace("+255", "0") : (firstName.substring(0, 2) + lastName.substring(0, 2)).toLowerCase();
-      userObject.password = this.generateSwahiliPassword();
+      userObject.password = GenerateSwahiliPassword.generate();
       userObject.roles = [roleUuid];
       userObject.person = {};
       userObject.person.uuid = newPerson.uuid;
@@ -508,7 +510,7 @@ class GatewayService {
 
       const newUserObject = {
         username: existingUsername + "_" + counterTicker,
-        password: this.generateSwahiliPassword(),
+        password: GenerateSwahiliPassword.generate(),
         roles: [roleUuid],
         person: {
           uuid: currentTeamMember.person.uuid,
@@ -598,24 +600,6 @@ class GatewayService {
   }
 
   /*
-   * Extract date from NIN
-   */
-  static extractDateFromNIN(nin) {
-    // Ensure NIN is in the expected format
-    const match = nin.match(/^(\d{8})-\d{5}-\d{5}-\d{2}$/);
-    if (!match) {
-      throw new ApiError("Invalid NIN format", 400, 3);
-    }
-
-    const birthSegment = match[1]; // "19570716"
-    const year = birthSegment.slice(0, 4);
-    const month = birthSegment.slice(4, 6);
-    const day = birthSegment.slice(6, 8);
-
-    return `${year}-${month}-${day}`;
-  }
-
-  /*
    * Random password generator
    */
   static generateRandomPassword() {
@@ -626,28 +610,6 @@ class GatewayService {
       retVal += charset.charAt(Math.floor(Math.random() * n));
     }
     return retVal;
-  }
-
-  /*
-   * Swahili password generator
-   */
-  static generateSwahiliPassword() {
-    const rawWords = process.env.SWAHILI_WORDS || "";
-    const swahiliWords = rawWords
-      .split(",")
-      .map((w) => w.trim())
-      .filter(Boolean);
-
-    const getRandomWord = () => {
-      const word = swahiliWords[Math.floor(Math.random() * swahiliWords.length)];
-      return word.charAt(0).toUpperCase() + word.slice(1);
-    };
-
-    const word1 = getRandomWord();
-    const word2 = getRandomWord();
-    const number = Math.floor(100 + Math.random() * 900); // 3-digit number
-
-    return `${word1}${word2}${number}`;
   }
 
   /*
