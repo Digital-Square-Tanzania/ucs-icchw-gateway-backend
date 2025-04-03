@@ -224,6 +224,28 @@ class OpenMRSLocationService {
       throw new CustomError("❌ OpenMRS Location Attribute Types Sync Error: " + error.message);
     }
   }
+
+  // Search facilities by name
+  static async searchFacilities(name) {
+    try {
+      console.log(`🔍 Searching for facilities with name: ${name}`);
+      const results = await OpenMRSLocationRepository.searchFacilities(name);
+      return results;
+    } catch (error) {
+      throw new CustomError("❌ Facility Search Error: " + error.message);
+    }
+  }
+
+  // Search hamlets by name
+  static async searchHamlets(name) {
+    try {
+      console.log(`🔍 Searching for hamlets with name: ${name}`);
+      const results = await OpenMRSLocationRepository.searchHamlets(name);
+      return results;
+    } catch (error) {
+      throw new CustomError("❌ Hamlet Search Error: " + error.message);
+    }
+  }
 }
 
 export default OpenMRSLocationService;

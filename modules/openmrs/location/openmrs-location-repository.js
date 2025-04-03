@@ -239,6 +239,42 @@ class OpenMRSLocationRepository {
       },
     });
   }
+
+  // Search for facilities by name
+  static async searchFacilities(name) {
+    return prisma.openMRSLocation.findMany({
+      where: {
+        name: {
+          contains: name,
+          mode: "insensitive",
+        },
+        type: "Facility",
+      },
+      select: {
+        name: true,
+        uuid: true,
+        hfrCode: true,
+      },
+    });
+  }
+
+  // Search for hamlets by name
+  static async searchHamlets(name) {
+    return prisma.openMRSLocation.findMany({
+      where: {
+        name: {
+          contains: name,
+          mode: "insensitive",
+        },
+        type: "Hamlet",
+      },
+      select: {
+        name: true,
+        uuid: true,
+        locationCode: true,
+      },
+    });
+  }
 }
 
 export default OpenMRSLocationRepository;

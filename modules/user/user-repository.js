@@ -39,6 +39,10 @@ class UserRepository {
           status: true,
           joinDate: true,
           lastLogin: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
         },
       }),
       prisma.user.count({ where: { isDeleted: false } }),

@@ -11,11 +11,34 @@ class TeamMemberRepository {
     const openmrsTeamMembersCount = await prisma.openMRSTeamMember.count();
     const skip = (page - 1) * pageSize;
     const teamMembers = await prisma.openMRSTeamMember.findMany({
+      orderBy: { createdAt: "desc" },
       skip: skip,
       take: pageSize,
+      select: {
+        openMrsUuid: true,
+        username: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        roleName: true,
+        teamName: true,
+        locationName: true,
+      },
     });
 
-    return { users: teamMembers, total: openmrsTeamMembersCount };
+    // Rename openMrsUuid to uuid in the response
+    const formattedTeamMembers = teamMembers.map((member) => ({
+      uuid: member.openMrsUuid,
+      username: member.username,
+      firstName: member.firstName,
+      middleName: member.middleName,
+      lastName: member.lastName,
+      roleName: member.roleName,
+      teamName: member.teamName,
+      locationName: member.locationName,
+    }));
+
+    return { users: formattedTeamMembers, total: openmrsTeamMembersCount };
   }
 
   /**

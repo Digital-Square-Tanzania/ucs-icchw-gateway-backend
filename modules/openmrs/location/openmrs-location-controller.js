@@ -128,9 +128,7 @@ class OpenMRSLocationController {
     }
   }
 
-  /**
-   * Sync locations from OpenMRS in batches
-   */
+  // Sync locations from OpenMRS in batches
   static async syncLocations(req, res, next) {
     try {
       const { pageSize } = req.query.pageSize;
@@ -141,6 +139,7 @@ class OpenMRSLocationController {
     }
   }
 
+  // Sync location tags
   static async syncLocationTags(req, res, next) {
     try {
       await OpenMRSLocationService.syncLocationTags();
@@ -150,10 +149,39 @@ class OpenMRSLocationController {
     }
   }
 
+  // Sync location attribute types
   static async syncLocationAttributeTypes(req, res, next) {
     try {
       await OpenMRSLocationService.syncLocationAttributeTypes();
       ResponseHelper.success(res, "OpenMRS location attribute types synced successfully.");
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  // Search facilities by name
+  static async searchFacilities(req, res, next) {
+    try {
+      const { q: name } = req.query;
+      if (!name) {
+        throw new CustomError("Query parameter 'q' is required", 400);
+      }
+      const facilities = await OpenMRSLocationService.searchFacilities(name);
+      return ResponseHelper.success(res, "Facilities retrieved successfully", facilities);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  // Search hamlets by name
+  static async searchHamlets(req, res, next) {
+    try {
+      const { q: name } = req.query;
+      if (!name) {
+        throw new CustomError("Query parameter 'q' is required", 400);
+      }
+      const hamlets = await OpenMRSLocationService.searchHamlets(name);
+      return ResponseHelper.success(res, "Hamlets retrieved successfully", hamlets);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
