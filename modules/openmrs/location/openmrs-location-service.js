@@ -111,8 +111,8 @@ class OpenMRSLocationService {
   static async syncLocations(pageSize) {
     try {
       console.log("🔄 Syncing OpenMRS Locations in batches...");
-      let fetchedRecords = 70000; // Track total fetched records
-      let totalFetched = 70000; // Track overall total fetched
+      let fetchedRecords = 0; // Track total fetched records
+      let totalFetched = 0; // Track overall total fetched
 
       while (true) {
         console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
