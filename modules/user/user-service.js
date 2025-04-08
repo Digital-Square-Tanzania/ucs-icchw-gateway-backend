@@ -111,17 +111,14 @@ class UserService {
       return { alert: true, message: "Muda wa kuwasha akaunti umepitiliza.", slug, login: false };
     }
 
-    // ✅ Hash password and activate account
-    // const hashedPassword = await bcrypt.hash(password, 10);
-
     // Update OpenMRS password
     const openmrsUser = await openmrsApiClient.post(`password/${activation.userUuid}`, {
       newPassword: password,
     });
     console.log("New Password", password);
     console.log("UserUuid", activation.userUuid);
-    console.log("🔄 OpenMRS user updated successfully: ", openmrsUser);
-    if (!openmrsUser) {
+    console.log("🔄 OpenMRS user updated successfully: ", openmrsUser.statusCode);
+    if (openmrsUser.statusCode !== 200) {
       return { alert: true, message: "Kuna tatizo!. Tafadhali jaribu tena baadaye.", slug, login: false };
     }
     // Save activation status
