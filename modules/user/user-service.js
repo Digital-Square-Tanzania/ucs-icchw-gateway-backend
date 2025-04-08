@@ -112,11 +112,11 @@ class UserService {
     }
 
     // ✅ Hash password and activate account
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // const hashedPassword = await bcrypt.hash(password, 10);
 
     // Update OpenMRS password
     const openmrsUser = await openmrsApiClient.post(`user/${activation.userUuid}`, {
-      password: hashedPassword,
+      password: password,
     });
     if (!openmrsUser) {
       return { alert: true, message: "Kuna tatizo!. Tafadhali jaribu tena baadaye.", slug, login: false };
