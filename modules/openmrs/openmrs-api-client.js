@@ -47,6 +47,19 @@ class OpenMRSApiClient {
   }
 
   /**
+   * POST request to send data with full response
+   */
+  async postReturningRawResponse(endpoint, data) {
+    try {
+      const response = await this.client.post(endpoint, data);
+      return response;
+    } catch (error) {
+      console.error(`❌ OpenMRS POST Error (${endpoint}):`, error.response?.data || error.message);
+      throw new ApiError(error.response?.data.error.message || error.message, 400, 3);
+    }
+  }
+
+  /**
    * PUT request to update data
    */
   async put(endpoint, data) {
