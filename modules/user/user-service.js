@@ -118,6 +118,9 @@ class UserService {
     const openmrsUser = await openmrsApiClient.post(`user/${activation.userUuid}`, {
       password: password,
     });
+    console.log("Password", password);
+    console.log("UserUuid", activation.userUuid);
+    console.log("🔄 OpenMRS user updated successfully: ", openmrsUser);
     if (!openmrsUser) {
       return { alert: true, message: "Kuna tatizo!. Tafadhali jaribu tena baadaye.", slug, login: false };
     }
