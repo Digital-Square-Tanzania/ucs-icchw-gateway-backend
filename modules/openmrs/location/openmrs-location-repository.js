@@ -266,12 +266,15 @@ class OpenMRSLocationRepository {
           contains: name,
           mode: "insensitive",
         },
-        type: "Hamlet",
+        type: {
+          in: ["Hamlet", "Village"],
+        },
       },
       select: {
         name: true,
         uuid: true,
         locationCode: true,
+        type: true,
       },
     });
   }
