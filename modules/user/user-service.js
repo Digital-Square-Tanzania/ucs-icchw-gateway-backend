@@ -115,10 +115,10 @@ class UserService {
     // const hashedPassword = await bcrypt.hash(password, 10);
 
     // Update OpenMRS password
-    const openmrsUser = await openmrsApiClient.post(`user/${activation.userUuid}`, {
-      password: password,
+    const openmrsUser = await openmrsApiClient.post(`password/${activation.userUuid}`, {
+      newPassword: password,
     });
-    console.log("Password", password);
+    console.log("New Password", password);
     console.log("UserUuid", activation.userUuid);
     console.log("🔄 OpenMRS user updated successfully: ", openmrsUser);
     if (!openmrsUser) {
