@@ -157,7 +157,7 @@ class GatewayService {
         preferred: true,
         prefix: payload.message.body[0].sex.toLowerCase() === "male" ? "Mr" : "Ms",
       });
-      personObject.birthdate = ExtractDateFromNin(payload.message.body[0].NIN);
+      personObject.birthdate = ExtractDateFromNin.extract(payload.message.body[0].NIN);
       personObject.gender = payload.message.body[0].sex.toLowerCase() === "male" ? "M" : "F";
 
       // Create the person in OpenMRS
