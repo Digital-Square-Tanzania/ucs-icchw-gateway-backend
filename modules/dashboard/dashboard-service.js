@@ -37,7 +37,7 @@ class DashboardService {
       };
     } catch (error) {
       console.error("❌ Error fetching dashboard stats:", error.message);
-      throw new CustomError("Failed to fetch dashboard statistics." + error.stack, 400);
+      throw new CustomError("Failed to fetch dashboard statistics." + error.message, 400);
     }
   }
 

@@ -120,7 +120,7 @@ class TeamMemberService {
 
       console.log("✅ OpenMRS Team Members Sync Completed.");
     } catch (error) {
-      throw new CustomError("❌ OpenMRS Team Members Sync Error: " + error.stack);
+      throw new CustomError("❌ OpenMRS Team Members Sync Error: " + error);
     }
   }
 
@@ -219,7 +219,7 @@ class TeamMemberService {
 
       return savedTeamMember;
     } catch (error) {
-      throw new CustomError("Failed to create team member." + error.stack, 500);
+      throw new CustomError("Failed to create team member." + error.message, 500);
     }
   }
 

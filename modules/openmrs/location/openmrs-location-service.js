@@ -187,7 +187,7 @@ class OpenMRSLocationService {
 
       console.log("✅ OpenMRS Location Sync Completed.");
     } catch (error) {
-      throw new CustomError("❌ OpenMRS Location Sync Error: " + error.stack);
+      throw new CustomError("❌ OpenMRS Location Sync Error: " + error.message);
     }
   }
 

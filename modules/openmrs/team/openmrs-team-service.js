@@ -30,7 +30,7 @@ class TeamService {
 
       return { message: "Teams synchronized successfully." };
     } catch (error) {
-      console.error("❌ Failed to fetch teams:", error.response?.data || error.stack);
+      console.error("❌ Failed to fetch teams:", error.response?.data || error.message);
       throw new CustomError("Failed to fetch teams.", 500);
     }
   }

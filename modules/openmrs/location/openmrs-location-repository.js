@@ -144,7 +144,7 @@ class OpenMRSLocationRepository {
         skipDuplicates: true,
       });
     } catch (error) {
-      throw new CustomError(error.stack);
+      throw new CustomError(error.message);
     }
   }
 
