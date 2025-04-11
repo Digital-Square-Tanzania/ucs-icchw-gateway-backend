@@ -86,15 +86,6 @@ class GatewayService {
 
       // Create a new OpenMRS user
       const newUser = await OpenmrsHelper.createOpenmrsUser(payload, newPerson);
-      if (!newUser) {
-        try {
-          await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
-          console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
-        } catch (deleteError) {
-          console.error(`❌ Failed to delete person with ID: ${newPerson.id}`, deleteError);
-          // Optional: report this error somewhere else too (logging service / monitoring / slack alert)
-        }
-      }
 
       // Create a new team member in OpenMRS
       const newTeamMember = await TeamMemberService.createTeamMember(
