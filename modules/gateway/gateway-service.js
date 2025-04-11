@@ -121,10 +121,12 @@ class GatewayService {
       console.error("❌ Error while registering CHW from HRHIS:", error.stack);
 
       // Remove the created person and user if any error occurs
-      await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+      if (newPerson && newPerson.id) {
+        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+      }
 
       // Rethrow with CustomError for the controller to catch
-      throw new ApiError(error.message, error.statusCode || 400, 5);
+      throw new ApiError(error.stack, error.statusCode || 400, 5);
     }
   }
 
