@@ -77,10 +77,6 @@ class GatewayService {
       const payloadContent = new PayloadContent(payload);
       const validatedContent = await payloadContent.validate();
 
-      console.log("Validated content:", validatedContent);
-      console.log("Validated Content Team UUID:", validatedContent.team.uuid);
-      console.log("Validated Content Team Member Location UUID:", validatedContent.teamMemberLocation.uuid);
-
       // Create a new person and attributes
       const newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
 
@@ -131,10 +127,10 @@ class GatewayService {
         }
       }
 
-      console.error("❌ Error while registering CHW from HRHIS:", error.stack);
+      console.error("❌ Error while registering CHW from HRHIS:", error.message);
 
       // Rethrow with CustomError for the controller to catch
-      throw new ApiError(error.stack, error.statusCode || 400, 5);
+      throw new ApiError(error.message, error.statusCode || 400, 5);
     }
   }
 

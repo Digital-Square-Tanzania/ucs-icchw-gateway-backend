@@ -52,7 +52,7 @@ class PayloadContent {
 
       return { teamMemberLocation, team };
     } catch (error) {
-      throw new ApiError(`Invalid payload: ${error.stack}`, 400, 1);
+      throw new ApiError(`Invalid payload: ${error.message}`, 400, 1);
     }
   }
 }
