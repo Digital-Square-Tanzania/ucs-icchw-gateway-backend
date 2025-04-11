@@ -1,7 +1,7 @@
 import axios from "axios";
 import dotenv from "dotenv";
-import CustomError from "../../utils/custom-error.js";
-import ApiError from "../../utils/api-error.js";
+import CustomError from "./custom-error.js";
+import ApiError from "./api-error.js";
 
 dotenv.config();
 

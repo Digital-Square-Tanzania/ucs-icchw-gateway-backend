@@ -15,7 +15,7 @@ const allowedOrigins = [
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-import ErrorHelper from "./helpers/error-helper.js";
+import ErrorResponder from "./responders/error-responder.js";
 import AuthRouter from "./modules/auth/auth-router.js";
 import UserRouter from "./modules/user/user-router.js";
 import OpenMrsRouter from "./modules/openmrs/openmrs-router.js";
@@ -85,7 +85,7 @@ class AppServer {
   }
 
   initializeErrorHandling() {
-    const errorHandlerInstance = new ErrorHelper();
+    const errorHandlerInstance = new ErrorResponder();
     // Global error handler
     this.app.use((err, req, res, next) => {
       errorHandlerInstance.handleError(err, req, res, next);

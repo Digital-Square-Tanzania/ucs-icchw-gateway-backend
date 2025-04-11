@@ -1,5 +1,5 @@
 import rateLimit from "express-rate-limit";
-import ResponseHelper from "../helpers/response-helper.js";
+import BaseResponse from "../responders/base-responder.js";
 
 class RoleBasedRateLimiter {
   constructor(windowMs = 60 * 60 * 1000) {
@@ -30,7 +30,7 @@ class RoleBasedRateLimiter {
       windowMs: this.windowMs,
       max: (req, res) => this.dynamicMaxRequests(req, defaultLimit),
       message: (req, res) => {
-        return ResponseHelper.error(res, "Too many requests. Please try again later.", 429);
+        return BaseResponse.error(res, "Too many requests. Please try again later.", 429);
       },
       keyGenerator: (req) => req.user?.id || req.ip, // Use user ID if available, else IP
       standardHeaders: true,

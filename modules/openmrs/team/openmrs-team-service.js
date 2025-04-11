@@ -1,8 +1,8 @@
 import axios from "axios";
 import dotenv from "dotenv";
-import TeamRepository from "./openmrs-openmrs-team-repository.js";
+import TeamRepository from "./openmrs-team-repository.js";
 import CustomError from "../../../utils/custom-error.js";
-import openmrsApiClient from "../openmrs-api-client.js";
+import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 
 dotenv.config();
 
@@ -48,7 +48,7 @@ class TeamService {
   static async createTeam(location) {
     // create team
     const teamObject = {};
-    const teamName = location.name + " - Team";
+    const teamName = location.name + "-Team";
     const teamIdentifier = (location.name + " - Team").replace(/-/g, "").replace(/\s+/g, "").toLowerCase();
     teamObject.location = location.uuid;
     teamObject.teamName = teamName;

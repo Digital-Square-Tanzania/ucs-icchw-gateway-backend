@@ -1,5 +1,5 @@
 import DashboardService from "./dashboard-service.js";
-import ResponseHelper from "../../helpers/response-helper.js";
+import BaseResponse from "../../responders/base-responder.js";
 
 class DashboardController {
   /**
@@ -8,7 +8,7 @@ class DashboardController {
   static async getDashboardStats(req, res, next) {
     try {
       const stats = await DashboardService.getDashboardStats();
-      return ResponseHelper.success(res, "Dashboard statistics retrieved successfully", stats);
+      return BaseResponse.success(res, "Dashboard statistics retrieved successfully", stats);
     } catch (error) {
       next(error);
     }
@@ -39,7 +39,7 @@ class DashboardController {
         });
 
       // Immediate response
-      return ResponseHelper.success(res, `Sync for ${path} started`, { started: true });
+      return BaseResponse.success(res, `Sync for ${path} started`, { started: true });
     } catch (error) {
       next(error);
     }

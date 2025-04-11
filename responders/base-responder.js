@@ -1,4 +1,4 @@
-class ResponseHelper {
+class BaseResponse {
   static send(res, statusCode, status, message, data = null) {
     return res.status(statusCode).json({
       status,
@@ -16,4 +16,4 @@ class ResponseHelper {
   }
 }
 
-export default ResponseHelper;
+export default BaseResponse;

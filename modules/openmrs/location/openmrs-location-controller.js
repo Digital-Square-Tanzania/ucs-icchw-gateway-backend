@@ -1,5 +1,5 @@
 import OpenMRSLocationService from "./openmrs-location-service.js";
-import ResponseHelper from "../../../helpers/response-helper.js";
+import BaseResponse from "../../../responders/base-responder.js";
 import CustomError from "../../../utils/custom-error.js";
 import { parse } from "dotenv";
 
@@ -16,7 +16,7 @@ import { parse } from "dotenv";
  * @memberof LocationController
  * @exports LocationController
  * @requires LocationService
- * @requires ResponseHelper
+ * @requires BaseResponse
  * @requires CustomError
  */
 class OpenMRSLocationController {
@@ -36,7 +36,7 @@ class OpenMRSLocationController {
         order: order || "asc",
       });
 
-      ResponseHelper.success(res, "OpenMRS locations retrieved successfully.", locations);
+      BaseResponse.success(res, "OpenMRS locations retrieved successfully.", locations);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -52,7 +52,7 @@ class OpenMRSLocationController {
         throw new CustomError("Location not found", 404);
       }
 
-      return ResponseHelper.success(res, "Location retrieved successfully", location);
+      return BaseResponse.success(res, "Location retrieved successfully", location);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -62,7 +62,7 @@ class OpenMRSLocationController {
   static async getAllLocationTags(_req, res, next) {
     try {
       const tags = await OpenMRSLocationService.getAllLocationTags();
-      return ResponseHelper.success(res, "Location tags retrieved successfully", tags);
+      return BaseResponse.success(res, "Location tags retrieved successfully", tags);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -81,7 +81,7 @@ class OpenMRSLocationController {
         throw new CustomError(`No active locations found for tag: ${tag}`, 404);
       }
 
-      return ResponseHelper.success(res, `Locations with tag ${tag} retrieved successfully`, locationsData);
+      return BaseResponse.success(res, `Locations with tag ${tag} retrieved successfully`, locationsData);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -91,7 +91,7 @@ class OpenMRSLocationController {
   static async getAllLocationAttributeTypes(_req, res, next) {
     try {
       const attributeTypes = await OpenMRSLocationService.getAllLocationAttributeTypes();
-      return ResponseHelper.success(res, "Location attribute types retrieved successfully", attributeTypes);
+      return BaseResponse.success(res, "Location attribute types retrieved successfully", attributeTypes);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -102,7 +102,7 @@ class OpenMRSLocationController {
     try {
       const { page, limit } = req.query;
       const hierarchy = await OpenMRSLocationService.getLocationHierarchy(page, limit);
-      return ResponseHelper.success(res, "Location hierarchy fetched successfully", hierarchy);
+      return BaseResponse.success(res, "Location hierarchy fetched successfully", hierarchy);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -112,9 +112,9 @@ class OpenMRSLocationController {
   static async getGroupedLocationHierarchy(_req, res) {
     try {
       const hierarchy = await OpenMRSLocationService.getGroupedLocationHierarchy();
-      return ResponseHelper.success(res, "Grouped location hierarchy fetched successfully", hierarchy);
+      return BaseResponse.success(res, "Grouped location hierarchy fetched successfully", hierarchy);
     } catch (error) {
-      return ResponseHelper.error(res, error.message, 500);
+      return BaseResponse.error(res, error.message, 500);
     }
   }
 
@@ -122,7 +122,7 @@ class OpenMRSLocationController {
   static async refreshLocationHierarchyView(_req, res, next) {
     try {
       await OpenMRSLocationService.refreshLocationHierarchyView();
-      return ResponseHelper.success(res, "Materialized view refreshed successfully");
+      return BaseResponse.success(res, "Materialized view refreshed successfully");
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -133,7 +133,7 @@ class OpenMRSLocationController {
     try {
       const { pageSize } = req.query.pageSize;
       await OpenMRSLocationService.syncLocations(parseInt(pageSize) || 1000);
-      ResponseHelper.success(res, "OpenMRS locations synced successfully.");
+      BaseResponse.success(res, "OpenMRS locations synced successfully.");
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -143,7 +143,7 @@ class OpenMRSLocationController {
   static async syncLocationTags(req, res, next) {
     try {
       await OpenMRSLocationService.syncLocationTags();
-      ResponseHelper.success(res, "OpenMRS location tags synced successfully.");
+      BaseResponse.success(res, "OpenMRS location tags synced successfully.");
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -153,7 +153,7 @@ class OpenMRSLocationController {
   static async syncLocationAttributeTypes(req, res, next) {
     try {
       await OpenMRSLocationService.syncLocationAttributeTypes();
-      ResponseHelper.success(res, "OpenMRS location attribute types synced successfully.");
+      BaseResponse.success(res, "OpenMRS location attribute types synced successfully.");
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -167,7 +167,7 @@ class OpenMRSLocationController {
         throw new CustomError("Query parameter 'q' is required", 400);
       }
       const facilities = await OpenMRSLocationService.searchFacilities(name);
-      return ResponseHelper.success(res, "Facilities retrieved successfully", facilities);
+      return BaseResponse.success(res, "Facilities retrieved successfully", facilities);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -181,7 +181,7 @@ class OpenMRSLocationController {
         throw new CustomError("Query parameter 'q' is required", 400);
       }
       const hamlets = await OpenMRSLocationService.searchHamlets(name);
-      return ResponseHelper.success(res, "Hamlets retrieved successfully", hamlets);
+      return BaseResponse.success(res, "Hamlets retrieved successfully", hamlets);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }

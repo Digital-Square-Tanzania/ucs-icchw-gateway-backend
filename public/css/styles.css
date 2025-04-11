@@ -83,7 +83,7 @@ input[type="text"] {
   border-radius: 4px;
   border: 1px solid #ccc;
   font-size: large;
-  letter-spacing: 3px;
+  letter-spacing: 1px;
 }
 
 button {

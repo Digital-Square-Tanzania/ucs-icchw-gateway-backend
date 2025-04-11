@@ -1,0 +1,80 @@
+# Query: helpers/response-helper
+# Flags: CaseSensitive
+# Including: ./*
+# Excluding: node_modules/*
+# ContextLines: 1
+
+17 results - 14 files
+
+backup/middlewares/authentication-middleware.js:
+  1  import jwt from "jsonwebtoken";
+  2: import BaseResponder from "../responders/base-responder.js";
+  3  import AuthRepository from "../modules/auth/auth-repository.js";
+
+backup/middlewares/ratelimiter-middleware.js:
+  1  import rateLimit from "express-rate-limit";
+  2: import BaseResponder from "../responders/base-responder.js";
+  3  
+
+backup/middlewares/validation-middleware.js:
+  1  import { body, validationResult } from "express-validator";
+  2: import BaseResponder from "../responders/base-responder.js";
+  3  
+
+backup/modules/auth/auth-controller.js:
+  1  import AuthService from "./auth-service.js";
+  2: import BaseResponder from "../../responders/base-responder.js";
+  3  
+
+backup/modules/dhis2/dhis2-controller.js:
+  1  import DHIS2Service from "./dhis2-service.js";
+  2: import BaseResponder from "../../responders/base-responder.js";
+  3  class DHIS2Controller {
+
+backup/modules/dhis2/role/dhis2-role-controller.js:
+  1  import DHIS2RoleService from "./dhis2-role-service.js";
+  2: import BaseResponder from "../../../responders/base-responder.js";
+  3  
+
+backup/modules/dhis2/user/dhis2-user-controller.js:
+  1  import DHIS2UserService from "./dhis2-user-service.js";
+  2: import BaseResponder from "../../../responders/base-responder.js";
+  3  
+
+backup/modules/location/location-controller.js:
+  1  import LocationService from "./location-service.js";
+  2: import BaseResponder from "../../responders/base-responder.js";
+  3  import CustomError from "../../utils/custom-error.js";
+
+backup/modules/team/team/team-controller.js:
+  1  import TeamService from "./team-service.js";
+  2: import BaseResponder from "../../../responders/base-responder.js";
+  3  
+
+backup/modules/team/team-member/team-member-controller.js:
+  1  import TeamMemberService from "./team-member-service.js";
+  2: import BaseResponder from "../../../responders/base-responder.js";
+  3  
+
+backup/modules/team/team-role/team-role-controller.js:
+  1: import BaseResponder from "../../../responders/base-responder.js";
+  2  import CustomError from "../../../utils/custom-error.js";
+
+backup/modules/team/user-role/user-role-controller.js:
+  1  import UserRoleService from "./user-role-service.js";
+  2: import BaseResponder from "../../../responders/base-responder.js";
+  3  
+
+backup/modules/user/user-controller.js:
+  1  import UserService from "./user-service.js";
+  2: import BaseResponder from "../../responders/base-responder.js";
+  3  import CustomError from "../../utils/custom-error.js";
+
+logs/error.log:
+  4022    "statusCode": 500,
+  4023:   "stack": "TypeError: res.status is not a function\n    at BaseResponder.send (file:///Users/kizito/Projects/ucs/ucs-hps-user-management-backend/responders/base-responder.js:3:16)\n    at BaseResponder.success (file:///Users/kizito/Projects/ucs/ucs-hps-user-management-backend/responders/base-responder.js:11:17)\n    at activateChwAccount (file:///Users/kizito/Projects/ucs/ucs-hps-user-management-backend/modules/user/user-controller.js:61:29)"
+  4024  } 
+
+  4028    "statusCode": 500,
+  4029: ⟪ 505 characters skipped ⟫(/Users/kizito/Projects/ucs/ucs-hps-user-management-backend/node_modules/express/lib/response.js:278:15)\n    at BaseResponder.send (file:///Users/kizito/Projects/ucs/ucs-hps-user-management-backend/responders/base-responder.js:3:35)\n    at BaseResponder.success (file:///Users/kizito/Projects/ucs/ucs-hps-user-management-backend/responders/base-responder.js:11:17)\n    at activateChwAccount (file:///Users/kizito/Projects/ucs/ucs-hps-user-management-backend/modules/user/user-controller.js:61:29)"
+  4030  } 

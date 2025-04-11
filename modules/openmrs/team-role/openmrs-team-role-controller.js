@@ -1,4 +1,4 @@
-import ResponseHelper from "../../../helpers/response-helper.js";
+import BaseResponse from "../../../responders/base-responder.js";
 import CustomError from "../../../utils/custom-error.js";
 import TeamRoleService from "./openmrs-team-role-service.js";
 
@@ -12,7 +12,7 @@ class TeamRoleController {
   static async syncTeamRoles(_req, res, next) {
     try {
       const result = await TeamRoleService.syncTeamRolesFromOpenMRS();
-      ResponseHelper.success(res, "Roles fetched successfully.", result, 200);
+      BaseResponse.success(res, "Roles fetched successfully.", result, 200);
     } catch (error) {
       next(error);
     }
@@ -29,7 +29,7 @@ class TeamRoleController {
   static async getAllTeamRoles(_req, res, next) {
     try {
       const teamRoles = await TeamRoleService.getAllTeamRoles();
-      ResponseHelper.success(res, "Team roles retrieved successfully.", teamRoles, 200);
+      BaseResponse.success(res, "Team roles retrieved successfully.", teamRoles, 200);
     } catch (error) {
       next(error);
     }
@@ -50,7 +50,7 @@ class TeamRoleController {
         throw new CustomError("Invalid UUID format", 400);
       }
       const teamRole = await TeamRoleService.getTeamRoleByUUID(uuid);
-      ResponseHelper.success(res, "Team role retrieved successfully.", teamRole, 200);
+      BaseResponse.success(res, "Team role retrieved successfully.", teamRole, 200);
     } catch (error) {
       next(error);
     }

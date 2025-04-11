@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import CustomError from "../../../utils/custom-error.js";
-import openmrsApiClient from "../openmrs-api-client.js";
+import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 import TeamRoleRepository from "../team-role/openmrs-team-role-repository.js";
 import TeamMemberRepository from "./openmrs-team-member-repository.js";
 
@@ -215,7 +215,6 @@ class TeamMemberService {
 
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
-      console.log("✅ Team member created successfully.");
 
       return savedTeamMember;
     } catch (error) {

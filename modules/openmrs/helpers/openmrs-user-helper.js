@@ -1,4 +1,4 @@
-import OpenMRSApiClient from "../openmrs-api-client.js";
+import OpenMRSApiClient from "../../../utils/openmrs-api-client.js";
 import CustomError from "../../../utils/custom-error.js";
 import MemberRoleRepository from "../member-role/openmrs-member-role-repository.js";
 import GenerateSwahiliPassword from "../../../utils/generate-swahili-password.js";

@@ -1,58 +1,23 @@
-import CustomError from "../../utils/custom-error.js";
 import ApiError from "../../utils/api-error.js";
-import GatewayRepository from "./gateway-repository.js";
-import openSRPApiClient from "../gateway/opensrp-api-client.js";
 import dotenv from "dotenv";
 import GatewayValidator from "./gateway-validator.js";
 import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
-import TeamRepository from "../openmrs/team/openmrs-openmrs-team-repository.js";
-import openmrsApiClient from "../openmrs/openmrs-api-client.js";
+import TeamRepository from "../openmrs/team/openmrs-team-repository.js";
+import openmrsApiClient from "../../utils/openmrs-api-client.js";
 import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-repository.js";
 import MemberRoleRepository from "../openmrs/member-role/openmrs-member-role-repository.js";
-import TeamRoleRepository from "../openmrs/team-role/openmrs-team-role-repository.js";
 import EmailService from "../../utils/email-service.js";
 import ApiLogger from "../../utils/api-logger.js";
 import GenerateActivationSlug from "../../utils/generate-activation-slug.js";
-import ExtractDateFromNin from "../../utils/extract-date-from-nin.js";
 import GenerateSwahiliPassword from "../../utils/generate-swahili-password.js";
+import CHWEligibilityStatuses from "./helpers/chw-eligibility-statuses.js";
+import PayloadContent from "./helpers/payload-content.js";
+import OpenmrsHelper from "./helpers/openmrs-helper.js";
+import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
 
 dotenv.config();
 
 class GatewayService {
-  /*
-   * Get team members by location HFR code
-   */
-  static async getTeamMemberByLocationHfrCode(hfrCode) {
-    return await GatewayRepository.getTeamMembersByLocationHfrCode(hfrCode);
-  }
-
-  /*
-   * Get CHW monthly activity status
-   */
-  static async getStatuses(month, year, teamMembers) {
-    try {
-      // Prepare payload for OpenSRP request
-      const opensrpRequestPyload = {
-        period: {
-          month: month,
-          year: year,
-        },
-        chws: teamMembers,
-      };
-
-      // Fetch team member statys from OpenSRP
-      const chwMonthlyStatusResponse = await openSRPApiClient.post("/chw/monthly-status", opensrpRequestPyload);
-
-      if (chwMonthlyStatusResponse.length === 0) {
-        throw new CustomError("CHW monthly activity statistics not found.", 404);
-      }
-
-      return chwMonthlyStatusResponse;
-    } catch (error) {
-      throw new CustomError(error.message, error.statusCode);
-    }
-  }
-
   /*
    * Generate message ID
    */
@@ -71,6 +36,7 @@ class GatewayService {
     return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}${SSS}`;
   }
 
+  // Get CHW monthly status by HFR code
   static async getChwMonthlyStatus(req, res, next) {
     try {
       const body = req.body.message.body;
@@ -79,14 +45,14 @@ class GatewayService {
 
       GatewayValidator.validateMonthAndYear(month, year);
       const hfrCode = body.FacilityCode;
-      const teamMembers = await this.getTeamMemberByLocationHfrCode(hfrCode);
+      const teamMembers = await TeamMemberRepository.getTeamMembersByLocationHfrCode(hfrCode);
 
       if (!teamMembers) {
-        throw new CustomError("CHW monthly activity statistics not found.", 404);
+        throw new ApiError("CHW monthly activity statistics not found.", 404, 5);
       }
 
       console.log("🔄 Getting monthly status for team members...");
-      const payload = await this.getStatuses(month, year, teamMembers);
+      const payload = await CHWEligibilityStatuses.get(month, year, teamMembers);
       console.log("✅ Statuses obtained and sent!");
 
       await ApiLogger.log(req, payload);
@@ -94,214 +60,37 @@ class GatewayService {
       return payload;
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
-      throw new CustomError(error.message, error.statusCode);
+      throw new ApiError(error.message, error.statusCode, 5);
     }
   }
 
-  /*
-   * Register new CHW from HRHIS
-   */
+  // Register new CHW from HRHIS
   static async registerChwFromHrhis(req, _res, _next) {
     console.log("🔄 Registering CHW from HRHIS...");
     try {
+      // Get the payload from the request body
       const payload = req.body;
 
       // Validate incoming CHW deployment payload
-      GatewayValidator.validateChwDemographics(payload);
+      const payloadContent = new PayloadContent(payload);
+      const validatedContent = await payloadContent.validate();
 
-      // Check if the CHW exists in team members by NIN
-      const teamMember = await TeamMemberRepository.getTeamMemberByNin(payload.message.body[0].NIN);
-
-      if (teamMember) {
-        throw new ApiError("Duplicate CHW ID found.", 409, 2);
-      }
-
-      // Check if the location exists
-      const location = await OpenMRSLocationRepository.getLocationByHfrCode(payload.message.body[0].hfrCode);
-      if (!location) {
-        throw new ApiError("Invalid locationCode or locationType.", 404, 4);
-      }
-
-      // GET teamMemberLocation by location Code attribute
-      const teamMemberLocation = await OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
-      if (!teamMemberLocation) {
-        throw new ApiError("Invalid locationCode or locationType.", 404, 4);
-      }
-
-      // Check if a team exists without location
-      const team = await TeamRepository.getTeamByLocationUuid(location.uuid);
-
-      if (!team) {
-        // create team
-        const teamObject = {};
-        const teamName = location.name + " - " + location.hfrCode + " - Team";
-        const teamIdentifier = (location.name + " - " + location.hfrCode + " - Team").replace(/-/g, "").replace(/\s+/g, "").toLowerCase();
-        teamObject.location = location.uuid;
-        teamObject.teamName = teamName;
-        teamObject.teamIdentifier = teamIdentifier;
-
-        // Send the request to OpenMRS server using OpenMRS API Client
-        const newTeam = await openmrsApiClient.post("team/team", teamObject);
-
-        // Save the returned object as a new team in the database
-        await TeamRepository.upsertTeam(newTeam);
-      }
-
-      // Create a new person if team member does not exist by NIN
-      const personObject = {};
-      personObject.names = [];
-      personObject.names.push({
-        givenName: payload.message.body[0].firstName,
-        middleName: payload.message.body[0].middleName,
-        familyName: payload.message.body[0].lastName,
-        preferred: true,
-        prefix: payload.message.body[0].sex.toLowerCase() === "male" ? "Mr" : "Ms",
-      });
-      personObject.birthdate = ExtractDateFromNin.extract(payload.message.body[0].NIN);
-      personObject.gender = payload.message.body[0].sex.toLowerCase() === "male" ? "M" : "F";
-
-      // Create the person in OpenMRS
-      const newPerson = await openmrsApiClient.post("person", personObject);
-
-      // Safely construct attributes
-      const personAttributes = [
-        {
-          attributeType: process.env.NIN_ATTRIBUTE_TYPE_UUID,
-          value: payload.message.body[0].NIN,
-          label: "NIN",
-        },
-        {
-          attributeType: process.env.EMAIL_ATTRIBUTE_TYPE_UUID,
-          value: payload.message.body[0].email,
-          label: "Email",
-        },
-        {
-          attributeType: process.env.PHONE_NUMBER_ATTRIBUTE_TYPE_UUID,
-          value: payload.message.body[0].phoneNumber,
-          label: "Phone Number",
-        },
-      ];
-
-      // Validate all attributeType UUIDs exist
-      for (const attr of personAttributes) {
-        if (!attr.attributeType) {
-          throw new ApiError(`Missing environment variable for ${attr.label} attribute type UUID`, 500, 10);
-        }
-      }
-
-      // Loop through and add each attribute
-      for (const attr of personAttributes) {
-        try {
-          const payload = {
-            attributeType: attr.attributeType,
-            value: attr.value,
-          };
-          if (!attr.attributeType) {
-            throw new ApiError(`Missing attributeType UUID for attribute with value: ${attr.value}`, 500, 10);
-          }
-          await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, payload);
-        } catch (error) {
-          console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
-          console.log("ERROR:", error.message);
-          throw new ApiError(`Error saving person ${attr.label} attribute: ${error.message}`, 500, 5);
-        }
-      }
+      // Create a new person and attributes
+      const newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
 
       // Create a new OpenMRS user
-      const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName(process.env.DEFAULT_ICCHW_ROLE_NAME);
-      const userObject = {};
-      const phone = payload.message.body[0].phoneNumber;
-      const firstName = payload.message.body[0].firstName || "";
-      const lastName = payload.message.body[0].lastName || "";
-
-      userObject.username = phone && phone.startsWith("+255") ? phone.replace("+255", "0") : (firstName.substring(0, 2) + lastName.substring(0, 2)).toLowerCase();
-      userObject.password = GenerateSwahiliPassword.generate();
-      userObject.roles = [roleUuid];
-      userObject.person = {};
-      userObject.person.uuid = newPerson.uuid;
-      userObject.systemId = userObject.username;
-
-      // Create the user in OpenMRS
-      const newUser = await openmrsApiClient.post("user", userObject);
-
-      if (!newUser) {
-        throw new ApiError(`User could not be created: +${error.message}`, 400, 3);
-      }
+      const newUser = await OpenmrsHelper.createOpenmrsUser(payload, newPerson);
 
       // Create a new team member in OpenMRS
-      const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.DEFAULT_ICCHW_TEAM_ROLE_IDENTIFIER);
-      const teamMemberObject = {
-        identifier: newUser.username + location.hfrCode.replace("-", ""),
-        locations: [
-          {
-            uuid: teamMemberLocation.uuid,
-          },
-        ],
-        joinDate: new Date().toISOString().split("T")[0],
-        team: {
-          uuid: team.uuid,
-        },
-        teamRole: {
-          uuid: identifierRole.uuid,
-        },
-        person: {
-          uuid: newPerson.uuid,
-        },
-        isDataProvider: "false",
-      };
+      const newTeamMember = await TeamMemberService.createTeamMember(
+        newUser.username,
+        newUser.uuid,
+        payload.message.body[0].hfrCode,
+        validatedContent.teamMemberLocation.uuid,
+        validatedContent.team.uuid,
+        newPerson.uuid
+      );
 
-      // Create the team member in OpenMRS
-      const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
-
-      const newTeamMemberDetails = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}`, {
-        v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
-      });
-
-      let formattedMember = {};
-
-      // Extract attributes for NIN, email, and phoneNumber
-      let nin = null;
-      let email = null;
-      let phoneNumber = null;
-
-      if (newTeamMemberDetails.person?.attributes?.length) {
-        for (const attr of newTeamMemberDetails.person.attributes) {
-          if (attr.attributeType?.display === "NIN") {
-            nin = attr.value;
-          } else if (attr.attributeType?.display === "email") {
-            email = attr.value;
-          } else if (attr.attributeType?.display === "phoneNumber") {
-            phoneNumber = attr.value;
-          }
-        }
-      }
-
-      // Format team member data
-      formattedMember = {
-        identifier: newTeamMemberDetails.identifier,
-        firstName: newTeamMemberDetails.person?.preferredName?.givenName || "",
-        middleName: newTeamMemberDetails.person?.preferredName?.middleName || null,
-        lastName: newTeamMemberDetails.person?.preferredName?.familyName || "",
-        personUuid: newTeamMemberDetails.person?.uuid,
-        username: newUser.username,
-        userUuid: newUser.uuid,
-        openMrsUuid: newTeamMemberDetails.uuid,
-        teamUuid: newTeamMemberDetails.team?.uuid || null,
-        teamName: newTeamMemberDetails.team?.teamName || null,
-        teamIdentifier: newTeamMemberDetails.team?.teamIdentifier || null,
-        locationUuid: newTeamMemberDetails.team?.location?.uuid || null,
-        locationName: newTeamMemberDetails.team?.location?.name || null,
-        locationDescription: newTeamMemberDetails.team?.location?.description || null,
-        roleUuid: newTeamMemberDetails.teamRole?.uuid || null,
-        roleName: newTeamMemberDetails.teamRole?.name || null,
-        NIN: nin,
-        email,
-        phoneNumber,
-        createdAt: new Date(newTeamMemberDetails.dateCreated),
-      };
-
-      // Save the returned object as a new team member in the database
-      await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("✅ CHW from HRHIS registered successfuly.");
 
       // Generate an activation slug and record
@@ -311,24 +100,24 @@ class GatewayService {
 
       // Send email to the CHW with their login credentials
       await EmailService.sendEmail({
-        to: formattedMember.email,
+        to: payload.message.body[0].email,
         subject: "Kufungua Akaunti ya UCS/WAJA",
-        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${userObject.username}).`,
+        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${newUser.username}).`,
         html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
            <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
-           <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${userObject.username})</strong>.</p><br>`,
+           <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${newUser.username})</strong>.</p><br>`,
       });
       // <hr><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${userObject.password}</span></small>`,
 
       // Log the entire brouhaha
-      await ApiLogger.log(req, { member: formattedMember, slug });
+      await ApiLogger.log(req, { member: newTeamMember, slug });
       return "Facility and personnel details processed successfully.";
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
       console.error("❌ Error while registering CHW from HRHIS:", error.stack);
 
       // Rethrow with CustomError for the controller to catch
-      throw new CustomError(error.message, error.statusCode || 400);
+      throw new ApiError(error.message, error.statusCode || 400, 5);
     }
   }
 
@@ -432,7 +221,7 @@ class GatewayService {
       console.log("✅ CHW demographic updates processed.");
       return results;
     } catch (error) {
-      throw new CustomError(error.message, error.statusCode || 400);
+      throw new ApiError(error.message, error.statusCode || 400, 5);
     }
   }
 
@@ -595,7 +384,7 @@ class GatewayService {
       return "CHW duty station changed successfully!";
     } catch (error) {
       console.error("❌ Error in changing duty station:", error.message);
-      throw new CustomError(error.message, error.statusCode || 400);
+      throw new ApiError(error.message, error.statusCode || 400, 5);
     }
   }
 

@@ -1,5 +1,5 @@
 import OpenMRSLocationRepository from "./openmrs-location-repository.js";
-import OpenMRSApiClient from "../openmrs-api-client.js";
+import OpenMRSApiClient from "../../../utils/openmrs-api-client.js";
 import CustomError from "../../../utils/custom-error.js";
 
 class OpenMRSLocationService {

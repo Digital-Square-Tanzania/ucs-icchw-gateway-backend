@@ -1,4 +1,4 @@
-import OpenMRSApiClient from "../openmrs-api-client.js";
+import OpenMRSApiClient from "../../../utils/openmrs-api-client.js";
 import CustomError from "../../../utils/custom-error.js";
 import ExtractDateFromNIN from "../../../utils/extract-date-from-nin.js";
 

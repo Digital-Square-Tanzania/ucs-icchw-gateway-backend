@@ -1,5 +1,5 @@
 import { body, validationResult } from "express-validator";
-import ResponseHelper from "../helpers/response-helper.js";
+import BaseResponse from "../responders/base-responder.js";
 
 class ValidationMiddleware {
   /**
@@ -16,7 +16,7 @@ class ValidationMiddleware {
 
       if (error) {
         const errorMessages = error.details.map((err) => err.message);
-        return ResponseHelper.error(res, `Validation error: ${errorMessages.join(", ")}`, 400);
+        return BaseResponse.error(res, `Validation error: ${errorMessages.join(", ")}`, 400);
       }
 
       req.body = value;
@@ -37,7 +37,7 @@ class ValidationMiddleware {
       (req, res, next) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-          return ResponseHelper.error(res, "Input sanitization failed", 400, errors.array());
+          return BaseResponse.error(res, "Input sanitization failed", 400, errors.array());
         }
         next();
       },
