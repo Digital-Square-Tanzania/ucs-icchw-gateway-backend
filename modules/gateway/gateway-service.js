@@ -118,12 +118,13 @@ class GatewayService {
       return "Facility and personnel details processed successfully.";
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
-      console.error("❌ Error while registering CHW from HRHIS:", error.stack);
 
       // Remove the created person and user if any error occurs
       if (newPerson && newPerson.id) {
         await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
       }
+
+      console.error("❌ Error while registering CHW from HRHIS:", error.stack);
 
       // Rethrow with CustomError for the controller to catch
       throw new ApiError(error.stack, error.statusCode || 400, 5);
