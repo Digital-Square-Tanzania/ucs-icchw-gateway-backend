@@ -14,6 +14,7 @@ import CHWEligibilityStatuses from "./helpers/chw-eligibility-statuses.js";
 import PayloadContent from "./helpers/payload-content.js";
 import OpenmrsHelper from "./helpers/openmrs-helper.js";
 import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
+import mysqlClient from "../../utils/mysql-client.js";
 
 dotenv.config();
 
@@ -107,7 +108,6 @@ class GatewayService {
            <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
            <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${newUser.username})</strong>.</p><br>`,
       });
-      // <hr><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${userObject.password}</span></small>`,
 
       // Log the entire brouhaha
       await ApiLogger.log(req, { member: newTeamMember, slug });
@@ -115,6 +115,9 @@ class GatewayService {
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
       console.error("❌ Error while registering CHW from HRHIS:", error.stack);
+
+      // Remove the created person and user if any error occurs
+      await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
 
       // Rethrow with CustomError for the controller to catch
       throw new ApiError(error.message, error.statusCode || 400, 5);
