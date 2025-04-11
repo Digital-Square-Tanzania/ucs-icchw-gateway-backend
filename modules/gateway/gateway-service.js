@@ -68,6 +68,7 @@ class GatewayService {
   // Register new CHW from HRHIS
   static async registerChwFromHrhis(req, _res, _next) {
     console.log("🔄 Registering CHW from HRHIS...");
+    let newPerson = null;
     try {
       // Get the payload from the request body
       const payload = req.body;
