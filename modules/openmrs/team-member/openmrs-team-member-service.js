@@ -170,6 +170,13 @@ class TeamMemberService {
         v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
       });
 
+      // Check if the CHW exists in team members by NIN
+      const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(newTeamMemberDetails.identifier);
+
+      if (identifiedTeamMember) {
+        throw new ApiError("Duplicate CHW ID found.", 409, 2);
+      }
+
       let formattedMember = {};
 
       // Extract attributes for NIN, email, and phoneNumber

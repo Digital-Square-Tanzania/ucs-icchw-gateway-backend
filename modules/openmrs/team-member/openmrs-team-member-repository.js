@@ -283,6 +283,12 @@ class TeamMemberRepository {
 
     return location ? location.hfrCode : null;
   }
+
+  static async getTeamMemberByIdentifier(identifier) {
+    return prisma.openMRSTeamMember.findFirst({
+      where: { identifier },
+    });
+  }
 }
 
 export default TeamMemberRepository;
