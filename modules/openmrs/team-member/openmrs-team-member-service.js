@@ -3,6 +3,7 @@ import CustomError from "../../../utils/custom-error.js";
 import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 import TeamRoleRepository from "../team-role/openmrs-team-role-repository.js";
 import TeamMemberRepository from "./openmrs-team-member-repository.js";
+import mysqlClient from "../../../utils/mysql-client.js";
 
 dotenv.config();
 
@@ -242,6 +243,15 @@ class TeamMemberService {
       return updatedTeamMember;
     } catch (error) {
       throw new CustomError("Failed to update team member.", 500);
+    }
+  }
+
+  static async deletePerson(personId) {
+    try {
+      await mysqlClient.query("CALL delete_person(?)", [personId]);
+      console.log(`✅ Successfully deleted person with ID: ${personId}`);
+    } catch (deleteError) {
+      throw new CustomError(`❌ Failed to delete person with ID: ${personId} ${deleteError}`, 500);
     }
   }
 }
