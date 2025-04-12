@@ -99,12 +99,12 @@ class OpenmrsHelper {
       const newUser = await openmrsApiClient.post("user", userObject);
 
       if (!newUser) {
-        throw "User could not be created: Probable duplicate";
+        throw new ApiError("User could not be created: Probable duplicate", 400, 5);
       }
 
       return newUser;
     } catch (error) {
-      return error;
+      throw new ApiError(`An error occurred while creating the user: ${error.message}`, 500, 10);
     }
   }
 

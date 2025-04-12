@@ -4,6 +4,7 @@ import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 import TeamRoleRepository from "../team-role/openmrs-team-role-repository.js";
 import TeamMemberRepository from "./openmrs-team-member-repository.js";
 import mysqlClient from "../../../utils/mysql-client.js";
+import ApiError from "../../../utils/api-error.js";
 
 dotenv.config();
 
