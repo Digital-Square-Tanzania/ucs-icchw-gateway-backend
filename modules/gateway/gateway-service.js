@@ -79,23 +79,28 @@ class GatewayService {
 
       // Create a new person and attributes
       const newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
+
+      // Capture the person ID for reverting deletion
       const newPersonId = await openmrsApiClient.get(`person/${newPerson.uuid}`, {
         v: "custom:(id)",
       });
-      console.log("New Person ID:", newPersonId.id);
+      newPerson.id = newPersonId.id;
+      console.log("NEW PERSON", newPerson);
 
       // Create a new OpenMRS user
-      const newUser = await OpenmrsHelper.createOpenmrsUser(payload, newPerson, newPersonId.id);
+      const newUser = await OpenmrsHelper.createOpenmrsUser(payload, newPerson);
 
       // Create a new team member in OpenMRS
-      const newTeamMember = await TeamMemberService.createTeamMember(
-        newUser.username,
-        newUser.uuid,
-        payload.message.body[0].hfrCode,
-        validatedContent.teamMemberLocation.uuid,
-        validatedContent.team.uuid,
-        newPerson.uuid
-      );
+      // const newTeamMember = await TeamMemberService.createTeamMember(
+      //   newUser.username,
+      //   newUser.uuid,
+      //   payload.message.body[0].hfrCode,
+      //   validatedContent.teamMemberLocation.uuid,
+      //   validatedContent.team.uuid,
+      //   newPerson.uuid,
+      //   newPersonId.id
+      // );
+      const newTeamMember = await TeamMemberService.createTeamMember(newUser, payload, validatedContent, newPerson);
 
       console.log("✅ CHW from HRHIS registered successfuly.");
 

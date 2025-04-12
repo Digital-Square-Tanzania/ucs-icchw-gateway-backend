@@ -9,6 +9,12 @@ import TeamRepository from "../../openmrs/team/openmrs-team-repository.js";
 import mysqlClient from "../../../utils/mysql-client.js";
 
 class OpenmrsHelper {
+  /**
+   * @description - Creates a new OpenMRS person using the provided payload.
+   * @param {Object} payload - The payload object containing person details.
+   * @returns {Promise<Object>} - A promise that resolves to the created person object.
+   * @throws {ApiError} - Throws an ApiError if there is an issue with the request.
+   */
   static async createOpenmrsPerson(payload) {
     try {
       // Create a new person and attributes
@@ -75,7 +81,7 @@ class OpenmrsHelper {
   }
 
   /**
-   * Creates a new OpenMRS user using the provided payload and person object.
+   * @description - Creates a new OpenMRS user using the provided payload and person object.
    * @param {Object} payload - The payload object containing user details.
    * @param {Object} newPerson - The person object created in OpenMRS.
    * @returns {Promise<Object>} - A promise that resolves to the created user object.
@@ -100,7 +106,7 @@ class OpenmrsHelper {
       const newUser = await openmrsApiClient.post("user", userObject);
       console.log("Incoming Person ID:", newPersonId);
 
-      if (!newUser.id) {
+      if (!newUser.uuid) {
         await mysqlClient.query("USE openmrs");
         console.log("Deleting person with ID:", newPersonId);
         await mysqlClient.query("CALL delete_person(?)", [newPersonId]);
@@ -115,7 +121,7 @@ class OpenmrsHelper {
   }
 
   /**
-   * Creates a new team in OpenMRS using the provided location object.
+   * @description - Creates a new team in OpenMRS using the provided location object.
    * @param {Object} location - The location object containing details about the location.
    * @returns {Promise<Object>} - A promise that resolves to the created team object.
    * @throws {CustomError} - Throws a CustomError if there is an issue with the request.
@@ -123,8 +129,8 @@ class OpenmrsHelper {
   static async createOpenmrsTeam(location) {
     try {
       const teamObject = {};
-      const teamName = location.name + " - " + location.hfrCode + " - Team";
-      const teamIdentifier = (location.name + "-" + location.hfrCode + "-Team").replace(/-/g, "").replace(/\s+/g, "").toLowerCase();
+      const teamName = location.name + " - Team";
+      const teamIdentifier = (location.name + "-Team").replace(/-/g, "").replace(/\s+/g, "").toLowerCase();
       teamObject.location = location.uuid;
       teamObject.teamName = teamName;
       teamObject.teamIdentifier = teamIdentifier;
@@ -135,11 +141,6 @@ class OpenmrsHelper {
       // Save the returned object as a new team in the database
       await TeamRepository.upsertTeam(newTeam);
     } catch (error) {
-      await mysqlClient.query("USE openmrs");
-      console.log("Deleting person with ID:", newPerson.id);
-      await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
-      console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
-      x;
       // Handle the error and throw a CustomError
       throw new ApiError(error.message, error.statusCode, 10);
     }

@@ -48,6 +48,13 @@ class UserService {
     return safeUserData;
   }
 
+  /**
+   * Delete a user by ID
+   * @param {string} userId - The ID of the user to delete
+   * @returns {Promise<void>} - A promise that resolves when the user is deleted
+   * @throws {Error} - Throws an error if the user is not found or if there is an issue with deletion
+   * @description This method deletes a user by their ID. It first checks if the user exists, and if so, it deletes the user from the database.
+   */
   static async deleteUser(userId) {
     return UserRepository.deleteUser(userId);
   }
@@ -195,7 +202,15 @@ class UserService {
     }
   }
 
-  // Handle forgotten password
+  /**
+   * Handle forgotten password
+   * @param {Request} req - The request object containing the username
+   * @param {Response} res - The response object
+   * @param {NextFunction} next - The next middleware function
+   * @returns {Promise<string>} - A message indicating the result of the operation
+   * @throws {CustomError} - Throws a CustomError if there is an issue with the request
+   * @description This method handles the forgotten password request for a user.
+   */
   static async handleForgotPassword(req, res, next) {
     try {
       const { username } = req.params;
@@ -263,6 +278,12 @@ class UserService {
 
   /**
    * Create a new CHW account
+   * @param {Request} req - The request object containing the CHW data
+   * @param {Response} res - The response object
+   * @param {NextFunction} next - The next middleware function
+   * @returns {Promise<TeamMember>} - The created CHW account
+   * @throws {CustomError} - Throws a CustomError if there is an issue with the request
+   * @description This method handles the creation of a new CHW account.
    */
   static async createChwAccount(req, _res, _next) {
     console.log("🔄 Registering CHW from the frontend...");

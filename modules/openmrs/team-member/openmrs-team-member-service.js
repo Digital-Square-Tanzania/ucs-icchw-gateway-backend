@@ -5,6 +5,7 @@ import TeamRoleRepository from "../team-role/openmrs-team-role-repository.js";
 import TeamMemberRepository from "./openmrs-team-member-repository.js";
 import mysqlClient from "../../../utils/mysql-client.js";
 import ApiError from "../../../utils/api-error.js";
+import mysqlClient from "../../../utils/mysql-client.js";
 
 dotenv.config();
 
@@ -134,21 +135,22 @@ class TeamMemberService {
     return teamMember;
   }
 
-  static async createTeamMember(username, userUuid, hfrCode, teamMemberLocationUuid, teamUuid, personUuid) {
+  // static async createTeamMember(username, userUuid, hfrCode, teamMemberLocationUuid, teamUuid, personUuid, newPersonId) {
+  static async createTeamMember(newUser, payload, validatedContent, newPerson) {
     try {
       console.log("🔄 Creating team member in OpenMRS...");
 
       const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.DEFAULT_ICCHW_TEAM_ROLE_IDENTIFIER);
       const teamMemberObject = {
-        identifier: username + hfrCode.replace("-", ""),
+        identifier: newUser.username + payload.message.body[0].hfrCode.replace("-", ""),
         locations: [
           {
-            uuid: teamMemberLocationUuid,
+            uuid: validatedContent.teamMemberLocation.uuid,
           },
         ],
         joinDate: new Date().toISOString().split("T")[0],
         team: {
-          uuid: teamUuid,
+          uuid: validatedContent.team.uuid,
         },
         teamRole: {
           uuid: identifierRole.uuid,
@@ -162,8 +164,12 @@ class TeamMemberService {
       // Send the request to OpenMRS server using OpenMRS API Client
       const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
 
-      if (!newTeamMember || !newTeamMember.uuid) {
-        throw new CustomError("Failed to create team member in OpenMRS.", 500);
+      if (!newTeamMember.uuid) {
+        await mysqlClient.query("USE openmrs");
+        console.log("Deleting person with ID:", newPerson.id);
+        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+        console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
+        throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
       }
       console.log("New Team Member Created in OpenMRS:");
 
@@ -206,7 +212,7 @@ class TeamMemberService {
         lastName: newTeamMemberDetails.person?.preferredName?.familyName || "",
         personUuid: newTeamMemberDetails.person?.uuid,
         username: username,
-        userUuid: userUuid,
+        userUuid: newUser.userUuid,
         openMrsUuid: newTeamMemberDetails.uuid,
         teamUuid: newTeamMemberDetails.team?.uuid || null,
         teamName: newTeamMemberDetails.team?.teamName || null,
@@ -224,6 +230,15 @@ class TeamMemberService {
 
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
+
+      if (!savedTeamMember.uuid) {
+        await mysqlClient.query("USE openmrs");
+        console.log("Deleting person with ID:", newPerson.id);
+        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+        console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
+        throw new CustomError("Failed to save team member in the database.", 500);
+      }
+      console.log("✅ Team member created successfully in the database.");
 
       return savedTeamMember;
     } catch (error) {
