@@ -98,6 +98,7 @@ class OpenmrsHelper {
 
       // Create the user in OpenMRS
       const newUser = await openmrsApiClient.post("user", userObject);
+      console.log("Incoming Person ID:", newPerson.id);
 
       if (!newUser.id) {
         await mysqlClient.query("USE openmrs");
