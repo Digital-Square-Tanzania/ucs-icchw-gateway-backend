@@ -119,11 +119,12 @@ class GatewayService {
       // Remove the created person and user if any error occurs
       if (newPerson && newPerson.id) {
         try {
+          await mysqlClient.query("USE openmrs");
+          console.log("Deleting person with ID:", newPerson.id);
           await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
           console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
         } catch (deleteError) {
           console.error(`❌ Failed to delete person with ID: ${newPerson.id}`, deleteError);
-          // Optional: report this error somewhere else too (logging service / monitoring / slack alert)
         }
       }
 

@@ -33,13 +33,13 @@ class PayloadContent {
       // Check if the location exists
       const location = await OpenMRSLocationRepository.getLocationByHfrCode(payload.message.body[0].hfrCode);
       if (!location) {
-        throw new ApiError("Invalid locationCode or locationType.", 404, 4);
+        throw new ApiError("Invalid facilityCode.", 404, 4);
       }
 
       // GET teamMemberLocation by location Code attribute
       const teamMemberLocation = await OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
       if (!teamMemberLocation) {
-        throw new ApiError("Invalid locationCode or locationType.", 404, 4);
+        throw new ApiError("Invalid locationCode.", 404, 4);
       }
 
       // Check if a team exists without location
