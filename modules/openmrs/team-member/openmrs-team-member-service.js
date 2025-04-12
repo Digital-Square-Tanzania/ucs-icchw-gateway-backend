@@ -248,9 +248,10 @@ class TeamMemberService {
 
   static async deletePerson(personId) {
     try {
-      const deletedPerson = await mysqlClient.query("CALL delete_person(?)", [personId]);
+      await mysqlClient.query("USE openmrs");
+      console.log(`🔄 Deleting person with ID: ${personId}...`);
+      await mysqlClient.query("CALL delete_person(?)", [personId]);
       console.log(`✅ Successfully deleted person with ID: ${personId}`);
-      return deletedPerson;
     } catch (deleteError) {
       throw new CustomError(`❌ Failed to delete person with ID: ${personId} ${deleteError}`, 500);
     }
