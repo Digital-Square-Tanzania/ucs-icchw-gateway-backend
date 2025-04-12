@@ -136,9 +136,9 @@ class TeamMemberService {
 
   // static async createTeamMember(username, userUuid, hfrCode, teamMemberLocationUuid, teamUuid, personUuid, newPersonId) {
   static async createTeamMember(newUser, payload, validatedContent, newPerson) {
+    let personId = newPerson.id;
     try {
       console.log("🔄 Creating team member in OpenMRS...");
-
       const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.DEFAULT_ICCHW_TEAM_ROLE_IDENTIFIER);
       const teamMemberObject = {
         identifier: newUser.username + payload.message.body[0].hfrCode.replace("-", ""),
@@ -214,7 +214,7 @@ class TeamMemberService {
         personUuid: newTeamMemberDetails.person?.uuid,
         username: username,
         userUuid: newUser.userUuid,
-        openMrsUuid: newTeamMemberDetails.uuid,
+        openMrsUuid: newPerson.uuid,
         teamUuid: newTeamMemberDetails.team?.uuid || null,
         teamName: newTeamMemberDetails.team?.teamName || null,
         teamIdentifier: newTeamMemberDetails.team?.teamIdentifier || null,
@@ -232,17 +232,15 @@ class TeamMemberService {
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
 
-      if (!savedTeamMember.uuid) {
-        await mysqlClient.query("USE openmrs");
-        console.log("Deleting person with ID:", newPerson.id);
-        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
-        console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
-        throw new CustomError("Failed to save team member in the database.", 500);
-      }
       console.log("✅ Team member created successfully in the database.");
 
       return savedTeamMember;
     } catch (error) {
+      await mysqlClient.query("USE openmrs");
+      console.log("Deleting person with ID:", personId);
+      await mysqlClient.query("CALL delete_person(?)", [personId]);
+      console.log(`✅ Successfully deleted person with ID: ${personId}`);
+
       throw new CustomError("Failed to create team member." + error.message, 500);
     }
   }
