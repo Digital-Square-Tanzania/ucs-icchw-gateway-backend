@@ -155,7 +155,7 @@ class TeamMemberService {
           uuid: identifierRole.uuid,
         },
         person: {
-          uuid: personUuid,
+          uuid: newPerson.uuid,
         },
         isDataProvider: "false",
       };
