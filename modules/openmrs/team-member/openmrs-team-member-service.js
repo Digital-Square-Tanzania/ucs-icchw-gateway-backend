@@ -230,7 +230,8 @@ class TeamMemberService {
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
 
-      console.log("Team member created successfully in the database.");
+      console.log("🔄 Creating a local team member account in UCS.");
+      console.log(`✅ CHW account created successfuly with uuid: ${savedTeamMember.uuid}`);
 
       return savedTeamMember;
     } catch (error) {
