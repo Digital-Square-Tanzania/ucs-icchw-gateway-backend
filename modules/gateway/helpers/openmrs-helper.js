@@ -87,7 +87,7 @@ class OpenmrsHelper {
    * @returns {Promise<Object>} - A promise that resolves to the created user object.
    * @throws {ApiError} - Throws an ApiError if there is an issue with the request.
    */
-  static async createOpenmrsUser(payload, newPerson, newPersonId) {
+  static async createOpenmrsUser(payload, newPerson) {
     try {
       const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName(process.env.DEFAULT_ICCHW_ROLE_NAME);
       const userObject = {};
@@ -104,13 +104,13 @@ class OpenmrsHelper {
 
       // Create the user in OpenMRS
       const newUser = await openmrsApiClient.post("user", userObject);
-      console.log("Incoming Person ID:", newPersonId);
+      console.log("Incoming Person ID:", newPerson.id);
 
       if (!newUser.uuid) {
         await mysqlClient.query("USE openmrs");
-        console.log("Deleting person with ID:", newPersonId);
-        await mysqlClient.query("CALL delete_person(?)", [newPersonId]);
-        console.log(`✅ Successfully deleted person with ID: ${newPersonId}`);
+        console.log("Deleting person with ID:", newPerson.id);
+        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+        console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
         throw new ApiError("User could not be created: Probable duplicate", 400, 5);
       }
 

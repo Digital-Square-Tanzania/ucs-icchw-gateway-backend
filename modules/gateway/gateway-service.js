@@ -84,26 +84,12 @@ class GatewayService {
       const newPersonId = await openmrsApiClient.get(`person/${newPerson.uuid}`, {
         v: "custom:(id)",
       });
-      if (newPersonId && newPersonId.id) {
-        newPerson.id = newPersonId.id;
-      } else {
-        throw new ApiError("Failed to retrieve person ID.", 500, 5);
-      }
-      console.log("NEW PERSON", newPerson);
+      newPerson.id = newPersonId.id;
 
       // Create a new OpenMRS user
       const newUser = await OpenmrsHelper.createOpenmrsUser(payload, newPerson);
 
-      // Create a new team member in OpenMRS
-      // const newTeamMember = await TeamMemberService.createTeamMember(
-      //   newUser.username,
-      //   newUser.uuid,
-      //   payload.message.body[0].hfrCode,
-      //   validatedContent.teamMemberLocation.uuid,
-      //   validatedContent.team.uuid,
-      //   newPerson.uuid,
-      //   newPersonId.id
-      // );
+      // Create a new team member in OpenMRS and in UCS
       const newTeamMember = await TeamMemberService.createTeamMember(newUser, payload, validatedContent, newPerson);
 
       console.log("✅ CHW from HRHIS registered successfuly.");
