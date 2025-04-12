@@ -99,7 +99,7 @@ class OpenmrsHelper {
       // Create the user in OpenMRS
       const newUser = await openmrsApiClient.post("user", userObject);
 
-      if (!newUser) {
+      if (!newUser.id) {
         await mysqlClient.query("USE openmrs");
         console.log("Deleting person with ID:", newPerson.id);
         await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
