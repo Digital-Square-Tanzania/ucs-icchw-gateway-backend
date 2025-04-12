@@ -52,7 +52,7 @@ class OpenmrsHelper {
         },
       ];
 
-      console.log("Adding attributes to the person...");
+      console.log("🔄 Adding attributes to the person...");
       // Loop through and add each attribute
       for (const attr of personAttributes) {
         // Validate all attributeType UUIDs exist
@@ -69,7 +69,7 @@ class OpenmrsHelper {
             throw new ApiError(`Missing attributeType UUID for attribute with value: ${attr.value}`, 500, 10);
           }
           await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, payload);
-          console.log(`🔄 New person created in OpenMRS with uuid: ${newPerson.uuid}`);
+          console.log(`New person created in OpenMRS with uuid: ${newPerson.uuid}`);
           return newPerson;
         } catch (error) {
           console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);

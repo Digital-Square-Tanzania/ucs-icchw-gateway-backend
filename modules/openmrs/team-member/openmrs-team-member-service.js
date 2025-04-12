@@ -171,6 +171,7 @@ class TeamMemberService {
         throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
       }
       console.log("New Team Member Created in OpenMRS:");
+      console.log("🔄 Creating a local team member account in UCS.");
 
       // Fetch the newly created team member details
       const newTeamMemberDetails = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}`, {
@@ -229,8 +230,7 @@ class TeamMemberService {
 
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
-
-      console.log("🔄 Creating a local team member account in UCS.");
+      console.log("Team member created locally.");
       console.log(`✅ CHW account created successfuly.`);
 
       return savedTeamMember;
