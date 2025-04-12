@@ -17,7 +17,7 @@ class OpenmrsHelper {
    */
   static async createOpenmrsPerson(payload) {
     try {
-      // Create a new person and attributes
+      console.log("🔄 Creating a new person in OpenMRS...");
       const personObject = {};
       personObject.names = [];
       personObject.names.push({
@@ -52,6 +52,7 @@ class OpenmrsHelper {
         },
       ];
 
+      console.log("Adding attributes to the person...");
       // Loop through and add each attribute
       for (const attr of personAttributes) {
         // Validate all attributeType UUIDs exist
@@ -68,6 +69,7 @@ class OpenmrsHelper {
             throw new ApiError(`Missing attributeType UUID for attribute with value: ${attr.value}`, 500, 10);
           }
           await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, payload);
+          console.log(`🔄 New person created in OpenMRS with uuid: ${newPerson.uuid}`);
           return newPerson;
         } catch (error) {
           console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
@@ -89,6 +91,7 @@ class OpenmrsHelper {
    */
   static async createOpenmrsUser(payload, newPerson) {
     try {
+      console.log("🔄 Creating new user in OpenMRS...");
       const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName(process.env.DEFAULT_ICCHW_ROLE_NAME);
       const userObject = {};
       const phone = payload.message.body[0].phoneNumber;
@@ -113,6 +116,7 @@ class OpenmrsHelper {
         throw new ApiError("User could not be created: Probable duplicate", 400, 5);
       }
 
+      console.log(`New user created in OpenMRS with UUID: ${newUser.uuid}`);
       return newUser;
     } catch (error) {
       throw new ApiError(`An error occurred while creating the user: ${error.message}`, 500, 10);
@@ -126,6 +130,7 @@ class OpenmrsHelper {
    * @throws {CustomError} - Throws a CustomError if there is an issue with the request.
    */
   static async createOpenmrsTeam(location) {
+    console.log(`Creating a new team in OpenMRS for ${location.name}...`);
     try {
       const teamObject = {};
       const teamName = location.name + " - Team";
@@ -139,6 +144,7 @@ class OpenmrsHelper {
 
       // Save the returned object as a new team in the database
       await TeamRepository.upsertTeam(newTeam);
+      console.log(`New team for ${location.name} created with uuid: ${newTeam.uuid}`);
     } catch (error) {
       // Handle the error and throw a CustomError
       throw new ApiError(error.message, error.statusCode, 10);

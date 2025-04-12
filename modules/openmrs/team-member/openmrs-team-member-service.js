@@ -203,8 +203,6 @@ class TeamMemberService {
         }
       }
 
-      console.log("New Team Member Details:", newTeamMemberDetails);
-
       // Format team member data
       formattedMember = {
         identifier: newTeamMemberDetails.identifier,
@@ -232,7 +230,7 @@ class TeamMemberService {
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
 
-      console.log("✅ Team member created successfully in the database.");
+      console.log("Team member created successfully in the database.");
 
       return savedTeamMember;
     } catch (error) {

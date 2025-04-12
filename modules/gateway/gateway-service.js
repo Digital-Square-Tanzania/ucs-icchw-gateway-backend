@@ -92,7 +92,7 @@ class GatewayService {
       // Create a new team member in OpenMRS and in UCS
       const newTeamMember = await TeamMemberService.createTeamMember(newUser, payload, validatedContent, newPerson);
 
-      console.log("✅ CHW from HRHIS registered successfuly.");
+      console.log(`✅ CHW from HRHIS registered successfuly with uuid: ${newTeamMember.uuid}`);
 
       // Generate an activation slug and record
       const slug = await GenerateActivationSlug.generate(newUser.uuid, "ACTIVATION", 32);
@@ -119,11 +119,10 @@ class GatewayService {
       if (newPerson && newPerson.id) {
         try {
           await mysqlClient.query("USE openmrs");
-          console.log("Deleting person with ID:", newPerson.id);
           await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
-          console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
+          console.log(`Successfully deleted person with ID: ${newPerson.id}`);
         } catch (deleteError) {
-          console.error(`❌ Failed to delete person with ID: ${newPerson.id}`, deleteError);
+          console.error(`Failed to delete person with ID: ${newPerson.id}`, deleteError);
         }
       }
 
