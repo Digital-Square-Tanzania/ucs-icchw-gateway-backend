@@ -43,7 +43,7 @@ class OpenMRSApiClient {
     } catch (error) {
       console.error(`❌ OpenMRS POST Error (${endpoint}):`, error.response?.data || error.message);
       // throw new ApiError(error.response?.data.error.message || error.message, 400, 3);
-      throw error;
+      return error;
     }
   }
 
