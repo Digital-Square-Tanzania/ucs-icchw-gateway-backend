@@ -6,6 +6,7 @@ import ExtractDateFromNin from "../../../utils/extract-date-from-nin.js";
 import MemberRoleRepository from "../../openmrs/member-role/openmrs-member-role-repository.js";
 import GenerateSwahiliPassword from "../../../utils/generate-swahili-password.js";
 import TeamRepository from "../../openmrs/team/openmrs-team-repository.js";
+import mysqlClient from "../../../utils/mysql-client.js";
 
 class OpenmrsHelper {
   static async createOpenmrsPerson(payload) {
@@ -99,6 +100,10 @@ class OpenmrsHelper {
       const newUser = await openmrsApiClient.post("user", userObject);
 
       if (!newUser) {
+        await mysqlClient.query("USE openmrs");
+        console.log("Deleting person with ID:", newPerson.id);
+        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+        console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
         throw new ApiError("User could not be created: Probable duplicate", 400, 5);
       }
 
@@ -129,6 +134,10 @@ class OpenmrsHelper {
       // Save the returned object as a new team in the database
       await TeamRepository.upsertTeam(newTeam);
     } catch (error) {
+      await mysqlClient.query("USE openmrs");
+      console.log("Deleting person with ID:", newPerson.id);
+      await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+      console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
       // Handle the error and throw a CustomError
       throw new ApiError(error.message, error.statusCode, 10);
     }
