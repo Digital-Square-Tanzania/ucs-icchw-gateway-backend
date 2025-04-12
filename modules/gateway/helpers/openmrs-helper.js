@@ -138,6 +138,7 @@ class OpenmrsHelper {
       console.log("Deleting person with ID:", newPerson.id);
       await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
       console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
+      x;
       // Handle the error and throw a CustomError
       throw new ApiError(error.message, error.statusCode, 10);
     }
