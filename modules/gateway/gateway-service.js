@@ -84,7 +84,11 @@ class GatewayService {
       const newPersonId = await openmrsApiClient.get(`person/${newPerson.uuid}`, {
         v: "custom:(id)",
       });
-      newPerson.id = newPersonId.id;
+      if (newPersonId && newPersonId.id) {
+        newPerson.id = newPersonId.id;
+      } else {
+        throw new ApiError("Failed to retrieve person ID.", 500, 5);
+      }
       console.log("NEW PERSON", newPerson);
 
       // Create a new OpenMRS user
