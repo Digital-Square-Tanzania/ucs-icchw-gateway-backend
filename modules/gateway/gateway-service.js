@@ -78,7 +78,7 @@ class GatewayService {
       const validatedContent = await payloadContent.validate();
 
       // Create a new person and attributes
-      const newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
+      let newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
 
       // Capture the person ID for reverting deletion
       const newPersonId = await openmrsApiClient.get(`person/${newPerson.uuid}`, {
