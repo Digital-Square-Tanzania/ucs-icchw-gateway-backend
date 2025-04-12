@@ -79,10 +79,13 @@ class GatewayService {
 
       // Create a new person and attributes
       const newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
-      console.log("New Person Created:", newPerson);
+      const newPersonId = await openmrsApiClient.get(`person/${newPerson.uuid}`, {
+        v: "custom:(id)",
+      });
+      console.log("New Person ID:", newPersonId);
 
       // Create a new OpenMRS user
-      const newUser = await OpenmrsHelper.createOpenmrsUser(payload, newPerson);
+      const newUser = await OpenmrsHelper.createOpenmrsUser(payload, newPersonId);
 
       // Create a new team member in OpenMRS
       const newTeamMember = await TeamMemberService.createTeamMember(
