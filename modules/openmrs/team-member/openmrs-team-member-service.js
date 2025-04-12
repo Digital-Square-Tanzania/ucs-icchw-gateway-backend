@@ -248,8 +248,9 @@ class TeamMemberService {
 
   static async deletePerson(personId) {
     try {
-      await mysqlClient.query("CALL delete_person(?)", [personId]);
+      const deletedPerson = await mysqlClient.query("CALL delete_person(?)", [personId]);
       console.log(`✅ Successfully deleted person with ID: ${personId}`);
+      return deletedPerson;
     } catch (deleteError) {
       throw new CustomError(`❌ Failed to delete person with ID: ${personId} ${deleteError}`, 500);
     }

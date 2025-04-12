@@ -60,6 +60,17 @@ class TeamMemberController {
       next(error);
     }
   }
+
+  // Delete a person by ID
+  static async deletePerson(req, res, next) {
+    try {
+      const { personId } = req.params;
+      await TeamMemberService.deletePerson(personId);
+      return BaseResponse.success(res, "Person deleted successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default TeamMemberController;
