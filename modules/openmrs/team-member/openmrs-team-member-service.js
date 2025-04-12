@@ -212,7 +212,7 @@ class TeamMemberService {
         middleName: newTeamMemberDetails.person?.preferredName?.middleName || null,
         lastName: newTeamMemberDetails.person?.preferredName?.familyName || "",
         personUuid: newTeamMemberDetails.person?.uuid,
-        username: username,
+        username: newUser.username,
         userUuid: newUser.userUuid,
         openMrsUuid: newPerson.uuid,
         teamUuid: newTeamMemberDetails.team?.uuid || null,
@@ -241,7 +241,7 @@ class TeamMemberService {
       await mysqlClient.query("CALL delete_person(?)", [personId]);
       console.log(`✅ Successfully deleted person with ID: ${personId}`);
 
-      throw new CustomError("Failed to create team member: " + error.stack, 500);
+      throw new CustomError("Failed to create team member: " + error.message, 500);
     }
   }
 
