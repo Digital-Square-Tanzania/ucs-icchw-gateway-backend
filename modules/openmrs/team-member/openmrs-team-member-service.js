@@ -203,6 +203,8 @@ class TeamMemberService {
         }
       }
 
+      console.log("New Team Member Details:", newTeamMemberDetails);
+
       // Format team member data
       formattedMember = {
         identifier: newTeamMemberDetails.identifier,
