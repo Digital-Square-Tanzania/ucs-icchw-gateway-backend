@@ -99,7 +99,7 @@ class OpenmrsHelper {
       const newUser = await openmrsApiClient.post("user", userObject);
 
       if (!newUser) {
-        throw new Error("User could not be created: Probable duplicate");
+        throw "User could not be created: Probable duplicate";
       }
 
       return newUser;
