@@ -9,6 +9,6 @@ router.post("/", AuthMiddleware.authenticate, TeamMemberController.createTeamMem
 router.get("/sync", AuthMiddleware.authenticate, TeamMemberController.syncTeamMembers);
 router.put("/:uuid", AuthMiddleware.authenticate, TeamMemberController.updateTeamMember);
 router.get("/:uuid", AuthMiddleware.authenticate, TeamMemberController.getTeamMemberByUuid);
-router.delete("/person/:personId", AuthMiddleware.authenticate, TeamMemberController.deletePerson);
+router.delete("/person/:personId", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), TeamMemberController.deletePerson);
 
 export default router;

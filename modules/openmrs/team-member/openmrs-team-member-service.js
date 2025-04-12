@@ -134,7 +134,7 @@ class TeamMemberService {
     return teamMember;
   }
 
-  // static async createTeamMember(username, userUuid, hfrCode, teamMemberLocationUuid, teamUuid, personUuid, newPersonId) {
+  // Create a new team member in OpenMRS and in Postgres
   static async createTeamMember(newUser, payload, validatedContent, newPerson) {
     let personId = newPerson.id;
     try {
@@ -261,6 +261,7 @@ class TeamMemberService {
     }
   }
 
+  // Endpoint to manually delete a person
   static async deletePerson(personId) {
     try {
       await mysqlClient.query("USE openmrs");
