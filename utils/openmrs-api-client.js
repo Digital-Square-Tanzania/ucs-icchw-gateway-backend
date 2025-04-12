@@ -34,7 +34,8 @@ class OpenMRSApiClient {
       const response = await this.client.post(endpoint, data);
       return response.data;
     } catch (error) {
-      console.error(`❌ OpenMRS POST Error (${endpoint}):`, error.response?.data || error.message);
+      // console.error(`❌ OpenMRS POST Error (${endpoint}):`, error.response?.data || error.message);
+      console.error(`❌ OpenMRS POST Error (${endpoint}):`, error.message);
       return error;
     }
   }
