@@ -70,6 +70,7 @@ class OpenmrsHelper {
           }
           await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, payload);
           console.log(`New person created in OpenMRS with uuid: ${newPerson.uuid}`);
+          console.log("New Person Payload", payload);
           return newPerson;
         } catch (error) {
           console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
