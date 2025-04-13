@@ -77,9 +77,9 @@ class UserService {
         where: { userUuid: activation.userUuid },
       });
 
-      if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi, member render.", slug, login: false };
+      if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
 
-      if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi, activation render.", slug, login: false };
+      if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
       if (activation.isUsed) return { alert: true, message: "Akaunti hii tayari inatumika.", slug, login: false };
       if (Date.now() > activation.expiryDate) return { alert: true, message: "Muda wa kuwasha akaunti umepitiliza.", slug, login: false, resend: true, username: member.username };
       console.log("🔄 Valid activation link received, rendering activation page for slug: ", slug);
@@ -108,7 +108,7 @@ class UserService {
       where: { userUuid: activation.userUuid },
     });
 
-    if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi, activate no member.", slug, login: false };
+    if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
     if (password !== confirmPassword) {
       return { alert: true, message: "Password ulizoingiza hazifanani.", slug, login: true, username: member.username };
     }
@@ -162,9 +162,9 @@ class UserService {
         where: { userUuid: activation.userUuid },
       });
 
-      if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi, no member.", slug, login: false };
+      if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
 
-      if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi, jaribu tena.", slug, login: false };
+      if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
       if (activation.isUsed) return { alert: true, message: "Akaunti hii tayari inatumika.", slug, login: false };
       if (Date.now() < activation.expiryDate) return { alert: true, message: "Linki uliuoutumiwa awali ipo sawa, itumie.", slug, login: true, resend: false };
       const openSlugs = await prisma.accountActivation.findMany({
