@@ -160,6 +160,8 @@ class TeamMemberService {
         isDataProvider: "false",
       };
 
+      console.log("Team Member Object:", teamMemberObject);
+
       // Send the request to OpenMRS server using OpenMRS API Client
       const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
 
@@ -177,8 +179,6 @@ class TeamMemberService {
       const newTeamMemberDetails = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}`, {
         v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
       });
-
-      console.log("New Team Member Attributes:", newTeamMemberDetails.person.attributes[0]);
 
       // Check if the CHW exists in team members by NIN
       const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(newTeamMemberDetails.identifier);
