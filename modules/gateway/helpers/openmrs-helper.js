@@ -146,14 +146,6 @@ class OpenmrsHelper {
       // Save the returned object as a new team in the database
       await TeamRepository.upsertTeam(newTeam);
       console.log(`New team for ${location.name} created with uuid: ${newTeam.uuid}`);
-
-      // Return the created team object
-      return newTeam;
-    } catch (error) {
-      console.error(`❌ Failed to create team for ${location.name}:`, error.message);
-      throw new ApiError(`Error creating team for ${location.name}: ${error.message}`, 500, 10);
-    }
-  }
     } catch (error) {
       // Handle the error and throw a CustomError
       throw new ApiError(error.message, error.statusCode, 10);
