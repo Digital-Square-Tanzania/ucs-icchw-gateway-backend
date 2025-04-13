@@ -43,11 +43,14 @@ class PayloadContent {
       }
 
       // Check if a team exists without location
-      const team = await TeamRepository.getTeamByLocationUuid(location.uuid);
+      let team = await TeamRepository.getTeamByLocationUuid(location.uuid);
 
       if (!team) {
         // create team
-        await OpenmrsHelper.createOpenmrsTeam(location);
+        const newTeam = await OpenmrsHelper.createOpenmrsTeam(location);
+
+        // Update team object
+        team = newTeam;
       }
 
       return { teamMemberLocation, team };
