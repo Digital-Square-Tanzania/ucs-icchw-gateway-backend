@@ -178,6 +178,8 @@ class TeamMemberService {
         v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
       });
 
+      console.log("New Team Member Details:", newTeamMemberDetails);
+
       // Check if the CHW exists in team members by NIN
       const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(newTeamMemberDetails.identifier);
 
@@ -212,7 +214,7 @@ class TeamMemberService {
         lastName: newTeamMemberDetails.person?.preferredName?.familyName || "",
         personUuid: newTeamMemberDetails.person?.uuid,
         username: newUser.username,
-        userUuid: newUser.userUuid,
+        userUuid: newUser.uuid,
         openMrsUuid: newPerson.uuid,
         teamUuid: newTeamMemberDetails.team?.uuid || null,
         teamName: newTeamMemberDetails.team?.teamName || null,
@@ -232,7 +234,7 @@ class TeamMemberService {
 
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
-      console.log("Team member created locally.", savedTeamMember);
+      console.log("Team member created locally.");
       console.log(`✅ CHW account created successfuly.`);
 
       return savedTeamMember;
