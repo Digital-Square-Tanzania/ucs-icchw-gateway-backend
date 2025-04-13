@@ -69,6 +69,9 @@ class OpenmrsHelper {
           };
           await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, attributePayload);
           console.log(`✅ Successfully added ${attr.label} to person ${newPerson.uuid}`);
+          // Fetch the newly created person with attributes
+          const newCreatedPerson = await openmrsApiClient.get(`person/${newPerson.uuid}?v=full`);
+          console.log(`✅ Retrieved person with attributes:`, newCreatedPerson);
         } catch (error) {
           console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
           throw new ApiError(`Error saving person ${attr.label} attribute: ${error.message}`, 500, 5);
@@ -76,7 +79,7 @@ class OpenmrsHelper {
       }
 
       console.log(`New person created in OpenMRS with uuid: ${newPerson.uuid}`);
-      return newPerson;
+      return newCreatedPerson;
     } catch (error) {
       throw new ApiError(500, `An error occurred while creating the person: ${error.message}`, 10);
     }
