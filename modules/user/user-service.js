@@ -109,7 +109,7 @@ class UserService {
     });
     console.log("🔄 Activation member: ", member);
 
-    if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
+    if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi, jaribu tena!.", slug, login: false };
     if (password !== confirmPassword) {
       return { alert: true, message: "Password ulizoingiza hazifanani.", slug, login: true, username: member.username };
     }
