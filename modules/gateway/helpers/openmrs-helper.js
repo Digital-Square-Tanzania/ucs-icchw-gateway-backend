@@ -53,31 +53,30 @@ class OpenmrsHelper {
       ];
 
       console.log("🔄 Adding attributes to the person...", personAttributes);
+
       // Loop through and add each attribute
       for (const attr of personAttributes) {
         // Validate all attributeType UUIDs exist
         if (!attr.attributeType) {
-          throw new ApiError(`Missing environment variable for ${attr.label} attribute type UUID`, 500, 10);
+          console.warn(`⚠️ Skipping ${attr.label} due to missing attributeType UUID`);
+          continue;
         }
 
         try {
-          const payload = {
+          const attributePayload = {
             attributeType: attr.attributeType,
             value: attr.value,
           };
-          if (!attr.attributeType) {
-            throw new ApiError(`Missing attributeType UUID for attribute with value: ${attr.value}`, 500, 10);
-          }
-          await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, payload);
-          console.log(`New person created in OpenMRS with uuid: ${newPerson.uuid}`);
-          console.log("New Person Payload", payload);
-          return newPerson;
+          await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, attributePayload);
+          console.log(`✅ Successfully added ${attr.label} to person ${newPerson.uuid}`);
         } catch (error) {
           console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
-          console.log("ERROR:", error.message);
           throw new ApiError(`Error saving person ${attr.label} attribute: ${error.message}`, 500, 5);
         }
       }
+
+      console.log(`New person created in OpenMRS with uuid: ${newPerson.uuid}`);
+      return newPerson;
     } catch (error) {
       throw new ApiError(500, `An error occurred while creating the person: ${error.message}`, 10);
     }
