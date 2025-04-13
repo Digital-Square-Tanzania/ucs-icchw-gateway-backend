@@ -52,7 +52,7 @@ class OpenmrsHelper {
         },
       ];
 
-      console.log("🔄 Adding attributes to the person...");
+      console.log("🔄 Adding attributes to the person...", personAttributes);
       // Loop through and add each attribute
       for (const attr of personAttributes) {
         // Validate all attributeType UUIDs exist
