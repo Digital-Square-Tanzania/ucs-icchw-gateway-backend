@@ -91,6 +91,11 @@ class GatewayService {
 
       // Create a new team member in OpenMRS and in UCS
       const newTeamMember = await TeamMemberService.createTeamMember(newUser, payload, validatedContent, newPerson);
+      console.log("New User created:", newUser);
+      console.log("Payload", payload);
+      console.log("Validated Content", validatedContent);
+      console.log("New Person created:", newPerson);
+      console.log("New team member created:", newTeamMember);
 
       // Generate an activation slug and record
       const slug = await GenerateActivationSlug.generate(newUser.uuid, "ACTIVATION", 32);

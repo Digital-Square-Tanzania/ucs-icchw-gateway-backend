@@ -52,8 +52,6 @@ class OpenmrsHelper {
         },
       ];
 
-      console.log("🔄 Adding attributes to the person...", personAttributes);
-
       // Loop through and add each attribute
       for (const attr of personAttributes) {
         // Validate all attributeType UUIDs exist
@@ -68,10 +66,9 @@ class OpenmrsHelper {
             value: attr.value,
           };
           await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, attributePayload);
-          console.log(`✅ Successfully added ${attr.label} to person ${newPerson.uuid}`);
+          console.log(`Successfully added ${attr.label} to person ${newPerson.uuid}`);
           // Fetch the newly created person with attributes
           const newCreatedPerson = await openmrsApiClient.get(`person/${newPerson.uuid}?v=full`);
-          console.log(`✅ Retrieved person with attributes:`, newCreatedPerson);
           newPerson = newCreatedPerson;
         } catch (error) {
           console.error(`❌ Failed to add ${attr.label} to person ${newPerson.uuid}:`, error.message);
