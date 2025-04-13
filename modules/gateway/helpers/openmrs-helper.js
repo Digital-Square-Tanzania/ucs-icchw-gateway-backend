@@ -31,7 +31,7 @@ class OpenmrsHelper {
       personObject.gender = payload.message.body[0].sex.toLowerCase() === "male" ? "M" : "F";
 
       // Create the person in OpenMRS
-      const newPerson = await openmrsApiClient.post("person", personObject);
+      let newPerson = await openmrsApiClient.post("person", personObject);
 
       // Safely construct attributes
       const personAttributes = [
