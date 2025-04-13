@@ -162,7 +162,7 @@ class UserService {
         where: { userUuid: activation.userUuid },
       });
 
-      if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
+      if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi, no member.", slug, login: false };
 
       if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi, jaribu tena.", slug, login: false };
       if (activation.isUsed) return { alert: true, message: "Akaunti hii tayari inatumika.", slug, login: false };
