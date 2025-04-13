@@ -230,8 +230,6 @@ class TeamMemberService {
         createdAt: new Date(newTeamMemberDetails.dateCreated),
       };
 
-      console.log("Formatted Team Member Object:", formattedMember);
-
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("Team member created locally.");
