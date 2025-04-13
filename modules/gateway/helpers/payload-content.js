@@ -59,6 +59,8 @@ class PayloadContent {
         }
       }
 
+      console.log("Team found or created:", team);
+
       return { teamMemberLocation, team };
     } catch (error) {
       throw new ApiError(`Invalid payload: ${error.message}`, 400, 1);
