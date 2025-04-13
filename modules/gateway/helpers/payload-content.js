@@ -43,14 +43,23 @@ class PayloadContent {
       }
 
       // Check if a team exists without location
-      let team = await TeamRepository.getTeamByLocationUuid(location.uuid);
+      let team;
+      try {
+        team = await TeamRepository.getTeamByLocationUuid(location.uuid);
+      } catch (error) {
+        throw new ApiError(`Failed to fetch team by location UUID: ${error.message}`, 500, 5);
+      }
 
       if (!team) {
-        // create team
-        const newTeam = await OpenmrsHelper.createOpenmrsTeam(location);
+        try {
+          // create team
+          const newTeam = await OpenmrsHelper.createOpenmrsTeam(location);
 
-        // Update team object
-        team = newTeam;
+          // Update team object
+          team = newTeam;
+        } catch (error) {
+          throw new ApiError(`Failed to create team: ${error.message}`, 500, 6);
+        }
       }
 
       return { teamMemberLocation, team };
