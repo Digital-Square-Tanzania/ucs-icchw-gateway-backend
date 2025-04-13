@@ -103,13 +103,12 @@ class UserService {
         slug,
       },
     });
-    console.log("🔄 Activation slug: ", slug);
+
     const member = await prisma.openMRSTeamMember.findUnique({
       where: { userUuid: activation.userUuid },
     });
-    console.log("🔄 Activation member: ", member);
 
-    if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi, jaribu tena!.", slug, login: false };
+    if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
     if (password !== confirmPassword) {
       return { alert: true, message: "Password ulizoingiza hazifanani.", slug, login: true, username: member.username };
     }
@@ -165,7 +164,7 @@ class UserService {
 
       if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
 
-      if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
+      if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi, jaribu tena.", slug, login: false };
       if (activation.isUsed) return { alert: true, message: "Akaunti hii tayari inatumika.", slug, login: false };
       if (Date.now() < activation.expiryDate) return { alert: true, message: "Linki uliuoutumiwa awali ipo sawa, itumie.", slug, login: true, resend: false };
       const openSlugs = await prisma.accountActivation.findMany({
