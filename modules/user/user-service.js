@@ -103,9 +103,11 @@ class UserService {
         slug,
       },
     });
+    console.log("🔄 Activation slug: ", slug);
     const member = await prisma.openMRSTeamMember.findUnique({
       where: { userUuid: activation.userUuid },
     });
+    console.log("🔄 Activation member: ", member);
 
     if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
     if (password !== confirmPassword) {
