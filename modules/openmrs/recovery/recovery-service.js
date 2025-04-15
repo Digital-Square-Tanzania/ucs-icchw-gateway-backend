@@ -34,6 +34,8 @@ class RecoveryService {
         });
         const dob = new Date(person.dob);
         personObject.birthdate = `${dob.getFullYear()}-${(dob.getMonth() + 1).toString().padStart(2, "0")}-${dob.getDate().toString().padStart(2, "0")}`;
+
+        console.log("Person Object:", personObject);
         personObject.gender = person.gender.toLowerCase() === "male" ? "M" : "F";
 
         // Create the person in OpenMRS
@@ -112,7 +114,7 @@ class RecoveryService {
       return response;
     } catch (error) {
       console.error("Error in addPeopleInOpenmrs:", error.stack);
-      throw new CustomError("Error adding people in OpenMRS: " + error.stack, 500);
+      throw new CustomError("Error adding people in OpenMRS: " + error.message, 500);
     }
   }
 }
