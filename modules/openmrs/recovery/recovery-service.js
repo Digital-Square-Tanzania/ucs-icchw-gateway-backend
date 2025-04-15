@@ -112,7 +112,7 @@ class RecoveryService {
       return response;
     } catch (error) {
       console.error("Error in addPeopleInOpenmrs:", error.message);
-      throw new CustomError("Error adding people in OpenMRS: " + error.message, 500);
+      throw new CustomError("Error adding people in OpenMRS: " + error.stack, 500);
     }
   }
 }
