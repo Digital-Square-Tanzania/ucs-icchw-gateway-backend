@@ -1,0 +1,39 @@
+import { Pool } from "pg";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+class PostgresClient {
+  constructor() {
+    this.pool = new Pool({
+      connectionString: process.env.OPENSRP_DB_URL,
+    });
+  }
+
+  async query(sql, params = []) {
+    try {
+      const { rows } = await this.pool.query(sql, params);
+      return rows;
+    } catch (error) {
+      console.error("❌ Postgres Query Error:", error);
+      throw error;
+    }
+  }
+
+  async getClient() {
+    try {
+      return await this.pool.connect();
+    } catch (error) {
+      console.error("❌ Postgres GetClient Error:", error);
+      throw error;
+    }
+  }
+
+  async close() {
+    await this.pool.end();
+  }
+}
+
+const postgresClient = new PostgresClient();
+
+export default postgresClient;
