@@ -43,6 +43,9 @@ class RecoveryService {
 
         // Get the newly created person id and uuid
         const newPersonWithId = await openmrsApiClient.get(`person/${newPerson.uuid}?v=custom:(id,uuid)`);
+
+        console.log("New Person with ID:", newPersonWithId);
+
         newPerson = newPersonWithId;
 
         // Update the local database with the OpenMRS id and uuid
