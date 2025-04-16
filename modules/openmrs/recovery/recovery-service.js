@@ -43,7 +43,7 @@ class RecoveryService {
 
         if (!newPerson.uuid) {
           totalFailed++;
-          console.error("Error creating OpenMRS person:", newPerson.response.data);
+          console.error("Error creating OpenMRS person:", newPerson.response.data.toString());
           return;
         }
 
