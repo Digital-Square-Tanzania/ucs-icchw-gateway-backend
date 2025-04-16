@@ -41,6 +41,12 @@ class RecoveryService {
         // Create the person in OpenMRS
         newPerson = await openmrsApiClient.post("person", personObject);
 
+        if (!newPerson.uuid) {
+          totalFailed++;
+          console.error("Error creating OpenMRS person:", newPerson.error);
+          return;
+        }
+
         // Get the newly created person id and uuid
         const newPersonWithId = await openmrsApiClient.get(`person/${newPerson.uuid}?v=custom:(id,uuid)`);
 
@@ -56,8 +62,8 @@ class RecoveryService {
 
         if (!updatePerson.personUuid) {
           TeamMemberService.deletePerson(newPerson.id);
-          console.error("Error updating OpenMRS person:", updatePerson.personUuid);
-          throw new CustomError("Error updating OpenMRS person.", 500);
+          console.error("Error updating OpenMRS person:", updatePerson.error);
+          return;
         }
         console.log("Successfully updated local OpenMRS person:", updatePerson.personUuid);
 
@@ -80,7 +86,7 @@ class RecoveryService {
         if (!newUser.uuid) {
           TeamMemberService.deletePerson(newPerson.id);
           totalFailed++;
-          console.error("Error creating OpenMRS user:");
+          console.error("Error creating OpenMRS user: " + newUser.error);
           throw new CustomError("Error creating OpenMRS user.", 500);
         }
         console.log("Successfully created OpenMRS user:", newUser.uuid);
@@ -103,7 +109,7 @@ class RecoveryService {
           TeamMemberService.deletePerson(updatePerson.personId);
           totalFailed++;
           console.error("Error fetching location UUID:", locationUuid);
-          throw new CustomError("Error fetching location UUID.", 500);
+          return;
         }
         console.log("Successfully fetched location UUID:", locationUuid[0].location_uuid);
 
