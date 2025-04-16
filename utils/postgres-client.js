@@ -7,7 +7,13 @@ const { Pool } = pkg;
 class PostgresClient {
   constructor() {
     this.pool = new Pool({
-      connectionString: process.env.OPENSRP_DB_URL,
+      // connectionString: process.env.OPENSRP_DB_URL,
+      host: process.env.PG_HOST,
+      port: parseInt(process.env.PG_PORT, 10),
+      database: process.env.PG_DATABASE,
+      user: process.env.PG_USER,
+      password: process.env.PG_PASSWORD,
+      ssl: process.env.PG_SSL === "false",
     });
   }
 
