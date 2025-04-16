@@ -132,27 +132,20 @@ class RecoveryService {
         successRecords.push({ personId: person.id });
       }
       console.log("✅ People added successfully in OpenMRS");
-      var response = {
+      let response = {};
+      response.data = {
         totalAdded: totalAdded,
         totalFailed: totalFailed,
         successRecords: successRecords,
         failedRecords: failedRecords,
       };
-      // Return response if success > 0
-      if (totalAdded > 0) {
-        response = {
-          status: "success",
-          message: "People added successfully in OpenMRS",
-          data: response,
-        };
+      // Return response if success > 0, if both > 0 return partial success
+      if (totalAdded > 0 && totalFailed === 0) {
+        response.status = "success";
+      } else if (totalAdded > 0 && totalFailed > 0) {
+        response.status = "partial success";
       } else {
-        response = {
-          status: "error",
-          message: "No people added in OpenMRS",
-          data: response,
-        };
-
-        throw new CustomError(`No people added in OpenMRS: ${response}`, 500);
+        response.status = "failed";
       }
       return response;
     } catch (error) {
