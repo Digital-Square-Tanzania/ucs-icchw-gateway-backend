@@ -117,7 +117,11 @@ class RecoveryService {
         // Fetch location UUIDs ny username (identifier) from OpenSRP team_member table
         let locationUuid;
         try {
-          locationUuid = await postgresClient.query("SELECT location_uuid FROM team_members WHERE identifier = $1", [updatePerson.username]);
+          // locationUuid = await postgresClient.query("SELECT * FROM team_members WHERE identifier = $1", [updatePerson.username]);
+          opensrpData = await postgresClient.query(
+            "SELECT * FROM public.team_members tm INNER JOIN (SELECT DISTINCT team_id AS team_uuid, team AS team_name FROM core.event_metadata) t1 using (team_name) WHERE tm.identifier = $1",
+            [updatePerson.username]
+          );
         } catch (error) {
           console.error("Error fetching location UUID:", error.message);
           TeamMemberService.deletePerson(updatePerson.personId);
@@ -126,7 +130,13 @@ class RecoveryService {
           continue;
         }
 
-        console.log("Successfully fetched location UUID:", JSON.stringify(locationUuid));
+        console.log("Successfully fetched location UUID:", JSON.stringify(opensrpData[0].location_uuid));
+        await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
+          locationUuid: opensrpData[0].location_uuid,
+          locationName: opensrpData[0].location_name,
+          teamName: opensrpData[0].team_name,
+          teamUuid: opensrpData[0].team_uuid,
+        });
 
         totalAdded++;
         successRecords.push({ personId: person.id });
