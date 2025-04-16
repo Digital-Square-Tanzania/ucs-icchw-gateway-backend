@@ -16,7 +16,7 @@ class PostgresClient {
       const { rows } = await this.pool.query(sql, params);
       return rows;
     } catch (error) {
-      console.error("❌ Postgres Query Error:", error);
+      console.error("❌ Postgres Query Error:", error.message);
       throw error;
     }
   }
@@ -25,7 +25,7 @@ class PostgresClient {
     try {
       return await this.pool.connect();
     } catch (error) {
-      console.error("❌ Postgres GetClient Error:", error);
+      console.error("❌ Postgres GetClient Error:", error.message);
       throw error;
     }
   }
