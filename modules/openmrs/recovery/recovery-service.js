@@ -117,7 +117,7 @@ class RecoveryService {
         // Fetch location UUIDs ny username (identifier) from OpenSRP team_member table
         let locationUuid;
         try {
-          locationUuid = await postgresClient.query("SELECT location_uuid FROM team_member WHERE username = $1", [updatePerson.username]);
+          locationUuid = await postgresClient.query("SELECT location_uuid FROM team_members WHERE username = $1", [updatePerson.username]);
         } catch (error) {
           console.error("Error fetching location UUID:", error.message);
           TeamMemberService.deletePerson(updatePerson.personId);
