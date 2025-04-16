@@ -9,11 +9,13 @@ dotenv.config();
 
 class RecoveryService {
   // Register new CHW from HRHIS
-  static async addPeopleInOpenmrs(req, _res, _next) {
+  static async addPeopleInOpenmrs(_req, _res, _next) {
     console.log("🔄 Adding people in OpenMRS...");
     let newPerson = null;
     let totalAdded = 0;
     let totalFailed = 0;
+    let failedRecords = [];
+    let successRecords = [];
     try {
       // Get people fron our local database ucs_master table
       const existingPeople = await RecoveryRepository.getAllUcsMasterPeople();
@@ -42,6 +44,7 @@ class RecoveryService {
 
         if (!newPerson.uuid) {
           totalFailed++;
+          failedRecords.push({ personId: person.id });
           console.error("Error creating OpenMRS person:", JSON.stringify(newPerson.response.data, null, 2));
           continue;
         }
@@ -63,6 +66,7 @@ class RecoveryService {
           TeamMemberService.deletePerson(newPerson.id);
           console.error("Error updating OpenMRS person:", JSON.stringify(updatePerson.response.data));
           totalFailed++;
+          failedRecords.push({ personId: person.id });
           continue;
         }
         console.log("Successfully updated local OpenMRS person:", updatePerson.personUuid);
@@ -86,6 +90,7 @@ class RecoveryService {
         if (!newUser.uuid) {
           TeamMemberService.deletePerson(newPerson.id);
           totalFailed++;
+          failedRecords.push({ personId: person.id });
           console.error("Error creating OpenMRS user: " + JSON(newUser.response.data));
           throw new CustomError("Error creating OpenMRS user: ", 500);
         }
@@ -102,6 +107,8 @@ class RecoveryService {
         });
         if (!updateUser) {
           totalFailed++;
+          failedRecords.push({ personId: person.id });
+          TeamMemberService.deletePerson(newPerson.id);
           console.error("Error updating OpenMRS user for person:", updatePerson.personUuid);
           continue;
         }
@@ -115,17 +122,21 @@ class RecoveryService {
           console.error("Error fetching location UUID:", error.message);
           TeamMemberService.deletePerson(updatePerson.personId);
           totalFailed++;
+          failedRecords.push({ personId: person.id });
           continue;
         }
 
         console.log("Successfully fetched location UUID:", locationUuid[0].location_uuid);
 
         totalAdded++;
+        successRecords.push({ personId: person.id });
       }
       console.log("✅ People added successfully in OpenMRS");
       var response = {
         totalAdded: totalAdded,
         totalFailed: totalFailed,
+        successRecords: successRecords,
+        failedRecords: failedRecords,
       };
       return response;
     } catch (error) {
