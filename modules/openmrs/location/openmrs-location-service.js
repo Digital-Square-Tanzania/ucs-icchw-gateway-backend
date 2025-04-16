@@ -1,5 +1,5 @@
 import OpenMRSLocationRepository from "./openmrs-location-repository.js";
-import OpenMRSApiClient from "../openmrs-api-client.js";
+import OpenMRSApiClient from "../../../utils/openmrs-api-client.js";
 import CustomError from "../../../utils/custom-error.js";
 
 class OpenMRSLocationService {
@@ -111,8 +111,8 @@ class OpenMRSLocationService {
   static async syncLocations(pageSize) {
     try {
       console.log("🔄 Syncing OpenMRS Locations in batches...");
-      let fetchedRecords = 70000; // Track total fetched records
-      let totalFetched = 70000; // Track overall total fetched
+      let fetchedRecords = 0; // Track total fetched records
+      let totalFetched = 0; // Track overall total fetched
 
       while (true) {
         console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
@@ -187,7 +187,7 @@ class OpenMRSLocationService {
 
       console.log("✅ OpenMRS Location Sync Completed.");
     } catch (error) {
-      throw new CustomError("❌ OpenMRS Location Sync Error: " + error.stack);
+      throw new CustomError("❌ OpenMRS Location Sync Error: " + error.message);
     }
   }
 
@@ -222,6 +222,28 @@ class OpenMRSLocationService {
       console.log("✅ OpenMRS Location Attribute Types Sync Completed.");
     } catch (error) {
       throw new CustomError("❌ OpenMRS Location Attribute Types Sync Error: " + error.message);
+    }
+  }
+
+  // Search facilities by name
+  static async searchFacilities(name) {
+    try {
+      console.log(`🔍 Searching for facilities with name: ${name}`);
+      const results = await OpenMRSLocationRepository.searchFacilities(name);
+      return results;
+    } catch (error) {
+      throw new CustomError("❌ Facility Search Error: " + error.message);
+    }
+  }
+
+  // Search hamlets by name
+  static async searchHamlets(name) {
+    try {
+      console.log(`🔍 Searching for hamlets with name: ${name}`);
+      const results = await OpenMRSLocationRepository.searchHamlets(name);
+      return results;
+    } catch (error) {
+      throw new CustomError("❌ Hamlet Search Error: " + error.message);
     }
   }
 }

@@ -1,5 +1,5 @@
 import TeamMemberService from "./openmrs-team-member-service.js";
-import ResponseHelper from "../../../helpers/response-helper.js";
+import BaseResponse from "../../../responders/base-responder.js";
 
 /*
  * Controller for handling team member related operations
@@ -10,7 +10,7 @@ class TeamMemberController {
     try {
       const { page = 1, pageSize = 10 } = req.query;
       const teamMembers = await TeamMemberService.getTeamMembers(parseInt(page), parseInt(pageSize));
-      return ResponseHelper.success(res, "Team members retrieved successfully", teamMembers);
+      return BaseResponse.success(res, "Team members retrieved successfully", teamMembers);
     } catch (error) {
       next(error);
     }
@@ -21,7 +21,7 @@ class TeamMemberController {
     try {
       const pageSize = req.query.pageSize;
       await TeamMemberService.syncTeamMembers(parseInt(pageSize));
-      return ResponseHelper.success(res, "Team members synced successfully from OpenMRS.");
+      return BaseResponse.success(res, "Team members synced successfully from OpenMRS.");
     } catch (error) {
       next(error);
     }
@@ -32,7 +32,7 @@ class TeamMemberController {
     try {
       const { uuid } = req.params;
       const teamMember = await TeamMemberService.getTeamMemberByUuid(uuid);
-      return ResponseHelper.success(res, "Team member retrieved successfully", teamMember);
+      return BaseResponse.success(res, "Team member retrieved successfully", teamMember);
     } catch (error) {
       next(error);
     }
@@ -43,7 +43,7 @@ class TeamMemberController {
     try {
       const teamMemberData = req.body;
       const createdMember = await TeamMemberService.createTeamMember(teamMemberData);
-      return ResponseHelper.success(res, "Team member created successfully", createdMember);
+      return BaseResponse.success(res, "Team member created successfully", createdMember);
     } catch (error) {
       next(error);
     }
@@ -55,7 +55,18 @@ class TeamMemberController {
       const { uuid } = req.params;
       const updateData = req.body;
       const updatedMember = await TeamMemberService.updateTeamMember(uuid, updateData);
-      return ResponseHelper.success(res, "Team member updated successfully", updatedMember);
+      return BaseResponse.success(res, "Team member updated successfully", updatedMember);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Delete a person by ID
+  static async deletePerson(req, res, next) {
+    try {
+      const { personId } = req.params;
+      await TeamMemberService.deletePerson(personId);
+      return BaseResponse.success(res, "Person deleted successfully");
     } catch (error) {
       next(error);
     }

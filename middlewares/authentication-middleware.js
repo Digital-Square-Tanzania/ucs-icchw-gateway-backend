@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import ResponseHelper from "../helpers/response-helper.js";
+import BaseResponse from "../responders/base-responder.js";
 import AuthRepository from "../modules/auth/auth-repository.js";
 
 class AuthMiddleware {
@@ -10,7 +10,7 @@ class AuthMiddleware {
     const token = req.headers.authorization?.split(" ")[1];
 
     if (!token) {
-      return ResponseHelper.error(res, "Authentication failed. No token provided.", 401);
+      return BaseResponse.error(res, "Authentication failed. No token provided.", 401);
     }
 
     try {
@@ -23,15 +23,15 @@ class AuthMiddleware {
       const allTokensBlacklisted = await AuthRepository.isAllTokensBlacklisted(decoded.id);
 
       if (isBlacklisted || allTokensBlacklisted) {
-        return ResponseHelper.error(res, "Authentication failed. Token is blacklisted.", 401);
+        return BaseResponse.error(res, "Authentication failed. Token is blacklisted.", 401);
       }
 
       next();
     } catch (error) {
       if (error.name === "TokenExpiredError") {
-        return ResponseHelper.error(res, "Access token expired. Please refresh your token.", 401);
+        return BaseResponse.error(res, "Access token expired. Please refresh your token.", 401);
       }
-      return ResponseHelper.error(res, "Authentication failed. Invalid token.", 401);
+      return BaseResponse.error(res, "Authentication failed. Invalid token.", 401);
     }
   }
 
@@ -42,9 +42,8 @@ class AuthMiddleware {
   static authorizeRoles(...allowedRoles) {
     return (req, res, next) => {
       const userRole = req.user?.role;
-
       if (!allowedRoles.includes(userRole)) {
-        return ResponseHelper.error(res, "Access denied. Insufficient permissions.", 403);
+        return BaseResponse.error(res, "Access denied. Insufficient permissions.", 403);
       }
 
       next();
@@ -68,7 +67,7 @@ class AuthMiddleware {
     const { refreshToken } = req.body;
 
     if (!refreshToken) {
-      return ResponseHelper.error(res, "No refresh token provided.", 400);
+      return BaseResponse.error(res, "No refresh token provided.", 400);
     }
 
     try {
@@ -78,7 +77,7 @@ class AuthMiddleware {
       // Check if the refresh token is blacklisted
       const isBlacklisted = await AuthRepository.isTokenBlacklisted(refreshToken);
       if (isBlacklisted) {
-        return ResponseHelper.error(res, "Refresh token is blacklisted.", 401);
+        return BaseResponse.error(res, "Refresh token is blacklisted.", 401);
       }
 
       // Issue new Access Token
@@ -88,11 +87,11 @@ class AuthMiddleware {
         { expiresIn: "15m" } // Short-lived access token
       );
 
-      return ResponseHelper.success(res, "New access token issued.", {
+      return BaseResponse.success(res, "New access token issued.", {
         accessToken: newAccessToken,
       });
     } catch (error) {
-      return ResponseHelper.error(res, "Invalid or expired refresh token.", 401);
+      return BaseResponse.error(res, "Invalid or expired refresh token.", 401);
     }
   }
 }

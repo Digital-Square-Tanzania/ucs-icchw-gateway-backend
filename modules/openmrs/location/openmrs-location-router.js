@@ -35,4 +35,8 @@ router.get("/hierarchy/all", AuthMiddleware.authenticate, OpenMRSLocationControl
 router.get("/hierarchy/grouped", AuthMiddleware.authenticate, OpenMRSLocationController.getGroupedLocationHierarchy);
 router.post("/hierarchy/refresh", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), OpenMRSLocationController.refreshLocationHierarchyView);
 
+// Search query routes
+router.get("/facilities/search", AuthMiddleware.authenticate, OpenMRSLocationController.searchFacilities);
+router.get("/hamlets/search", AuthMiddleware.authenticate, OpenMRSLocationController.searchHamlets);
+
 export default router;

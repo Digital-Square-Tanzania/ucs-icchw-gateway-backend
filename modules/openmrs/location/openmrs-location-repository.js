@@ -144,7 +144,7 @@ class OpenMRSLocationRepository {
         skipDuplicates: true,
       });
     } catch (error) {
-      throw new CustomError(error.stack);
+      throw new CustomError(error.message);
     }
   }
 
@@ -236,6 +236,45 @@ class OpenMRSLocationRepository {
     return prisma.openMRSLocation.findFirst({
       where: {
         locationCode: locationCode,
+      },
+    });
+  }
+
+  // Search for facilities by name
+  static async searchFacilities(name) {
+    return prisma.openMRSLocation.findMany({
+      where: {
+        name: {
+          contains: name,
+          mode: "insensitive",
+        },
+        type: "Facility",
+      },
+      select: {
+        name: true,
+        uuid: true,
+        hfrCode: true,
+      },
+    });
+  }
+
+  // Search for hamlets by name
+  static async searchHamlets(name) {
+    return prisma.openMRSLocation.findMany({
+      where: {
+        name: {
+          contains: name,
+          mode: "insensitive",
+        },
+        type: {
+          in: ["Hamlet", "Village"],
+        },
+      },
+      select: {
+        name: true,
+        uuid: true,
+        locationCode: true,
+        type: true,
       },
     });
   }

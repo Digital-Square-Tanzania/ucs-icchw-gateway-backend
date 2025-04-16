@@ -331,3 +331,36 @@ model AccountActivation {
   @@index([slug])
   @@map("account_activations")
 }
+
+model UcsMaster {
+  id               Int       @id @default(autoincrement())
+  firstName        String    @map("first_name")
+  middleName       String?   @map("middle_name")
+  familyName       String    @map("family_name")
+  dob              DateTime
+  gender           String
+  username         String
+  password         String
+  memberIdentifier String    @map("member_identifier")
+  teamName         String?   @map("team_name")
+  teamRole         String?   @map("team_role")
+  createdAt        DateTime? @default(now()) @map("created_at")
+  updatedAt        DateTime? @updatedAt @map("updated_at")
+  userRole         String?   @default("Provider") @map("user_role")
+  personId         Int?      @map("person_id")
+  personUuid       String?   @map("person_uuid")
+  userId           Int?      @map("user_id")
+  userUuid         String?   @map("user_uuid")
+  teamUuid         String?   @map("team_uuid")
+  locationUuid     String?   @map("location_uuid")
+  locationId       Int?      @map("location_id")
+  locationName     String?   @map("location_name")
+  memberId         Int?      @map("member_id")
+  memberUuid       String?   @map("member_uuid")
+  teamRoleId       String?   @map("team_role_id")
+  teamId           Int?      @map("team_id")
+
+  @@index([username])
+  @@index([memberIdentifier])
+  @@map("ucs_master")
+}

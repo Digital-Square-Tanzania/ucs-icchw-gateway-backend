@@ -11,4 +11,7 @@ const router = express.Router();
  */
 router.get("/stats", AuthMiddleware.authenticate, DashboardController.getDashboardStats);
 
+// Sync dashboard data (MOH_ADMIN and UCS_DEVELOPER roles)
+router.post("/sync", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"), DashboardController.syncDashboard);
+
 export default router;

@@ -4,6 +4,7 @@ import MemberRoleRouter from "./member-role/openmrs-member-role-router.js";
 import TeamRoleRouter from "./team-role/openmrs-team-role-router.js";
 import TeamRouter from "./team/openmrs-team-router.js";
 import TeamMemberRouter from "./team-member/openmrs-team-member-router.js";
+import RecoveryRouter from "./recovery/recovery-router.js";
 
 const router = Router();
 
@@ -12,5 +13,6 @@ router.use("/teamrole", TeamRoleRouter);
 router.use("/team", TeamRouter);
 router.use("/location", LocationRouter);
 router.use("/teammember", TeamMemberRouter);
+router.use("/recovery", RecoveryRouter);
 
 export default router;

@@ -1,5 +1,5 @@
 import DHIS2OrgUnitService from "./dhis2-org-unit-service.js";
-import ResponseHelper from "../../../helpers/response-helper.js";
+import BaseResponse from "../../../responders/base-responder.js";
 import { parse } from "dotenv";
 
 class DHIS2OrgUnitController {
@@ -11,7 +11,7 @@ class DHIS2OrgUnitController {
       const pageSize = req.query.pageSize;
       console.log("PageSize: ", pageSize);
       await DHIS2OrgUnitService.syncOrgUnits(parseInt(pageSize));
-      ResponseHelper.success(res, "DHIS2 Org Units synced successfully.");
+      BaseResponse.success(res, "DHIS2 Org Units synced successfully.");
     } catch (error) {
       next(error);
     }
@@ -34,7 +34,7 @@ class DHIS2OrgUnitController {
         order,
       });
 
-      ResponseHelper.success(res, "DHIS2 Org Units retrieved successfully.", data);
+      BaseResponse.success(res, "DHIS2 Org Units retrieved successfully.", data);
     } catch (error) {
       next(error);
     }

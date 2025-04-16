@@ -8,14 +8,14 @@ html
   body
     div.container
       div.bg-top
-        img(src="/images/tz.png" alt="Tanzania Coat of Arms" height="100px" width="100px" style="margin-top: 5%; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));")
+        img(src="/images/tz_tiny.png" alt="Tanzania Coat of Arms" height="100px" width="100px" style="margin-top: 8%; filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.25));")
         if alert
           div.alert
             p ⚠️ #{message}
 
       div.card
         if login
-          h1 Anzisha akaunti ya WAJA
+          h1 Unda nenosiri la WAJA
           small <span style="color: #ccc;">Kitambulisho chako cha WAJA ni: <strong>#{username}</strong></span>
           br
           form(action=`/api/v1/user/chw/activate/${slug}` method="POST")
@@ -32,6 +32,9 @@ html
               label(for="confirmPassword") Rudia Nenosiri:
               span.password-error.match
             input(type="password" name="confirmPassword" id="confirmPassword" required)
+            div.input-group
+              input(type="checkbox" id="showPassword" onclick="togglePasswordVisibility()" style="margin: 2px 15px;")
+              span Onesha Nenosiri
             button(type="submit" disabled) Hifadhi Nenosiri
         else
           if !alert

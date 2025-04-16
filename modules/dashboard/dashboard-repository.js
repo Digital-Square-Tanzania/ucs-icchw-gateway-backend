@@ -75,9 +75,9 @@ class DashboardRepository {
       )
       SELECT
         m.month,
-        COUNT(o."createdAt") AS registrations
+        COUNT(o."created_at") AS registrations
       FROM months m
-      LEFT JOIN openmrs_team_members o ON to_char(o."createdAt", 'YYYY-MM') = m.month
+      LEFT JOIN openmrs_team_members o ON to_char(o."created_at", 'YYYY-MM') = m.month
       GROUP BY m.month
       ORDER BY m.month ASC;
     `;
@@ -135,7 +135,7 @@ class DashboardRepository {
         z.zone_name,
         COUNT(t.id) AS members_count
     FROM openmrs_team_members t
-    JOIN location_hierarchy z ON t."locationUuid" = z.location_uuid
+    JOIN location_hierarchy z ON t."location_uuid" = z.location_uuid
     WHERE z.location_type = 'Facility'
     GROUP BY z.zone_name
     ORDER BY members_count DESC;
@@ -174,9 +174,9 @@ class DashboardRepository {
       -- Get unique team counts per Zone
       SELECT
           z.location_name AS zone_name,
-          COUNT(DISTINCT t."teamUuid") AS teams_count
+          COUNT(DISTINCT t."team_uuid") AS teams_count
       FROM openmrs_team_members t
-      JOIN location_hierarchy loc ON t."locationUuid" = loc.location_uuid
+      JOIN location_hierarchy loc ON t."location_uuid" = loc.location_uuid
       JOIN location_hierarchy z ON loc.zone_uuid = z.location_uuid
       GROUP BY z.zone_uuid, z.location_name
       ORDER BY z.location_name;
@@ -195,7 +195,7 @@ class DashboardRepository {
     FROM (
         SELECT t."uuid", COUNT(m.id) AS member_count
         FROM openmrs_team_members m
-        JOIN openmrs_teams t ON m."teamUuid" = t.uuid
+        JOIN openmrs_teams t ON m."team_uuid" = t.uuid
         GROUP BY t."uuid"
     ) AS team_member_counts
     GROUP BY team_size_category

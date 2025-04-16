@@ -1,5 +1,5 @@
 import AuthService from "./auth-service.js";
-import ResponseHelper from "../../helpers/response-helper.js";
+import BaseResponse from "../../responders/base-responder.js";
 
 class AuthController {
   static async login(req, res) {
@@ -7,9 +7,9 @@ class AuthController {
       const { email, password } = req.body;
       const { accessToken, refreshToken } = await AuthService.login(email, password);
 
-      return ResponseHelper.success(res, "Authentication successful", { accessToken, refreshToken });
+      return BaseResponse.success(res, "Authentication successful", { accessToken, refreshToken });
     } catch (error) {
-      return ResponseHelper.error(res, error.message, 401);
+      return BaseResponse.error(res, error.message, 401);
     }
   }
 
@@ -17,18 +17,18 @@ class AuthController {
     try {
       const token = req.headers.authorization?.split(" ")[1];
       await AuthService.logout(token, req.user.id);
-      return ResponseHelper.success(res, "Logout successful");
+      return BaseResponse.success(res, "Logout successful");
     } catch (error) {
-      return ResponseHelper.error(res, error.message, 500);
+      return BaseResponse.error(res, error.message, 500);
     }
   }
 
   static async logoutAll(req, res) {
     try {
       await AuthService.logoutAll(req.user.id);
-      return ResponseHelper.success(res, "All tokens invalidated. User logged out from all devices.");
+      return BaseResponse.success(res, "All tokens invalidated. User logged out from all devices.");
     } catch (error) {
-      return ResponseHelper.error(res, error.message, 500);
+      return BaseResponse.error(res, error.message, 500);
     }
   }
 
@@ -36,9 +36,9 @@ class AuthController {
   static async getProfile(req, res) {
     try {
       const user = await AuthService.getProfile(req.user.id);
-      return ResponseHelper.success(res, "User details retrieved", user);
+      return BaseResponse.success(res, "User details retrieved", user);
     } catch (error) {
-      return ResponseHelper.error(res, error.message, 500);
+      return BaseResponse.error(res, error.message, 500);
     }
   }
 
@@ -49,14 +49,14 @@ class AuthController {
     try {
       const { refreshToken } = req.body;
       if (!refreshToken) {
-        return ResponseHelper.error(res, "Refresh token is required.", 400);
+        return BaseResponse.error(res, "Refresh token is required.", 400);
       }
 
       const { accessToken } = await AuthService.refreshAccessToken(refreshToken);
 
-      return ResponseHelper.success(res, "New access token issued.", { accessToken });
+      return BaseResponse.success(res, "New access token issued.", { accessToken });
     } catch (error) {
-      return ResponseHelper.error(res, error.message, 401);
+      return BaseResponse.error(res, error.message, 401);
     }
   }
 }

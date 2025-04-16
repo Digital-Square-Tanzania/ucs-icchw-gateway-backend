@@ -1,7 +1,8 @@
 import axios from "axios";
 import dotenv from "dotenv";
-import TeamRepository from "./openmrs-openmrs-team-repository.js";
+import TeamRepository from "./openmrs-team-repository.js";
 import CustomError from "../../../utils/custom-error.js";
+import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 
 dotenv.config();
 
@@ -29,7 +30,7 @@ class TeamService {
 
       return { message: "Teams synchronized successfully." };
     } catch (error) {
-      console.error("❌ Failed to fetch teams:", error.response?.data || error.stack);
+      console.error("❌ Failed to fetch teams:", error.response?.data || error.message);
       throw new CustomError("Failed to fetch teams.", 500);
     }
   }
@@ -42,6 +43,23 @@ class TeamService {
     const team = await TeamRepository.getTeamByUuid(uuid);
     if (!team) throw new CustomError("Team not found.", 404);
     return team;
+  }
+
+  static async createTeam(location) {
+    // create team
+    const teamObject = {};
+    const teamName = location.name + "-Team";
+    const teamIdentifier = (location.name + " - Team").replace(/-/g, "").replace(/\s+/g, "").toLowerCase();
+    teamObject.location = location.uuid;
+    teamObject.teamName = teamName;
+    teamObject.teamIdentifier = teamIdentifier;
+
+    // Send the request to OpenMRS server using OpenMRS API Client
+    const newTeam = await openmrsApiClient.post("team/team", teamObject);
+
+    // Save the returned object as a new team in the database
+    const localTeam = await TeamRepository.upsertTeam(newTeam);
+    return localTeam;
   }
 }
 
