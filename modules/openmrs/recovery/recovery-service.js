@@ -43,7 +43,7 @@ class RecoveryService {
 
         if (!newPerson.uuid) {
           totalFailed++;
-          console.error("Error creating OpenMRS person:", newPerson);
+          console.error("Error creating OpenMRS person:", newPerson.response.data);
           return;
         }
 
@@ -62,7 +62,7 @@ class RecoveryService {
 
         if (!updatePerson.personUuid) {
           TeamMemberService.deletePerson(newPerson.id);
-          console.error("Error updating OpenMRS person:", updatePerson);
+          console.error("Error updating OpenMRS person:", updatePerson.response.data);
           return;
         }
         console.log("Successfully updated local OpenMRS person:", updatePerson.personUuid);
@@ -86,8 +86,8 @@ class RecoveryService {
         if (!newUser.uuid) {
           TeamMemberService.deletePerson(newPerson.id);
           totalFailed++;
-          console.error("Error creating OpenMRS user: " + newUser.error);
-          throw new CustomError("Error creating OpenMRS user.", 500);
+          console.error("Error creating OpenMRS user: " + newUser.response.data);
+          throw new CustomError("Error creating OpenMRS user: ", 500);
         }
         console.log("Successfully created OpenMRS user:", newUser.uuid);
         // Get the newly created user id and uuid
