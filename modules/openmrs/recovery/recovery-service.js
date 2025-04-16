@@ -126,11 +126,10 @@ class RecoveryService {
           continue;
         }
 
-        console.log("Successfully fetched location UUID:", locationUuid[0]);
+        console.log("Successfully fetched location UUID:", locationUuid[0].location_uuid);
 
         totalAdded++;
         successRecords.push({ personId: person.id });
-        TeamMemberService.deletePerson(person.id);
       }
       console.log("✅ People added successfully in OpenMRS");
       var response = {
