@@ -91,7 +91,7 @@ class RecoveryService {
           TeamMemberService.deletePerson(newPerson.id);
           totalFailed++;
           failedRecords.push({ personId: person.id });
-          console.error("Error creating OpenMRS user: " + JSON(newUser.response.data));
+          console.error("Error creating OpenMRS user: " + JSON.stringify(newUser.response.data));
           throw new CustomError("Error creating OpenMRS user: ", 500);
         }
         console.log("Successfully created OpenMRS user:", newUser.uuid);
