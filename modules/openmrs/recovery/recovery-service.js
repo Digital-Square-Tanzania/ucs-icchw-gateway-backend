@@ -126,7 +126,7 @@ class RecoveryService {
           continue;
         }
 
-        console.log("Successfully fetched location UUID:", locationUuid[0].location_uuid);
+        console.log("Successfully fetched location UUID:", JSON.stringify(locationUuid));
 
         totalAdded++;
         successRecords.push({ personId: person.id });
