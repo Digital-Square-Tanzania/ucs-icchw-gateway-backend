@@ -108,13 +108,16 @@ class RecoveryService {
         console.log("Successfully updated Local OpenMRS user:", updateUser.userUuid);
 
         // Fetch location UUIDs ny username (identifier) from OpenSRP team_member table
-        const locationUuid = await postgresClient.query("SELECT location_uuid FROM team_member WHERE username = $1", [updatePerson.username]);
-        if (!locationUuid || locationUuid.length === 0) {
+        let locationUuid;
+        try {
+          locationUuid = await postgresClient.query("SELECT location_uuid FROM team_member WHERE username = $1", [updatePerson.username]);
+        } catch (error) {
+          console.error("Error fetching location UUID:", error.message);
           TeamMemberService.deletePerson(updatePerson.personId);
           totalFailed++;
-          console.error("Error fetching location UUID:", locationUuid);
           continue;
         }
+
         console.log("Successfully fetched location UUID:", locationUuid[0].location_uuid);
 
         totalAdded++;
