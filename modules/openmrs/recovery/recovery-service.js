@@ -62,7 +62,8 @@ class RecoveryService {
 
         if (!updatePerson.personUuid) {
           TeamMemberService.deletePerson(newPerson.id);
-          console.error("Error updating OpenMRS person:", updatePerson.response.data);
+          console.error("Error updating OpenMRS person:", updatePerson.response.data.toString());
+          totalFailed++;
           return;
         }
         console.log("Successfully updated local OpenMRS person:", updatePerson.personUuid);
