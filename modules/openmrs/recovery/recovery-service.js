@@ -43,7 +43,7 @@ class RecoveryService {
 
         if (!newPerson.uuid) {
           totalFailed++;
-          console.error("Error creating OpenMRS person:", newPerson.error);
+          console.error("Error creating OpenMRS person:", newPerson);
           return;
         }
 
@@ -62,7 +62,7 @@ class RecoveryService {
 
         if (!updatePerson.personUuid) {
           TeamMemberService.deletePerson(newPerson.id);
-          console.error("Error updating OpenMRS person:", updatePerson.error);
+          console.error("Error updating OpenMRS person:", updatePerson);
           return;
         }
         console.log("Successfully updated local OpenMRS person:", updatePerson.personUuid);
