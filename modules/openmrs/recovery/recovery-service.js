@@ -35,7 +35,6 @@ class RecoveryService {
         const dob = new Date(person.dob);
         personObject.birthdate = `${dob.getFullYear()}-${(dob.getMonth() + 1).toString().padStart(2, "0")}-${dob.getDate().toString().padStart(2, "0")}`;
 
-        console.log("Person Object:", personObject);
         personObject.gender = person.gender.toLowerCase() === "male" ? "M" : "F";
 
         // Create the person in OpenMRS
@@ -44,7 +43,7 @@ class RecoveryService {
         if (!newPerson.uuid) {
           totalFailed++;
           console.error("Error creating OpenMRS person:", JSON.stringify(newPerson.response.data, null, 2));
-          return;
+          continue;
         }
 
         // Get the newly created person id and uuid
@@ -62,9 +61,9 @@ class RecoveryService {
 
         if (!updatePerson.personUuid) {
           TeamMemberService.deletePerson(newPerson.id);
-          console.error("Error updating OpenMRS person:", updatePerson.response.data.toString());
+          console.error("Error updating OpenMRS person:", JSON.stringify(updatePerson.response.data));
           totalFailed++;
-          return;
+          continue;
         }
         console.log("Successfully updated local OpenMRS person:", updatePerson.personUuid);
 
@@ -87,20 +86,24 @@ class RecoveryService {
         if (!newUser.uuid) {
           TeamMemberService.deletePerson(newPerson.id);
           totalFailed++;
-          console.error("Error creating OpenMRS user: " + newUser.response.data);
+          console.error("Error creating OpenMRS user: " + JSON(newUser.response.data));
           throw new CustomError("Error creating OpenMRS user: ", 500);
         }
         console.log("Successfully created OpenMRS user:", newUser.uuid);
+
         // Get the newly created user id and uuid
         const newUserWithId = await openmrsApiClient.get(`user/${newUser.uuid}?v=custom:(id,uuid)`);
         newUser = newUserWithId;
+
         // Update the local database with the OpenMRS user id and uuid
         const updateUser = await RecoveryRepository.updateOpenmrsPersonById(updatePerson.id, {
           userId: newUser.id,
           userUuid: newUser.uuid,
         });
         if (!updateUser) {
-          throw new CustomError("Error updating OpenMRS user.", 500);
+          totalFailed++;
+          console.error("Error updating OpenMRS user for person:", updatePerson.personUuid);
+          continue;
         }
         console.log("Successfully updated Local OpenMRS user:", updateUser.userUuid);
 
@@ -110,7 +113,7 @@ class RecoveryService {
           TeamMemberService.deletePerson(updatePerson.personId);
           totalFailed++;
           console.error("Error fetching location UUID:", locationUuid);
-          return;
+          continue;
         }
         console.log("Successfully fetched location UUID:", locationUuid[0].location_uuid);
 
