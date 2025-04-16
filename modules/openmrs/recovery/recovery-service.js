@@ -138,6 +138,22 @@ class RecoveryService {
         successRecords: successRecords,
         failedRecords: failedRecords,
       };
+      // Return response if success > 0
+      if (totalAdded > 0) {
+        response = {
+          status: "success",
+          message: "People added successfully in OpenMRS",
+          data: response,
+        };
+      } else {
+        response = {
+          status: "error",
+          message: "No people added in OpenMRS",
+          data: response,
+        };
+
+        throw new CustomError(`No people added in OpenMRS: ${response}`, 500);
+      }
       return response;
     } catch (error) {
       console.error("Error in addPeopleInOpenmrs:", error.stack);
