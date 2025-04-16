@@ -115,9 +115,8 @@ class RecoveryService {
         console.log("Successfully updated Local OpenMRS user:", updateUser.userUuid);
 
         // Fetch location UUIDs ny username (identifier) from OpenSRP team_member table
-        let locationUuid;
+        let opensrpData;
         try {
-          // locationUuid = await postgresClient.query("SELECT * FROM team_members WHERE identifier = $1", [updatePerson.username]);
           opensrpData = await postgresClient.query(
             "SELECT * FROM public.team_members tm INNER JOIN (SELECT DISTINCT team_id AS team_uuid, team AS team_name FROM core.event_metadata) t1 using (team_name) WHERE tm.identifier = $1",
             [updatePerson.username]
