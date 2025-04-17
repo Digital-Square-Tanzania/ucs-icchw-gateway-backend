@@ -82,8 +82,14 @@ class RecoveryService {
         if (password.length < 8 || !hasLower || !hasUpper) {
           password += "1Ucs";
         }
+        let sanitizedUsername = updatePerson.username.replace(/\s/g, "");
+        if (sanitizedUsername.length < 2) {
+          sanitizedUsername = sanitizedUsername + "-New";
+        } else if (sanitizedUsername.length > 50) {
+          sanitizedUsername = sanitizedUsername.substring(0, 8) + "-New";
+        }
         const userObject = {
-          username: updatePerson.username,
+          username: sanitizedUsername,
           password: password,
           roles: [
             {
@@ -93,7 +99,7 @@ class RecoveryService {
           person: {
             uuid: updatePerson.personUuid,
           },
-          systemId: updatePerson.username,
+          systemId: sanitizedUsername,
         };
         let newUser = null;
         newUser = await openmrsApiClient.post("user", userObject);
