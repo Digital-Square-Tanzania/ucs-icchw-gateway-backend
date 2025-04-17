@@ -139,6 +139,14 @@ class RecoveryService {
           continue;
         }
 
+        if (!opensrpData || !opensrpData[0] || !opensrpData[0].location_uuid) {
+          console.error("OpenSRP data missing location UUID.");
+          await TeamMemberService.deletePerson(updateUser.personId);
+          totalFailed++;
+          failedRecords.push({ personId: newPerson.id });
+          continue;
+        }
+
         console.log("Successfully fetched location UUID:", JSON.stringify(opensrpData[0].location_uuid));
         await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
           locationUuid: opensrpData[0].location_uuid,
