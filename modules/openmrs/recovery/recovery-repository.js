@@ -3,12 +3,7 @@ import prisma from "../../../config/prisma.js";
 class RecoveryRepository {
   static async getAllUcsMasterPeople() {
     return prisma.ucsMaster.findMany({
-      where: {
-        username: {
-          contains: "district",
-          mode: "insensitive",
-        },
-      },
+      distinct: ["username"],
     });
   }
 
