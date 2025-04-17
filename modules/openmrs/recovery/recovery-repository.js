@@ -2,7 +2,14 @@ import prisma from "../../../config/prisma.js";
 
 class RecoveryRepository {
   static async getAllUcsMasterPeople() {
-    return prisma.ucsMaster.findMany({});
+    return prisma.ucsMaster.findMany({
+      where: {
+        username: {
+          contains: "district",
+          mode: "insensitive",
+        },
+      },
+    });
   }
 
   // Update the OpenMRS person with the given ID
