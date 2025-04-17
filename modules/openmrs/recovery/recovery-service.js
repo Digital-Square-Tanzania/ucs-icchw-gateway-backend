@@ -191,6 +191,7 @@ class RecoveryService {
           teamRoleId: 1,
           locationId: openmrsTeam.location.id,
           teamRole: "UCS Provider",
+          teamId: openmrsTeam.id,
         });
         if (!updateTeamMember) {
           TeamMemberService.deletePerson(updateUser.personId);
