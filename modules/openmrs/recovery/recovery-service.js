@@ -147,7 +147,7 @@ class RecoveryService {
             location: opensrpData[0].location_uuid,
           });
         }
-        newOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
+        const newOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
         openmrsTeam = newOpenmrsTeamWithId;
 
         // Create a new team member in OpenMRS using collected details
