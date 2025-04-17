@@ -18,10 +18,9 @@ class RecoveryService {
     let successRecords = [];
     try {
       // Get people fron our local database ucs_master table
-      // const existingPeople = await RecoveryRepository.getAllUcsMasterPeople();
-      const existingPeople = await this.checkAvailableTeamsInOpenmrs();
+      const existingPeople = await RecoveryRepository.getAllUcsMasterPeople();
+      // const existingPeople = await this.checkAvailableTeamsInOpenmrs();
       console.log("Existing people from local database:", existingPeople);
-      return;
       if (!existingPeople || existingPeople.length === 0) {
         console.log("No people found in the local database.");
         throw new CustomError("No people found in the local database.", 404);
@@ -150,13 +149,20 @@ class RecoveryService {
 
         // Get Team details form OpenMRS, if no team, create one
         let openmrsTeam = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid)`);
-        if (!openmrsTeam.uuid) {
+        if (openmrsTeam.error) {
           // Create the team in OpenMRS
-          await openmrsApiClient.post("team", {
-            teamName: opensrpData[0].team_name,
-            uuid: opensrpData[0].team_uuid,
-            location: opensrpData[0].location_uuid,
-          });
+          // await openmrsApiClient.post("team", {
+          //   teamName: opensrpData[0].team_name,
+          //   uuid: opensrpData[0].team_uuid,
+          //   location: opensrpData[0].location_uuid,
+          // });
+
+          // Remove the created records and move on
+          TeamMemberService.deletePerson(updateUser.personId);
+          totalFailed++;
+          failedRecords.push({ personId: newPerson.id });
+          console.error("Error creating OpenMRS team member:", JSON.stringify(openmrsTeam.response.data));
+          continue;
         }
         const newOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
         openmrsTeam = newOpenmrsTeamWithId;
