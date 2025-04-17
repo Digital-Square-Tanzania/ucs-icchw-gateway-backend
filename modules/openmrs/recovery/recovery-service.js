@@ -248,7 +248,7 @@ class RecoveryService {
         throw new CustomError("No records found in the local database.", 404);
       }
 
-      const ucsValidRecords = ucsMasterPeople.filter((team) => openmrsTeams.some((openmrsTeam) => openmrsTeam.uuid === team.teamUuid));
+      const ucsValidRecords = ucsMasterPeople.filter((team) => openmrsTeams.some((openmrsTeam) => openmrsTeam.name === team.teamName));
 
       if (ucsValidRecords.length === 0) {
         console.log("No matching teams found in OpenMRS.");
