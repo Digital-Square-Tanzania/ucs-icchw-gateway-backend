@@ -234,23 +234,23 @@ class RecoveryService {
   static async checkAvailableTeamsInOpenmrs() {
     console.log("🔄 Checking available teams in OpenMRS...");
     try {
-      // Get available teams from OpenMRS
-      const openmrsTeams = await openmrsApiClient.get("team/team");
-      if (!openmrsTeams || openmrsTeams.length === 0) {
+      const response = await openmrsApiClient.get("team/team");
+      const openmrsTeams = response.results || [];
+
+      if (openmrsTeams.length === 0) {
         console.log("No teams found in OpenMRS.");
         throw new CustomError("No teams found in OpenMRS.", 404);
       }
 
-      // Compare them with the ucs_master table
       const ucsMasterPeople = await RecoveryRepository.getAllUcsMasterPeople();
       if (!ucsMasterPeople || ucsMasterPeople.length === 0) {
-        console.log("No recordss found in the local database.");
+        console.log("No records found in the local database.");
         throw new CustomError("No records found in the local database.", 404);
       }
 
-      // Select only the ucs master rows whose teamUuid matches the OpenMRS team uuid
       const ucsValidRecords = ucsMasterPeople.filter((team) => openmrsTeams.some((openmrsTeam) => openmrsTeam.uuid === team.teamUuid));
-      if (!ucsMasterTeams || ucsMasterTeams.length === 0) {
+
+      if (ucsValidRecords.length === 0) {
         console.log("No matching teams found in OpenMRS.");
         throw new CustomError("No matching teams found in OpenMRS.", 404);
       }
