@@ -76,7 +76,7 @@ class RecoveryService {
         console.log("Successfully updated local OpenMRS person:", updatePerson.personUuid);
 
         // Create OpenMRS user
-        const password = updatePerson.password.length < 8 ? updatePerson.password + "NEW" : updatePerson.password;
+        const password = updatePerson.password.length < 8 ? updatePerson.password + "1Ucs" : updatePerson.password;
         const userObject = {
           username: updatePerson.username,
           password: password,
