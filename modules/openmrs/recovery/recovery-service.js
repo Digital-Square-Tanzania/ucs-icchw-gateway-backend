@@ -138,7 +138,7 @@ class RecoveryService {
         });
 
         // Get Team details form OpenMRS, if no team, create one
-        let openmrsTeam = await openmrsApiClient.get(`team/${opensrpData[0].team_uuid}?v=custom:(id,uuid)`);
+        let openmrsTeam = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid)`);
         if (!openmrsTeam.uuid) {
           // Create the team in OpenMRS
           await openmrsApiClient.post("team", {
@@ -147,7 +147,7 @@ class RecoveryService {
             location: opensrpData[0].location_uuid,
           });
         }
-        newOpenmrsTeamWithId = await openmrsApiClient.get(`team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
+        newOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
         openmrsTeam = newOpenmrsTeamWithId;
 
         // Create a new team member in OpenMRS using collected details
@@ -171,7 +171,7 @@ class RecoveryService {
           isDataProvider: "false",
         };
 
-        let newTeamMember = await openmrsApiClient.post("team_member", teamMemberObject);
+        let newTeamMember = await openmrsApiClient.post("team/team_member", teamMemberObject);
         if (!newTeamMember.uuid) {
           TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
@@ -181,7 +181,7 @@ class RecoveryService {
         }
         console.log("Successfully created OpenMRS team member:", newTeamMember.uuid);
         // Get the newly created team member id and uuid
-        const newTeamMemberWithId = await openmrsApiClient.get(`team_member/${newTeamMember.uuid}?v=custom:(id,uuid)`);
+        const newTeamMemberWithId = await openmrsApiClient.get(`team/team_member/${newTeamMember.uuid}?v=custom:(id,uuid)`);
         newTeamMember = newTeamMemberWithId;
         // Update the local database with the OpenMRS team member id and uuid
         const updateTeamMember = await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
