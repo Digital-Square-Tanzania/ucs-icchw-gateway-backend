@@ -148,23 +148,26 @@ class RecoveryService {
         });
 
         // Get Team details form OpenMRS, if no team, create one
-        let openmrsTeam = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid)`);
-        if (openmrsTeam.error) {
-          // Create the team in OpenMRS
-          // await openmrsApiClient.post("team", {
-          //   teamName: opensrpData[0].team_name,
-          //   uuid: opensrpData[0].team_uuid,
-          //   location: opensrpData[0].location_uuid,
-          // });
-
-          // Remove the created records and move on
-          TeamMemberService.deletePerson(updateUser.personId);
+        let openmrsTeam;
+        let newOpenmrsTeamWithId;
+        try {
+          newOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
+        } catch (err) {
+          console.error("Error fetching OpenMRS team:", err.message);
+          await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
-          console.error("Error creating OpenMRS team member:", JSON.stringify(openmrsTeam.response.data));
           continue;
         }
-        const newOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
+
+        if (!newOpenmrsTeamWithId || !newOpenmrsTeamWithId.location || !newOpenmrsTeamWithId.location.uuid) {
+          console.error("OpenMRS team missing location info.");
+          await TeamMemberService.deletePerson(updateUser.personId);
+          totalFailed++;
+          failedRecords.push({ personId: newPerson.id });
+          continue;
+        }
+
         openmrsTeam = newOpenmrsTeamWithId;
 
         // Create a new team member in OpenMRS using collected details
