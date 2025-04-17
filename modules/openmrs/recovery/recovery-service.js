@@ -255,7 +255,7 @@ class RecoveryService {
         throw new CustomError("No matching teams found in OpenMRS.", 404);
       }
 
-      return ucsValidRecords.id;
+      return ucsValidRecords;
     } catch (error) {
       console.error("Error in checkAvailableTeamsInOpenmrs:", error.stack);
       throw new CustomError("Error checking available teams in OpenMRS: " + error.message, 500);
