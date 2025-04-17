@@ -117,8 +117,16 @@ class RecoveryService {
         // Fetch location UUIDs ny username (identifier) from OpenSRP team_member table
         let opensrpData;
         try {
+          // Deprecated query to get the location UUID
+          // opensrpData = await postgresClient.query(
+          //   "SELECT * FROM public.team_members tm INNER JOIN (SELECT DISTINCT team_id AS team_uuid, team AS team_name FROM core.event_metadata) t1 using (team_name) WHERE tm.identifier = $1",
+          //   [updatePerson.username]
+          // );
+
+          // A faster query to get the location UUID
+
           opensrpData = await postgresClient.query(
-            "SELECT * FROM public.team_members tm INNER JOIN (SELECT DISTINCT team_id AS team_uuid, team AS team_name FROM core.event_metadata) t1 using (team_name) WHERE tm.identifier = $1",
+            "SELECT DISTINCT tm.*, em.team_id AS team_uuid FROM public.team_members tm JOIN core.event_metadata em ON tm.team_name = em.team WHERE tm.identifier = $1",
             [updatePerson.username]
           );
         } catch (error) {
