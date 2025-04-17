@@ -82,14 +82,8 @@ class RecoveryService {
         if (password.length < 8 || !hasLower || !hasUpper) {
           password += "1Ucs";
         }
-        let sanitizedUsername = updatePerson.username.replace(/\s/g, "");
-        if (sanitizedUsername.length < 2) {
-          sanitizedUsername = sanitizedUsername + "-New";
-        } else if (sanitizedUsername.length > 50) {
-          sanitizedUsername = sanitizedUsername.substring(0, 8) + "-New";
-        }
         const userObject = {
-          username: sanitizedUsername,
+          username: updatePerson.username,
           password: password,
           roles: [
             {
@@ -99,7 +93,7 @@ class RecoveryService {
           person: {
             uuid: updatePerson.personUuid,
           },
-          systemId: sanitizedUsername,
+          systemId: updatePerson.username,
         };
         let newUser = null;
         newUser = await openmrsApiClient.post("user", userObject);
@@ -120,7 +114,7 @@ class RecoveryService {
         newUser = newUserWithId;
 
         // Update the local database with the OpenMRS user id and uuid
-        const updateUser = await await RecoveryRepository.updateOpenmrsPersonById(updatePerson.id, {
+        const updateUser = await RecoveryRepository.updateOpenmrsPersonById(updatePerson.id, {
           userId: newUser.id,
           userUuid: newUser.uuid,
         });
@@ -247,7 +241,7 @@ class RecoveryService {
         const newTeamMemberWithId = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}?v=custom:(id,uuid)`);
         newTeamMember = newTeamMemberWithId;
         // Update the local database with the OpenMRS team member id and uuid
-        const updateTeamMember = await await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
+        const updateTeamMember = await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
           memberId: newTeamMember.id,
           memberUuid: newTeamMember.uuid,
           memberIdentifier: updateUser.username,
