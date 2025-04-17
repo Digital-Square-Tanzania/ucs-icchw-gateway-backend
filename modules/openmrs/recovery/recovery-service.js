@@ -68,7 +68,7 @@ class RecoveryService {
           console.error("Error updating OpenMRS person:", JSON.stringify(updatePerson.response.data.error.message));
           totalFailed++;
           failedRecords.push({ personId: person.id });
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: updatePerson.response.data.error.message,
           });
           continue;
@@ -97,7 +97,7 @@ class RecoveryService {
           totalFailed++;
           failedRecords.push({ personId: person.id });
           console.error("Error creating OpenMRS user: " + JSON.stringify(newUser.response.data.error.message));
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: newUser.response.data.error.message,
           });
           throw new CustomError("Error creating OpenMRS user: ", 500);
@@ -118,7 +118,7 @@ class RecoveryService {
           failedRecords.push({ personId: person.id });
           TeamMemberService.deletePerson(newPerson.id);
           console.error("Error updating OpenMRS user for person:", updatePerson.personUuid);
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: `Error updating OpenMRS user for person: ${updatePerson.personUuid}`,
           });
           continue;
@@ -145,7 +145,7 @@ class RecoveryService {
           TeamMemberService.deletePerson(updatePerson.personId);
           totalFailed++;
           failedRecords.push({ personId: person.id });
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: `Error fetching location UUID: ${error.message}`,
           });
           continue;
@@ -156,14 +156,14 @@ class RecoveryService {
           await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: `OpenSRP data missing location UUID.`,
           });
           continue;
         }
 
         console.log("Successfully fetched location UUID:", JSON.stringify(opensrpData[0].location_uuid));
-        await await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
+        await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
           locationUuid: opensrpData[0].location_uuid,
           locationName: opensrpData[0].location_name,
           teamName: opensrpData[0].team_name,
@@ -180,7 +180,7 @@ class RecoveryService {
           await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: `Error fetching OpenMRS team:", ${err.message}`,
           });
           continue;
@@ -191,7 +191,7 @@ class RecoveryService {
           await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: `Openmrs team missing location info.`,
           });
           continue;
@@ -226,7 +226,7 @@ class RecoveryService {
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
           console.error("Error creating OpenMRS team member:", JSON.stringify(newTeamMember.response.data.error.message));
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: `Error creating OpenMRS team member.", ${err.message}`,
           });
           continue;
@@ -250,7 +250,7 @@ class RecoveryService {
           totalFailed++;
           failedRecords.push({ personId: person.id });
           console.error("Error updating OpenMRS team member for person:", updateUser.personUuid);
-          await RecoveryRepository.updateOpenmrsPersonById(newPerson.id, {
+          await RecoveryRepository.updateOpenmrsPersonById(person.id, {
             errorLog: `Error updating OpenMRS team member for person.", ${err.message}`,
           });
           continue;
