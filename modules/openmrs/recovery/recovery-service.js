@@ -53,8 +53,6 @@ class RecoveryService {
         // Get the newly created person id and uuid
         const newPersonWithId = await openmrsApiClient.get(`person/${newPerson.uuid}?v=custom:(id,uuid)`);
 
-        console.log("New Person with ID:", newPersonWithId);
-
         newPerson = newPersonWithId;
 
         // Update the local database with the OpenMRS id and uuid
@@ -73,7 +71,6 @@ class RecoveryService {
           });
           continue;
         }
-        console.log("Successfully updated local OpenMRS person:", updatePerson.personUuid);
 
         // Create OpenMRS user
         let password = updatePerson.password;
@@ -107,7 +104,6 @@ class RecoveryService {
           });
           throw new CustomError("Error creating OpenMRS user: ", 500);
         }
-        console.log("Successfully created OpenMRS user:", newUser.uuid);
 
         // Get the newly created user id and uuid
         const newUserWithId = await openmrsApiClient.get(`user/${newUser.uuid}?v=custom:(id,uuid)`);
@@ -128,7 +124,6 @@ class RecoveryService {
           });
           continue;
         }
-        console.log("Successfully updated Local OpenMRS user:", updateUser.userUuid);
 
         // Fetch location UUIDs ny username (identifier) from OpenSRP team_member table
         let opensrpData;
@@ -167,7 +162,6 @@ class RecoveryService {
           continue;
         }
 
-        console.log("Successfully fetched location UUID:", JSON.stringify(opensrpData[0].location_uuid));
         await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
           locationUuid: opensrpData[0].location_uuid,
           locationName: opensrpData[0].location_name,
@@ -236,10 +230,11 @@ class RecoveryService {
           });
           continue;
         }
-        console.log("Successfully created OpenMRS team member:", newTeamMember.uuid);
+
         // Get the newly created team member id and uuid
         const newTeamMemberWithId = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}?v=custom:(id,uuid)`);
         newTeamMember = newTeamMemberWithId;
+
         // Update the local database with the OpenMRS team member id and uuid
         const updateTeamMember = await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
           memberId: newTeamMember.id,
@@ -261,7 +256,6 @@ class RecoveryService {
           continue;
         }
         console.log("Successfully updated Local OpenMRS team member:", updateTeamMember.memberUuid);
-        // Move this further down the class
         totalAdded++;
         successRecords.push({ personId: person.id });
       }
