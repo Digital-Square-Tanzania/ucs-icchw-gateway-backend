@@ -163,7 +163,7 @@ class RecoveryService {
             uuid: openmrsTeam.uuid,
           },
           teamRole: {
-            uuid: process.env.UCS_PROD_PROVIDER_ROLE_UUID,
+            uuid: process.env.UCS_PROVIDER_TEAM_ROLE_UUID,
           },
           person: {
             uuid: updateUser.personUuid,
