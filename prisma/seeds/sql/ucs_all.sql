@@ -7469,3 +7469,12 @@ INSERT INTO ucs_master (first_name, middle_name, family_name, dob, gender, usern
 INSERT INTO ucs_master (first_name, middle_name, family_name, dob, gender, username, password, member_identifier, team_name, team_role) VALUES ('Rhoda', 'Yohana', 'Kimea', '1902-01-11', 'Female', 'RhYoKim', 'HOimea39', 'RhYoKimTGA', 'MONGATGA Team', NULL);
 INSERT INTO ucs_master (first_name, middle_name, family_name, dob, gender, username, password, member_identifier, team_name, team_role) VALUES ('Mwanahamisi', 'Ramji', 'Daudi', '1902-01-12', 'Female', 'MwRaDau', 'WAaudi97', 'MwRaDauTGA', 'MWARONGOTGA Team', NULL);
 INSERT INTO ucs_master (first_name, middle_name, family_name, dob, gender, username, password, member_identifier, team_name, team_role) VALUES ('Vedastus', 'Evarist', 'Mtobu', '1902-01-13', 'Male', 'VeEvMto', 'EDtobu64', 'VeEvMtoTGA', 'Kibafuta Team', NULL);
+WITH ranked AS ( 
+  SELECT id, username, 
+         ROW_NUMBER() OVER (PARTITION BY username ORDER BY id) AS rn 
+  FROM public.ucs_master 
+) 
+UPDATE public.ucs_master u 
+SET username_duplicate = TRUE 
+FROM ranked r 
+WHERE u.id = r.id AND r.rn > 1; 

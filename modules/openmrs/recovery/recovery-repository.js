@@ -4,6 +4,9 @@ class RecoveryRepository {
   static async getAllUcsMasterPeople() {
     return prisma.ucsMaster.findMany({
       distinct: ["username"],
+      where: {
+        usernameDuplicate: false,
+      },
     });
   }
 
