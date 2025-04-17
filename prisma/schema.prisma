@@ -359,6 +359,7 @@ model UcsMaster {
   memberUuid       String?   @map("member_uuid")
   teamRoleId       Int?      @map("team_role_id")
   teamId           Int?      @map("team_id")
+  errorLog         String?   @map("error_log")
 
   @@index([username])
   @@index([memberIdentifier])
