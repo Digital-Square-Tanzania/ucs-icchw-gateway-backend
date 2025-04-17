@@ -8,8 +8,8 @@ import postgresClient from "../../../utils/postgres-client.js";
 dotenv.config();
 
 class RecoveryService {
-  // Register new CHW from HRHIS
-  static async addPeopleInOpenmrs(_req, _res, _next) {
+  // Add records from UCS Master file into OpenMRS
+  static async addPeopleInOpenmrs() {
     console.log("🔄 Adding people in OpenMRS...");
     let newPerson = null;
     let totalAdded = 0;
@@ -18,7 +18,10 @@ class RecoveryService {
     let successRecords = [];
     try {
       // Get people fron our local database ucs_master table
-      const existingPeople = await RecoveryRepository.getAllUcsMasterPeople();
+      // const existingPeople = await RecoveryRepository.getAllUcsMasterPeople();
+      const existingPeople = await this.checkAvailableTeamsInOpenmrs();
+      console.log("Existing people from local database:", existingPeople);
+      return;
       if (!existingPeople || existingPeople.length === 0) {
         console.log("No people found in the local database.");
         throw new CustomError("No people found in the local database.", 404);
@@ -225,6 +228,37 @@ class RecoveryService {
     } catch (error) {
       console.error("Error in addPeopleInOpenmrs:", error.stack);
       throw new CustomError("Error adding people in OpenMRS: " + error.message, 500);
+    }
+  }
+
+  static async checkAvailableTeamsInOpenmrs() {
+    console.log("🔄 Checking available teams in OpenMRS...");
+    try {
+      // Get available teams from OpenMRS
+      const openmrsTeams = await openmrsApiClient.get("team/teams");
+      if (!openmrsTeams || openmrsTeams.length === 0) {
+        console.log("No teams found in OpenMRS.");
+        throw new CustomError("No teams found in OpenMRS.", 404);
+      }
+
+      // Compare them with the ucs_master table
+      const ucsMasterPeople = await RecoveryRepository.getAllUcsMasterPeople();
+      if (!ucsMasterPeople || ucsMasterPeople.length === 0) {
+        console.log("No recordss found in the local database.");
+        throw new CustomError("No records found in the local database.", 404);
+      }
+
+      // Select only the ucs master rows whose teamUuid matches the OpenMRS team uuid
+      const ucsValidRecords = ucsMasterPeople.filter((team) => openmrsTeams.some((openmrsTeam) => openmrsTeam.uuid === team.teamUuid));
+      if (!ucsMasterTeams || ucsMasterTeams.length === 0) {
+        console.log("No matching teams found in OpenMRS.");
+        throw new CustomError("No matching teams found in OpenMRS.", 404);
+      }
+
+      return ucsValidRecords;
+    } catch (error) {
+      console.error("Error in checkAvailableTeamsInOpenmrs:", error.stack);
+      throw new CustomError("Error checking available teams in OpenMRS: " + error.message, 500);
     }
   }
 }

@@ -6,7 +6,7 @@ class RecoveryController {
   // Add people in OpenMRS
   static async addPeopleInOpenmrs(req, res, next) {
     try {
-      const addedPeople = await RecoveryService.addPeopleInOpenmrs(req, res, next);
+      const addedPeople = await RecoveryService.addPeopleInOpenmrs();
       return BaseResponder.success(res, "People added successfully in OpenMRS", addedPeople, 201);
     } catch (error) {
       throw new CustomError("Error adding people in OpenMRS" + error.message, 500);
