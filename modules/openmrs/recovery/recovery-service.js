@@ -47,7 +47,7 @@ class RecoveryService {
         if (!newPerson.uuid) {
           totalFailed++;
           failedRecords.push({ personId: person.id });
-          console.error("Error creating OpenMRS person:", JSON.stringify(newPerson.response.data, null, 2));
+          console.error("Error creating OpenMRS person:", JSON.stringify(newPerson.response.data.error.message, null, 2));
           continue;
         }
 
@@ -66,7 +66,7 @@ class RecoveryService {
 
         if (!updatePerson.personUuid) {
           TeamMemberService.deletePerson(newPerson.id);
-          console.error("Error updating OpenMRS person:", JSON.stringify(updatePerson.response.data));
+          console.error("Error updating OpenMRS person:", JSON.stringify(updatePerson.response.data.error.message));
           totalFailed++;
           failedRecords.push({ personId: person.id });
           continue;
@@ -94,7 +94,7 @@ class RecoveryService {
           TeamMemberService.deletePerson(newPerson.id);
           totalFailed++;
           failedRecords.push({ personId: person.id });
-          console.error("Error creating OpenMRS user: " + JSON.stringify(newUser.response.data));
+          console.error("Error creating OpenMRS user: " + JSON.stringify(newUser.response.data.error.message));
           throw new CustomError("Error creating OpenMRS user: ", 500);
         }
         console.log("Successfully created OpenMRS user:", newUser.uuid);
@@ -205,7 +205,7 @@ class RecoveryService {
           TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
-          console.error("Error creating OpenMRS team member:", JSON.stringify(newTeamMember.response.data));
+          console.error("Error creating OpenMRS team member:", JSON.stringify(newTeamMember.response.data.error.message));
           continue;
         }
         console.log("Successfully created OpenMRS team member:", newTeamMember.uuid);
