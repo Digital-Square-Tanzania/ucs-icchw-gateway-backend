@@ -235,7 +235,7 @@ class RecoveryService {
     console.log("🔄 Checking available teams in OpenMRS...");
     try {
       // Get available teams from OpenMRS
-      const openmrsTeams = await openmrsApiClient.get("team/teams");
+      const openmrsTeams = await openmrsApiClient.get("team/team");
       if (!openmrsTeams || openmrsTeams.length === 0) {
         console.log("No teams found in OpenMRS.");
         throw new CustomError("No teams found in OpenMRS.", 404);
