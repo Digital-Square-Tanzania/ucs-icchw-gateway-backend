@@ -171,7 +171,7 @@ class RecoveryService {
           isDataProvider: "false",
         };
 
-        let newTeamMember = await openmrsApiClient.post("team/team_member", teamMemberObject);
+        let newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
         if (!newTeamMember.uuid) {
           TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
@@ -181,7 +181,7 @@ class RecoveryService {
         }
         console.log("Successfully created OpenMRS team member:", newTeamMember.uuid);
         // Get the newly created team member id and uuid
-        const newTeamMemberWithId = await openmrsApiClient.get(`team/team_member/${newTeamMember.uuid}?v=custom:(id,uuid)`);
+        const newTeamMemberWithId = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}?v=custom:(id,uuid)`);
         newTeamMember = newTeamMemberWithId;
         // Update the local database with the OpenMRS team member id and uuid
         const updateTeamMember = await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
