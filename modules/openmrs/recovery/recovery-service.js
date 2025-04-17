@@ -105,7 +105,7 @@ class RecoveryService {
           userId: newUser.id,
           userUuid: newUser.uuid,
         });
-        if (!updateUser) {
+        if (updateUser.error) {
           totalFailed++;
           failedRecords.push({ personId: person.id });
           TeamMemberService.deletePerson(newPerson.id);
