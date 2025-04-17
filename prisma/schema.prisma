@@ -357,7 +357,7 @@ model UcsMaster {
   locationName     String?   @map("location_name")
   memberId         Int?      @map("member_id")
   memberUuid       String?   @map("member_uuid")
-  teamRoleId       String?   @map("team_role_id")
+  teamRoleId       Int?      @map("team_role_id")
   teamId           Int?      @map("team_id")
 
   @@index([username])
