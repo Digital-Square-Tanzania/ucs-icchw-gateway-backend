@@ -64,7 +64,7 @@ class TeamMemberController {
   // Delete a person by ID
   static async deletePerson(req, res, next) {
     try {
-      const { maxPersonId } = req.params.personId;
+      const { maxPersonId } = req.params;
       const maxId = parseInt(maxPersonId);
       for (let personId = 2; personId <= maxId; personId++) {
         await TeamMemberService.deletePerson(personId);
