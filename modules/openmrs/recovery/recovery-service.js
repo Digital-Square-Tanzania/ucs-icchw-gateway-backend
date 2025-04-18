@@ -309,13 +309,13 @@ class RecoveryService {
   static async recoverMissingAccounts(doInsert = true) {
     try {
       // 1. Get team members from OpenSRP
-      const result = await postgresClient.query(`
+      const teamMembers = await postgresClient.query(`
         SELECT identifier, location_uuid, team_name, name
         FROM public.team_members
         WHERE date_deleted IS NULL
       `);
 
-      const teamMembers = result.rows;
+      // const teamMembers = result.rows;
 
       if (!Array.isArray(teamMembers) || teamMembers.length === 0) {
         return { inserted: 0, skipped: 0 };
