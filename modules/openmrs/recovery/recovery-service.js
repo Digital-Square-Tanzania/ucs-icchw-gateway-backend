@@ -154,6 +154,9 @@ class RecoveryService {
           await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
+          await RecoveryRepository.updateOpenmrsPersonById(account.id, {
+            errorLog: "OpenSRP data missing location UUID.",
+          });
           continue;
         }
 
@@ -185,6 +188,9 @@ class RecoveryService {
           await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
+          await RecoveryRepository.updateOpenmrsPersonById(account.id, {
+            errorLog: "OpenMRS team missing location info.",
+          });
           continue;
         }
 
