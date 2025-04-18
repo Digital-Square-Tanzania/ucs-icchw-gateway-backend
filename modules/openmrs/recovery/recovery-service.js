@@ -322,7 +322,7 @@ class RecoveryService {
         FROM public.team_members
         WHERE date_deleted IS NULL
       `);
-      console.log("[DEBUG] PG query teamMembers:", result);
+      console.log("[DEBUG] PG query teamMembers:", teamMembers);
 
       if (!Array.isArray(teamMembers) || teamMembers.length === 0) {
         return { inserted: 0, skipped: 0 };
