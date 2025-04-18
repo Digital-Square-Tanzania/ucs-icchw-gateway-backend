@@ -23,7 +23,7 @@ class OpenMRSApiClient {
       const response = await this.client.get(endpoint, { params });
       return response.data;
     } catch (error) {
-      console.error(`❌ OpenMRS GET Error (${endpoint}):`, error.response?.data.error.message || error.message);
+      console.error(`❌ OpenMRS GET Error (${endpoint}):`, error.response?.data.error || error);
       return error;
     }
   }
