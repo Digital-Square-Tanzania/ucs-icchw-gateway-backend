@@ -174,6 +174,9 @@ class RecoveryService {
           await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
+          await RecoveryRepository.updateOpenmrsPersonById(account.id, {
+            errorLog: "Error fetching OpenMRS team: " + err.message,
+          });
           continue;
         }
 
