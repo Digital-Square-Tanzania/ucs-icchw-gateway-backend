@@ -5,6 +5,7 @@ import CustomError from "../../../utils/custom-error.js";
 import TeamMemberService from "../team-member/openmrs-team-member-service.js";
 import postgresClient from "../../../utils/postgres-client.js";
 import prisma from "../../../config/prisma.js";
+import DateFormatter from "../../../utils/date-formatter.js";
 
 dotenv.config();
 
@@ -35,8 +36,21 @@ class RecoveryService {
           preferred: true,
           prefix: account.gender.toLowerCase() === "male" ? "Mr" : "Ms",
         });
-        const dob = new Date(account.dob);
-        personObject.birthdate = `${dob.getFullYear()}-${(dob.getMonth() + 1).toString().padStart(2, "0")}-${dob.getDate().toString().padStart(2, "0")}`;
+
+        if (!account.dob || isNaN(new Date(account.dob))) {
+          console.warn("Invalid DOB found:", account.dob, "for person ID:", account.id);
+        }
+
+        const birthdate = await DateFormatter.formatDateToYMD(account.dob);
+
+        if (!birthdate) {
+          console.warn(`Skipping person with invalid DOB: id=${account.id}, dob=${account.dob}`);
+          totalFailed++;
+          failedRecords.push({ personId: account.id, reason: "Invalid DOB" });
+          continue;
+        }
+
+        personObject.birthdate = birthdate;
 
         personObject.gender = account.gender.toLowerCase() === "male" ? "M" : "F";
 
