@@ -10,10 +10,19 @@ class RecoveryRepository {
     });
   }
 
+  // Get all recovered accounts
+  static async getAllRecoveredAccounts() {
+    return prisma.recoveredAccounts.findMany({
+      where: {
+        isDuplicate: false,
+      },
+    });
+  }
+
   // Update the OpenMRS person with the given ID
   static async updateOpenmrsPerson(id, payload) {
     try {
-      const updatedPerson = await prisma.ucsMaster.update({
+      const updatedPerson = await prisma.recoveredAccounts.update({
         where: { id: id },
         data: payload,
       });
@@ -27,7 +36,7 @@ class RecoveryRepository {
   // Update the OpenMRS person with the given username with userId and userUuid
   static async updateOpenmrsPersonById(id, payload) {
     try {
-      const updatedPerson = await prisma.ucsMaster.update({
+      const updatedPerson = await prisma.recoveredAccounts.update({
         where: { id: id },
         data: payload,
       });
