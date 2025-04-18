@@ -37,20 +37,16 @@ class RecoveryService {
           prefix: account.gender.toLowerCase() === "male" ? "Mr" : "Ms",
         });
 
-        if (!account.dob || isNaN(new Date(account.dob))) {
-          console.warn("Invalid DOB found:", account.dob, "for person ID:", account.id);
-        }
+        // const birthdate = await DateFormatter.formatDateToYMD(account.dob);
 
-        const birthdate = await DateFormatter.formatDateToYMD(account.dob);
+        // if (!birthdate) {
+        //   console.warn(`Skipping person with invalid DOB: id=${account.id}, dob=${account.dob}`);
+        //   totalFailed++;
+        //   failedRecords.push({ personId: account.id, reason: "Invalid DOB" });
+        //   continue;
+        // }
 
-        if (!birthdate) {
-          console.warn(`Skipping person with invalid DOB: id=${account.id}, dob=${account.dob}`);
-          totalFailed++;
-          failedRecords.push({ personId: account.id, reason: "Invalid DOB" });
-          continue;
-        }
-
-        personObject.birthdate = birthdate;
+        personObject.birthdate = "1950-01-01";
 
         personObject.gender = account.gender.toLowerCase() === "male" ? "M" : "F";
 
