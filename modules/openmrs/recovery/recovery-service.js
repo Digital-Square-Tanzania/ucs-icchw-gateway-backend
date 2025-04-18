@@ -309,20 +309,11 @@ class RecoveryService {
   static async recoverMissingAccounts(doInsert = true) {
     try {
       // 1. Get team members from OpenSRP
-      // const { rows: teamMembers } = await postgresClient.query(`
-      //   SELECT identifier, location_uuid, team_name, name
-      //   FROM public.team_members
-      //   WHERE date_deleted IS NULL
-      // `);
-
-      // console.log("[DEBUG] teamMembers:", teamMembers);
-
       const teamMembers = await postgresClient.query(`
         SELECT identifier, location_uuid, team_name, name
         FROM public.team_members
         WHERE date_deleted IS NULL
       `);
-      console.log("[DEBUG] PG query teamMembers:", teamMembers);
 
       if (!Array.isArray(teamMembers) || teamMembers.length === 0) {
         return { inserted: 0, skipped: 0 };
@@ -384,9 +375,6 @@ class RecoveryService {
           skipped: teamMembers.length - recoveredAccounts.length,
         };
       }
-
-      console.log("[DEBUG] recoveredAccounts length:", recoveredAccounts.length);
-      console.log("[DEBUG] recoveredAccounts sample:", recoveredAccounts[0]);
 
       // 4. Insert via your repository
       const insertedCount = await RecoveryRepository.createRecoveredAccounts(recoveredAccounts);
