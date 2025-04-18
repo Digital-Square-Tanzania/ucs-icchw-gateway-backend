@@ -367,7 +367,7 @@ model UcsMaster {
   @@map("ucs_master")
 }
 
-model recovered_accounts {
+model recoveredAccounts {
   id               Int       @id @default(autoincrement())
   recoveredName    String?   @map("recovered_name")
   firstName        String?   @map("first_name")

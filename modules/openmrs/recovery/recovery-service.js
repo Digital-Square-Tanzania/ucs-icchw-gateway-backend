@@ -315,7 +315,11 @@ class RecoveryService {
         WHERE date_deleted IS NULL
       `);
 
-      if (!teamMembers.length) return { inserted: 0, skipped: 0 };
+      if (!Array.isArray(teamMembers) || teamMembers.length === 0) {
+        return { inserted: 0, skipped: 0 };
+      }
+
+      console.log("[DEBUG] teamMembers:", teamMembers);
 
       // 2. Get usernames from ucs_master
       const ucsMaster = await prisma.ucsMaster.findMany({
@@ -373,6 +377,9 @@ class RecoveryService {
           skipped: teamMembers.length - recoveredAccounts.length,
         };
       }
+
+      console.log("[DEBUG] recoveredAccounts length:", recoveredAccounts.length);
+      console.log("[DEBUG] recoveredAccounts sample:", recoveredAccounts[0]);
 
       // 4. Insert via your repository
       const insertedCount = await RecoveryRepository.createRecoveredAccounts(recoveredAccounts);

@@ -40,14 +40,14 @@ class RecoveryRepository {
 
   static async createRecoveredAccounts(payload) {
     try {
-      const createdAccount = await prisma.ucsMaster.createMany({
+      const createdAccount = await prisma.recoveredAccounts.createMany({
         data: payload,
         skipDuplicates: true,
       });
       console.log(`[SUCCESS] Inserted ${createdAccount.count} new recovered accounts`);
       return createdAccount.count;
     } catch (error) {
-      console.error("Error creating recovered accounts:", error.message);
+      console.error("Error creating recovered accounts:", error);
       throw new Error("Error creating recovered accounts");
     }
   }
