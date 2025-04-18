@@ -309,17 +309,19 @@ class RecoveryService {
   static async recoverMissingAccounts(doInsert = true) {
     try {
       // 1. Get team members from OpenSRP
-      const teamMembers = await postgresClient.query(`
+      const result = await postgresClient.query(`
         SELECT identifier, location_uuid, team_name, name
         FROM public.team_members
         WHERE date_deleted IS NULL
       `);
 
+      const teamMembers = result.rows;
+
       if (!Array.isArray(teamMembers) || teamMembers.length === 0) {
         return { inserted: 0, skipped: 0 };
       }
 
-      // 2. Get usernames from ucs_master
+      // 2. Get all UCS master entries
       const ucsMaster = await prisma.ucsMaster.findMany({
         select: {
           username: true,
@@ -332,47 +334,50 @@ class RecoveryService {
         },
       });
 
+      // Create fast lookup map
       const masterMap = new Map();
-      ucsMaster.forEach((u) => masterMap.set(u.username, u));
+      ucsMaster.forEach((u) => {
+        if (u.username) masterMap.set(u.username.trim().toLowerCase(), u);
+      });
 
       // 3. Build recovered accounts
-      const recoveredAccounts = teamMembers
-        .filter((member) => !masterMap.has(member.identifier))
-        .map((member) => {
-          const matched = masterMap.get(member.identifier);
-          return {
-            recoveredName: member.name || null,
-            firstName: matched?.firstName || null,
-            middleName: matched?.middleName || null,
-            familyName: matched?.familyName || null,
-            dob: matched?.dob || new Date("1950-01-01"),
-            gender: matched?.gender || "Male",
-            username: member.identifier,
-            password: matched?.password || "R3c0v3r3d",
-            memberIdentifier: member.identifier,
-            teamId: null,
-            teamUuid: null,
-            teamName: member.team_name || null,
-            teamRole: null,
-            teamRoleId: null,
-            personId: null,
-            personUuid: null,
-            userRole: "Provider",
-            userId: null,
-            userUuid: null,
-            locationId: null,
-            locationUuid: member.location_uuid || null,
-            locationName: null,
-            memberId: null,
-            memberUuid: member.identifier,
-            errorLog: null,
-          };
-        });
+      const recoveredAccounts = teamMembers.map((member) => {
+        const identifier = member.identifier?.trim().toLowerCase();
+        const matched = masterMap.get(identifier);
+
+        return {
+          recoveredName: member.name || null,
+          firstName: matched?.firstName || null,
+          middleName: matched?.middleName || null,
+          familyName: matched?.familyName || null,
+          dob: matched?.dob || new Date("1950-01-01"),
+          gender: matched?.gender || "Male",
+          username: member.identifier,
+          password: matched?.password || "R3c0v3r3d",
+          memberIdentifier: member.identifier,
+          teamId: null,
+          teamUuid: null,
+          teamName: member.team_name || null,
+          teamRole: null,
+          teamRoleId: null,
+          personId: null,
+          personUuid: null,
+          userRole: "Provider",
+          userId: null,
+          userUuid: null,
+          locationId: null,
+          locationUuid: member.location_uuid || null,
+          locationName: null,
+          memberId: null,
+          memberUuid: member.identifier,
+          errorLog: null,
+        };
+      });
 
       if (!doInsert || recoveredAccounts.length === 0) {
         return {
           inserted: 0,
-          skipped: teamMembers.length - recoveredAccounts.length,
+          skipped: 0,
         };
       }
 
