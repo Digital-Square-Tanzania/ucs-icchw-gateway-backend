@@ -4,6 +4,7 @@ import RecoveryRepository from "./recovery-repository.js";
 import CustomError from "../../../utils/custom-error.js";
 import TeamMemberService from "../team-member/openmrs-team-member-service.js";
 import postgresClient from "../../../utils/postgres-client.js";
+import prisma from "../../../config/prisma.js";
 
 dotenv.config();
 
@@ -317,7 +318,7 @@ class RecoveryService {
       if (!teamMembers.length) return { inserted: 0, skipped: 0 };
 
       // 2. Get usernames from ucs_master
-      const ucsMaster = await this.prisma.ucsMaster.findMany({
+      const ucsMaster = await prisma.ucsMaster.findMany({
         select: {
           username: true,
           firstName: true,
@@ -374,7 +375,7 @@ class RecoveryService {
       }
 
       // 4. Insert via your repository
-      const insertedCount = await this.recoveryRepository.createRecoveredAccounts(recoveredAccounts);
+      const insertedCount = await RecoveryRepository.createRecoveredAccounts(recoveredAccounts);
 
       return {
         inserted: insertedCount,

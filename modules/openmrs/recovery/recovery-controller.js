@@ -17,7 +17,7 @@ class RecoveryController {
   static async createRecoveredAccounts(req, res, next) {
     try {
       const payload = req.body;
-      const createdAccounts = await RecoveryService.createRecoveredAccounts(payload);
+      const createdAccounts = await RecoveryService.recoverMissingAccounts();
       return BaseResponder.success(res, "Recovered accounts created successfully", createdAccounts, 201);
     } catch (error) {
       throw new CustomError("Error creating recovered accounts" + error.message, 500);
