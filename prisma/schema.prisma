@@ -394,6 +394,7 @@ model RecoveredAccounts {
   memberId         Int?      @map("member_id")
   memberUuid       String?   @map("member_uuid")
   errorLog         String?   @map("error_log")
+  isDuplicate      Boolean?  @default(false) @map("is_duplicate")
   createdAt        DateTime? @default(now()) @map("created_at")
   updatedAt        DateTime? @updatedAt @map("updated_at")
 
