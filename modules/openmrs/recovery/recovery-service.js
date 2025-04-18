@@ -314,12 +314,11 @@ class RecoveryService {
         FROM public.team_members
         WHERE date_deleted IS NULL
       `);
+      console.log("[DEBUG] teamMembers:", teamMembers);
 
       if (!Array.isArray(teamMembers) || teamMembers.length === 0) {
         return { inserted: 0, skipped: 0 };
       }
-
-      console.log("[DEBUG] teamMembers:", teamMembers);
 
       // 2. Get usernames from ucs_master
       const ucsMaster = await prisma.ucsMaster.findMany({
