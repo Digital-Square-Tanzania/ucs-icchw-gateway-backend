@@ -369,7 +369,7 @@ class RecoveryService {
           locationUuid: member.location_uuid || null,
           locationName: null,
           memberId: null,
-          memberUuid: member.identifier,
+          memberUuid: null,
           errorLog: null,
         };
       });
