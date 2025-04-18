@@ -304,6 +304,87 @@ class RecoveryService {
       throw new CustomError("Error checking available teams in OpenMRS: " + error.message, 500);
     }
   }
+
+  static async recoverMissingAccounts(doInsert = true) {
+    try {
+      // 1. Get team members from OpenSRP
+      const { rows: teamMembers } = await postgresClient.query(`
+        SELECT identifier, location_uuid, team_name, name
+        FROM public.team_members
+        WHERE date_deleted IS NULL
+      `);
+
+      if (!teamMembers.length) return { inserted: 0, skipped: 0 };
+
+      // 2. Get usernames from ucs_master
+      const ucsMaster = await this.prisma.ucsMaster.findMany({
+        select: {
+          username: true,
+          firstName: true,
+          middleName: true,
+          familyName: true,
+          dob: true,
+          gender: true,
+          password: true,
+        },
+      });
+
+      const masterMap = new Map();
+      ucsMaster.forEach((u) => masterMap.set(u.username, u));
+
+      // 3. Build recovered accounts
+      const recoveredAccounts = teamMembers
+        .filter((member) => !masterMap.has(member.identifier))
+        .map((member) => {
+          const matched = masterMap.get(member.identifier);
+          return {
+            recoveredName: member.name || null,
+            firstName: matched?.firstName || null,
+            middleName: matched?.middleName || null,
+            familyName: matched?.familyName || null,
+            dob: matched?.dob || new Date("1950-01-01"),
+            gender: matched?.gender || "Male",
+            username: member.identifier,
+            password: matched?.password || "R3c0v3r3d",
+            memberIdentifier: member.identifier,
+            teamId: null,
+            teamUuid: null,
+            teamName: member.team_name || null,
+            teamRole: null,
+            teamRoleId: null,
+            personId: null,
+            personUuid: null,
+            userRole: "Provider",
+            userId: null,
+            userUuid: null,
+            locationId: null,
+            locationUuid: member.location_uuid || null,
+            locationName: null,
+            memberId: null,
+            memberUuid: member.identifier,
+            errorLog: null,
+          };
+        });
+
+      if (!doInsert || recoveredAccounts.length === 0) {
+        return {
+          inserted: 0,
+          skipped: teamMembers.length - recoveredAccounts.length,
+        };
+      }
+
+      // 4. Insert via your repository
+      const insertedCount = await this.recoveryRepository.createRecoveredAccounts(recoveredAccounts);
+
+      return {
+        inserted: insertedCount,
+        skipped: teamMembers.length - insertedCount,
+      };
+    } catch (error) {
+      console.error("[ERROR] Recovery failed:", error.message);
+      throw error;
+    }
+  }
 }
 
 export default RecoveryService;

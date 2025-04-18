@@ -19,7 +19,7 @@ class RecoveryRepository {
       });
       return updatedPerson;
     } catch (error) {
-      console.error("Error updating OpenMRS person:", error);
+      console.error("Error updating OpenMRS person:", error.message);
       throw new Error("Error updating OpenMRS person");
     }
   }
@@ -33,8 +33,22 @@ class RecoveryRepository {
       });
       return updatedPerson;
     } catch (error) {
-      console.error("Error updating OpenMRS person by username:", error);
+      console.error("Error updating OpenMRS person by username:", error.message);
       throw new Error("Error updating OpenMRS person by username");
+    }
+  }
+
+  static async createRecoveredAccounts(payload) {
+    try {
+      const createdAccount = await prisma.ucsMaster.createMany({
+        data: payload,
+        skipDuplicates: true,
+      });
+      console.log(`[SUCCESS] Inserted ${createdAccount.count} new recovered accounts`);
+      return createdAccount.count;
+    } catch (error) {
+      console.error("Error creating recovered accounts:", error.message);
+      throw new Error("Error creating recovered accounts");
     }
   }
 }

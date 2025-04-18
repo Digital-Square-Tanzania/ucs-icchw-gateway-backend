@@ -1,0 +1,32 @@
+-- CreateTable
+CREATE TABLE "recovered_accounts" (
+    "id" SERIAL NOT NULL,
+    "first_name" TEXT NOT NULL,
+    "middle_name" TEXT,
+    "family_name" TEXT NOT NULL,
+    "dob" TIMESTAMP(3) NOT NULL,
+    "gender" TEXT NOT NULL,
+    "username" TEXT NOT NULL,
+    "password" TEXT NOT NULL,
+    "member_identifier" TEXT NOT NULL,
+    "team_id" INTEGER,
+    "team_uuid" TEXT,
+    "team_name" TEXT,
+    "team_role" TEXT,
+    "team_role_id" INTEGER,
+    "person_id" INTEGER,
+    "person_uuid" TEXT,
+    "user_role" TEXT DEFAULT 'Provider',
+    "user_id" INTEGER,
+    "user_uuid" TEXT,
+    "location_id" INTEGER,
+    "location_uuid" TEXT,
+    "location_name" TEXT,
+    "member_id" INTEGER,
+    "member_uuid" TEXT,
+    "error_log" TEXT,
+    "created_at" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3),
+
+    CONSTRAINT "recovered_accounts_pkey" PRIMARY KEY ("id")
+);
