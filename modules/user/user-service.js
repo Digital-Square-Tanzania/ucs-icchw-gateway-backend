@@ -98,52 +98,57 @@ class UserService {
    * @param {NextFunction} next
    */
   static async activateChwAccount(slug, password, confirmPassword) {
-    const activation = await prisma.accountActivation.findUnique({
-      where: {
-        slug,
-      },
-    });
+    try {
+      const activation = await prisma.accountActivation.findUnique({
+        where: {
+          slug,
+        },
+      });
 
-    if (!activation.userUuid) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
+      if (!activation.userUuid) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
 
-    if (activation.isUsed || Date.now() > new Date(activation.expiryDate)) {
-      return { alert: true, message: "Muda wa kuwasha akaunti umepitiliza.", slug, login: false };
+      if (activation.isUsed || Date.now() > new Date(activation.expiryDate)) {
+        return { alert: true, message: "Muda wa kuwasha akaunti umepitiliza.", slug, login: false };
+      }
+
+      const member = await prisma.openMRSTeamMember.findUnique({
+        where: { userUuid: activation.userUuid },
+      });
+
+      if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
+      if (password !== confirmPassword) {
+        return { alert: true, message: "Password ulizoingiza hazifanani.", slug, login: true, username: member.username };
+      }
+
+      // Update OpenMRS password
+      const openmrsUser = await openmrsApiClient.postReturningRawResponse(`password/${activation.userUuid}`, {
+        newPassword: password,
+      });
+      console.log("New Password", password);
+      console.log("UserUuid", activation.userUuid);
+      console.log("🔄 OpenMRS user updated successfully: ", openmrsUser.statusCode);
+      if (openmrsUser.status !== 200) {
+        return { alert: true, message: "Kuna tatizo!. Tafadhali jaribu tena baadaye.", slug, login: false };
+      }
+      // Save activation status
+      const newActivation = await prisma.accountActivation.update({
+        where: { slug },
+        data: {
+          isUsed: true,
+          usedAt: new Date(),
+        },
+      });
+
+      // Log the activation
+      await ApiLogger.log({ newActivation, openmrsUser });
+      console.log("🔄 Activation successful for slug: ", slug);
+
+      // Respond to the user frontend on success
+      return { alert: false, message: "Akaunti ya WAJA/UCS imeundwa. Sasa unaweza kutumia akaunti hiyo kwenye kishkwambi ulichopewa.", login: false };
+    } catch (error) {
+      await ApiLogger.log({ statusCode: error.statusCode || 500, body: error.message });
+      throw new CustomError(error.stack, error.status || 500);
     }
-
-    const member = await prisma.openMRSTeamMember.findUnique({
-      where: { userUuid: activation.userUuid },
-    });
-
-    if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
-    if (password !== confirmPassword) {
-      return { alert: true, message: "Password ulizoingiza hazifanani.", slug, login: true, username: member.username };
-    }
-
-    // Update OpenMRS password
-    const openmrsUser = await openmrsApiClient.postReturningRawResponse(`password/${activation.userUuid}`, {
-      newPassword: password,
-    });
-    console.log("New Password", password);
-    console.log("UserUuid", activation.userUuid);
-    console.log("🔄 OpenMRS user updated successfully: ", openmrsUser.statusCode);
-    if (openmrsUser.status !== 200) {
-      return { alert: true, message: "Kuna tatizo!. Tafadhali jaribu tena baadaye.", slug, login: false };
-    }
-    // Save activation status
-    const newActivation = await prisma.accountActivation.update({
-      where: { slug },
-      data: {
-        isUsed: true,
-        usedAt: new Date(),
-      },
-    });
-
-    // Log the activation
-    await ApiLogger.log({ newActivation, openmrsUser });
-    console.log("🔄 Activation successful for slug: ", slug);
-
-    // Respond to the user frontend on success
-    return { alert: false, message: "Akaunti ya WAJA/UCS imeundwa. Sasa unaweza kutumia akaunti hiyo kwenye kishkwambi ulichopewa.", login: false };
   }
 
   /**
