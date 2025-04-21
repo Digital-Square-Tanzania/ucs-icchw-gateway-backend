@@ -66,7 +66,6 @@ class OpenmrsHelper {
             value: attr.value,
           };
           await openmrsApiClient.post(`person/${newPerson.uuid}/attribute`, attributePayload);
-          console.log(`Successfully added ${attr.label} to person ${newPerson.uuid}`);
           // Fetch the newly created person with attributes
           const newCreatedPerson = await openmrsApiClient.get(`person/${newPerson.uuid}?v=full`);
           newPerson = newCreatedPerson;
