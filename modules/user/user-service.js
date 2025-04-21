@@ -104,6 +104,12 @@ class UserService {
       },
     });
 
+    if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
+
+    if (activation.isUsed || Date.now() > new Date(activation.expiryDate)) {
+      return { alert: true, message: "Muda wa kuwasha akaunti umepitiliza.", slug, login: false };
+    }
+
     const member = await prisma.openMRSTeamMember.findUnique({
       where: { userUuid: activation.userUuid },
     });
@@ -111,10 +117,6 @@ class UserService {
     if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
     if (password !== confirmPassword) {
       return { alert: true, message: "Password ulizoingiza hazifanani.", slug, login: true, username: member.username };
-    }
-
-    if (!activation || activation.isUsed || Date.now() > new Date(activation.expiryDate)) {
-      return { alert: true, message: "Muda wa kuwasha akaunti umepitiliza.", slug, login: false };
     }
 
     // Update OpenMRS password
