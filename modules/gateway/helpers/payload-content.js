@@ -32,7 +32,7 @@ class PayloadContent {
 
       // Check if the location exists
       const location = await OpenMRSLocationRepository.getLocationByHfrCode(payload.message.body[0].hfrCode);
-      console.log("Location found:", location);
+
       if (!location.uuid) {
         throw new ApiError("Invalid facilityCode.", 404, 4);
       }
@@ -60,7 +60,7 @@ class PayloadContent {
         }
       }
 
-      console.log("Team found or created:", team);
+      console.log("Team found or created:", team.uuid);
 
       return { teamMemberLocation, team };
     } catch (error) {

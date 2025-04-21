@@ -124,8 +124,6 @@ class UserService {
       const openmrsUser = await openmrsApiClient.postReturningRawResponse(`password/${activation.userUuid}`, {
         newPassword: password,
       });
-      console.log("New Password", password);
-      console.log("UserUuid", activation.userUuid);
       console.log("🔄 OpenMRS user updated successfully: ", openmrsUser.statusCode);
       if (openmrsUser.status !== 200) {
         return { alert: true, message: "Kuna tatizo!. Tafadhali jaribu tena baadaye.", slug, login: false };
