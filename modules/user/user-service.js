@@ -104,7 +104,7 @@ class UserService {
       },
     });
 
-    if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
+    if (!activation.userUuid) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
 
     if (activation.isUsed || Date.now() > new Date(activation.expiryDate)) {
       return { alert: true, message: "Muda wa kuwasha akaunti umepitiliza.", slug, login: false };
