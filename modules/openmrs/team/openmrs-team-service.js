@@ -34,7 +34,7 @@ class TeamService {
       }
 
       for (const team of openmrsTeams.results) {
-        console.log(`Synced: ${JSON.stringify(team.name + "-" + team.uuid)}`);
+        console.log(`Synced: ${JSON.stringify(team.display + "-" + team.uuid)}`);
         TeamRepository.upsertTeam(team);
       }
       return { message: `${openmrsTeams.results.length} teams synchronized successfully.` };
