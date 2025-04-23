@@ -1,4 +1,5 @@
 import prisma from "../../config/prisma.js";
+import mysqlClient from "../../utils/mysql-client.js";
 
 class DashboardRepository {
   constructor() {}
@@ -8,7 +9,8 @@ class DashboardRepository {
    */
   static async getOpenMRSUsersCount() {
     const query = await prisma.openMRSTeamMember.count();
-    return Number(query);
+    const query2 = mysqlClient.query("SELECT COUNT(*) FROM users WHERE voided = 0");
+    return Number(query2);
   }
 
   /**

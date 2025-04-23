@@ -19,7 +19,7 @@ class RecoveryService {
     let failedRecords = [];
     let successRecords = [];
     try {
-      // Get people fron our local database ucs_master table
+      // Get people from our local database ucs_master table
       const recoveredAccounts = await RecoveryRepository.getAllRecoveredAccounts();
       if (!recoveredAccounts || recoveredAccounts.length === 0) {
         console.log("No people found in the local database.");
@@ -36,15 +36,6 @@ class RecoveryService {
           preferred: true,
           prefix: account.gender.toLowerCase() === "male" ? "Mr" : "Ms",
         });
-
-        // const birthdate = await DateFormatter.formatDateToYMD(account.dob);
-
-        // if (!birthdate) {
-        //   console.warn(`Skipping person with invalid DOB: id=${account.id}, dob=${account.dob}`);
-        //   totalFailed++;
-        //   failedRecords.push({ personId: account.id, reason: "Invalid DOB" });
-        //   continue;
-        // }
 
         personObject.birthdate = "1950-01-01";
 
