@@ -120,15 +120,9 @@ class RecoveryService {
         // Fetch location UUIDs by username/identifier from OpenSRP team_member table
         let opensrpData;
         try {
-          /* TODO: Delete this deprecated query
+          // Check if the username exists in the OpenSRP team_member table
           opensrpData = await postgresClient.query(
-            "SELECT * FROM public.team_members tm INNER JOIN (SELECT DISTINCT team_id AS team_uuid, team AS team_name FROM core.event_metadata) t1 using (team_name) WHERE tm.identifier = $1",
-            [updatePerson.username]
-          ); */
-
-          // A blasingly fast query to get the location UUID
-          opensrpData = await postgresClient.query(
-            "SELECT DISTINCT tm.*, em.team_id AS team_uuid FROM public.team_members tm JOIN core.event_metadata em ON tm.team_name = em.team WHERE tm.identifier = $1",
+            "SELECT DISTINCT tm.*, em.team_id AS team_uuid FROM public.team_members tm JOIN core.event_metadata em ON tm.identifier = em.provider_id WHERE em.team_id IS NOT NULL AND tm.identifier =$1",
             [updatePerson.username]
           );
         } catch (error) {
@@ -159,9 +153,31 @@ class RecoveryService {
 
         // Get Team details form OpenMRS, if no team, create one
         let openmrsTeam;
-        let newOpenmrsTeamWithId;
+        let openmrsTeamWithId;
         try {
-          newOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
+          let existingOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
+
+          // If the team does not exist, create a new one
+          if (!existingOpenmrsTeamWithId || !existingOpenmrsTeamWithId.uuid) {
+            const teamObject = {
+              teamName: opensrpData[0].team_name,
+              location: opensrpData[0].location_uuid,
+              uuid: opensrpData[0].team_uuid,
+              teamIdentifier: opensrpData[0].team_name.replace(/-/g, "").replace(/\s+/g, "").toLowerCase(),
+            };
+            console.log("Creating new OpenMRS team...");
+            const newOpenmrsTeamWithId = await openmrsApiClient.post("team/team", teamObject);
+            console.log("New OpenMRS team created", JSON.stringify(teamObject.uuid));
+            if (!newOpenmrsTeamWithId || !newOpenmrsTeamWithId.uuid) {
+              console.error("Error creating OpenMRS team:", JSON.stringify(newOpenmrsTeamWithId.response.data.error.message));
+              await TeamMemberService.deletePerson(updateUser.personId);
+              totalFailed++;
+              failedRecords.push({ personId: newPerson.id });
+              continue;
+            }
+            openmrsTeamWithId = newOpenmrsTeamWithId;
+          }
+          openmrsTeamWithId = existingOpenmrsTeamWithId;
         } catch (err) {
           console.error("Error fetching OpenMRS team:", err.message);
           await TeamMemberService.deletePerson(updateUser.personId);
@@ -173,7 +189,7 @@ class RecoveryService {
           continue;
         }
 
-        if (!newOpenmrsTeamWithId || !newOpenmrsTeamWithId.location || !newOpenmrsTeamWithId.location.uuid) {
+        if (!openmrsTeamWithId || !openmrsTeamWithId.location || !openmrsTeamWithId.location.uuid) {
           console.error("OpenMRS team missing location info.");
           await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
@@ -184,7 +200,7 @@ class RecoveryService {
           continue;
         }
 
-        openmrsTeam = newOpenmrsTeamWithId;
+        openmrsTeam = openmrsTeamWithId;
 
         // Create a new team member in OpenMRS using collected details
         const teamMemberObject = {
@@ -386,6 +402,50 @@ class RecoveryService {
       console.error("[ERROR] Recovery failed:", error.message);
       throw error;
     }
+  }
+
+  static async createMissingOpenmrsTeams() {
+    try {
+      // 1. Get all missing teams from recovered_records
+      const missingTeams = await RecoveryRepository.getMissingOpenmrsTeams();
+      if (!missingTeams || missingTeams.length === 0) {
+        console.log("No missing teams found in the local database.");
+        throw new CustomError("No missing teams found in the local database.", 404);
+      }
+
+      // 2. For each record, check if location exists in OpenMRS
+      for (const team of missingTeams) {
+        const locationUuid = team.locationUuid;
+        const teamName = team.teamName;
+        const teamUuid = team.teamUuid;
+
+        // 3. Check if the location exists in OpenMRS
+        const openmrsLocation = await openmrsApiClient.get(`location/${locationUuid}?v=custom:(id,uuid,name)`);
+        if (!openmrsLocation || !openmrsLocation.uuid) {
+          console.error("OpenMRS location not found:", locationUuid);
+          continue;
+        }
+
+        // 4. Create a new team in OpenMRS
+        const teamObject = {
+          teamName: `${locationName}-Team`,
+          location: openmrsLocation.uuid,
+        };
+
+        const newTeam = await openmrsApiClient.post("team/team", teamObject);
+        if (!newTeam || !newTeam.uuid) {
+          console.error("Error creating OpenMRS team:", JSON.stringify(newTeam.response.data.error.message));
+          continue;
+        }
+
+        // 5. Update the local database with the OpenMRS team id and uuid
+        await RecoveryRepository.updateOpenmrsPersonById(team.id, {
+          teamId: newTeam.id,
+          teamUuid: newTeam.uuid,
+          errorLog: null,
+        });
+      }
+    } catch (error) {}
   }
 }
 

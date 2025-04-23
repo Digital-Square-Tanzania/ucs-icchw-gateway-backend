@@ -60,6 +60,26 @@ class RecoveryRepository {
       throw new Error("Error creating recovered accounts");
     }
   }
+
+  static async getMissingOpenmrsTeams() {
+    try {
+      const missingTeams = await prisma.recoveredAccounts.findMany({
+        distinct: ["team_name", "team_uuid", "location_uuid"],
+        where: {
+          error_log: "OpenMRS team missing location info.",
+        },
+        select: {
+          team_name: true,
+          team_uuid: true,
+          location_uuid: true,
+        },
+      });
+      return missingTeams;
+    } catch (error) {
+      console.error("Error fetching missing OpenMRS teams:", error);
+      throw new Error("Error fetching missing OpenMRS teams");
+    }
+  }
 }
 
 export default RecoveryRepository;
