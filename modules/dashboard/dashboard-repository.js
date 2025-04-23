@@ -10,7 +10,11 @@ class DashboardRepository {
   static async getOpenMRSUsersCount() {
     const query = await prisma.openMRSTeamMember.count();
     const query2 = mysqlClient.query("SELECT COUNT(*) FROM users WHERE voided = 0");
-    return Number(query2);
+    const [result] = await query2;
+    const count = result["COUNT(*)"];
+    const total = Number(query) + Number(count);
+    return total;
+    // return Number(query);
   }
 
   /**
