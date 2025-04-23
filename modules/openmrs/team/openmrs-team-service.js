@@ -29,13 +29,16 @@ class TeamService {
       // }
 
       const openmrsTeams = await openmrsApiClient.get("team/team?v=custom:(uuid,display,teamName,teamIdentifier,supervisor,supervisorUuid,voided,voidReason,members,location:(uuid,name),dateCreated");
-      if (!openmrsTeams) {
+      if (!openmrsTeams.results) {
         throw new CustomError("No team data found in OpenMRS.", 404);
       }
 
       console.log(`OpenMRS teams: ${JSON.stringify(openmrsTeams)}`);
 
-      return { message: "Teams synchronized successfully." };
+      for (const team of openmrsTeams.results) {
+        TeamRepository.upsertTeam(team);
+      }
+      return { message: `${openmrsTeams.results.length} teams synchronized successfully.` };
     } catch (error) {
       console.error("❌ Failed to fetch teams:", error.response?.data || error.message);
       throw new CustomError("Failed to fetch teams.", 500);
