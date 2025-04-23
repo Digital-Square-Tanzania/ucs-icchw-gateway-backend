@@ -126,17 +126,16 @@ class RecoveryService {
           continue;
         }
 
-        // Fetch location UUIDs ny username (identifier) from OpenSRP team_member table
+        // Fetch location UUIDs by username/identifier from OpenSRP team_member table
         let opensrpData;
         try {
-          // Deprecated query to get the location UUID
-          // opensrpData = await postgresClient.query(
-          //   "SELECT * FROM public.team_members tm INNER JOIN (SELECT DISTINCT team_id AS team_uuid, team AS team_name FROM core.event_metadata) t1 using (team_name) WHERE tm.identifier = $1",
-          //   [updatePerson.username]
-          // );
+          /* TODO: Delete this deprecated query
+          opensrpData = await postgresClient.query(
+            "SELECT * FROM public.team_members tm INNER JOIN (SELECT DISTINCT team_id AS team_uuid, team AS team_name FROM core.event_metadata) t1 using (team_name) WHERE tm.identifier = $1",
+            [updatePerson.username]
+          ); */
 
           // A blasingly fast query to get the location UUID
-
           opensrpData = await postgresClient.query(
             "SELECT DISTINCT tm.*, em.team_id AS team_uuid FROM public.team_members tm JOIN core.event_metadata em ON tm.team_name = em.team WHERE tm.identifier = $1",
             [updatePerson.username]
@@ -150,12 +149,12 @@ class RecoveryService {
         }
 
         if (!opensrpData || !opensrpData[0] || !opensrpData[0].location_uuid) {
-          console.error("OpenSRP data missing location UUID.");
+          console.error("Team member data not found in OpenSRP events.");
           await TeamMemberService.deletePerson(updateUser.personId);
           totalFailed++;
           failedRecords.push({ personId: newPerson.id });
           await RecoveryRepository.updateOpenmrsPersonById(account.id, {
-            errorLog: "OpenSRP data missing location UUID.",
+            errorLog: "Team member data not found in OpenSRP events.",
           });
           continue;
         }
@@ -252,6 +251,7 @@ class RecoveryService {
         successRecords.push({ personId: account.id });
       }
 
+      // Log the results and return the response with success and failure counts
       console.log(`✅ ${totalAdded} People recovered successfully in OpenMRS.`);
       var response = {
         totalAdded: totalAdded,
@@ -306,8 +306,6 @@ class RecoveryService {
         WHERE date_deleted IS NULL
       `);
 
-      // const teamMembers = result.rows;
-
       if (!Array.isArray(teamMembers) || teamMembers.length === 0) {
         return { inserted: 0, skipped: 0 };
       }
@@ -325,13 +323,13 @@ class RecoveryService {
         },
       });
 
-      // Create fast lookup map
+      // 3. Create fast lookup map
       const masterMap = new Map();
       ucsMaster.forEach((u) => {
         if (u.username) masterMap.set(u.username.trim().toLowerCase(), u);
       });
 
-      // 3. Build recovered accounts
+      // 4. Build recovered accounts
       const recoveredAccounts = teamMembers.map((member) => {
         const identifier = member.identifier?.trim().toLowerCase();
         const matched = masterMap.get(identifier);
@@ -372,9 +370,23 @@ class RecoveryService {
         };
       }
 
-      // 4. Insert via your repository
+      // 5. Insert via recovery repository
       const insertedCount = await RecoveryRepository.createRecoveredAccounts(recoveredAccounts);
 
+      // 6. Log the results
+      if (insertedCount > 0) {
+        console.log(`✅ ${insertedCount} accounts recovered successfully.`);
+      }
+      if (insertedCount === 0) {
+        console.log("No accounts were recovered.");
+      }
+      if (insertedCount < teamMembers.length) {
+        console.log(`⚠️ ${teamMembers.length - insertedCount} accounts were skipped.`);
+      }
+      if (insertedCount > teamMembers.length) {
+        console.log(`⚠️ ${insertedCount - teamMembers.length} accounts were inserted but not in the original list.`);
+      }
+      // 7. Return the result
       return {
         inserted: insertedCount,
         skipped: teamMembers.length - insertedCount,
