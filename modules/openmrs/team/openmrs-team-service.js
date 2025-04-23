@@ -33,9 +33,8 @@ class TeamService {
         throw new CustomError("No team data found in OpenMRS.", 404);
       }
 
-      console.log(`OpenMRS teams: ${JSON.stringify(openmrsTeams)}`);
-
       for (const team of openmrsTeams.results) {
+        console.log(`Synced: ${JSON.stringify(team)}`);
         TeamRepository.upsertTeam(team);
       }
       return { message: `${openmrsTeams.results.length} teams synchronized successfully.` };
