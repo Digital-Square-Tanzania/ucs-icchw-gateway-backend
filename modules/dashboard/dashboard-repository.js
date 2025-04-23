@@ -8,13 +8,11 @@ class DashboardRepository {
    * Get the count of OpenMRS Users
    */
   static async getOpenMRSUsersCount() {
-    const query = await prisma.openMRSTeamMember.count();
     const query2 = mysqlClient.query("SELECT COUNT(*) FROM users WHERE retired = 0");
     const [result] = await query2;
     const count = result["COUNT(*)"];
     const total = Number(query) + Number(count);
     return total;
-    // return Number(query);
   }
 
   /**
