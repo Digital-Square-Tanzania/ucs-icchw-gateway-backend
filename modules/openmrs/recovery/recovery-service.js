@@ -5,7 +5,8 @@ import CustomError from "../../../utils/custom-error.js";
 import TeamMemberService from "../team-member/openmrs-team-member-service.js";
 import postgresClient from "../../../utils/postgres-client.js";
 import prisma from "../../../config/prisma.js";
-import DateFormatter from "../../../utils/date-formatter.js";
+import pLimit from "p-limit";
+import TeamMemberRepository from "../team-member/openmrs-team-member-repository.js";
 
 dotenv.config();
 
@@ -13,260 +14,41 @@ class RecoveryService {
   // Add records from UCS Master file into OpenMRS
   static async addPeopleInOpenmrs() {
     console.log("🔄 Adding people in OpenMRS...");
-    let newPerson = null;
     let totalAdded = 0;
     let totalFailed = 0;
     let failedRecords = [];
     let successRecords = [];
+
     try {
-      // Get people from our local database ucs_master table
       const recoveredAccounts = await RecoveryRepository.getAllRecoveredAccounts();
       if (!recoveredAccounts || recoveredAccounts.length === 0) {
         console.log("No people found in the local database.");
         throw new CustomError("No people found in the local database.", 404);
       }
-      // Loop through each person and add them to OpenMRS
-      for (const account of recoveredAccounts) {
-        const personObject = {};
-        personObject.names = [];
-        personObject.names.push({
-          givenName: account.firstName,
-          middleName: account.middleName,
-          familyName: account.familyName,
-          preferred: true,
-          prefix: account.gender.toLowerCase() === "male" ? "Mr" : "Ms",
-        });
 
-        personObject.birthdate = "1950-01-01";
+      const limit = pLimit(5); // Tune concurrency here
+      const results = await Promise.allSettled(recoveredAccounts.map((account) => limit(() => this.processAccount(account))));
 
-        personObject.gender = account.gender.toLowerCase() === "male" ? "M" : "F";
-
-        // Create the person in OpenMRS
-        newPerson = await openmrsApiClient.post("person", personObject);
-
-        if (!newPerson.uuid) {
+      for (const result of results) {
+        if (result.status === "fulfilled" && result.value.success) {
+          totalAdded++;
+          successRecords.push({ personId: result.value.personId });
+        } else {
           totalFailed++;
-          failedRecords.push({ personId: account.id });
-          console.error("Error creating OpenMRS person:", JSON.stringify(newPerson.response.data.error.message, null, 2));
-          continue;
-        }
-
-        // Get the newly created person id and uuid
-        const newPersonWithId = await openmrsApiClient.get(`person/${newPerson.uuid}?v=custom:(id,uuid)`);
-
-        newPerson = newPersonWithId;
-
-        // Update the local database with the OpenMRS id and uuid
-        const updatePerson = await RecoveryRepository.updateOpenmrsPerson(account.id, {
-          personId: newPerson.id,
-          personUuid: newPerson.uuid,
-        });
-
-        if (!updatePerson.personUuid) {
-          TeamMemberService.deletePerson(newPerson.id);
-          console.error("Error updating OpenMRS person:", JSON.stringify(updatePerson.response.data.error.message));
-          totalFailed++;
-          failedRecords.push({ personId: account.id });
-          continue;
-        }
-
-        // Create OpenMRS user
-        let password = updatePerson.password;
-        const hasLower = /[a-z]/.test(password);
-        const hasUpper = /[A-Z]/.test(password);
-        if (password.length < 8 || !hasLower || !hasUpper) {
-          password += "1Ucs";
-        }
-        const userObject = {
-          username: updatePerson.username,
-          password: password,
-          roles: [
-            {
-              uuid: process.env.UCS_PROD_PROVIDER_ROLE_UUID,
-            },
-          ],
-          person: {
-            uuid: updatePerson.personUuid,
-          },
-          systemId: updatePerson.username,
-        };
-        let newUser = null;
-        newUser = await openmrsApiClient.post("user", userObject);
-        if (!newUser.uuid) {
-          TeamMemberService.deletePerson(newPerson.id);
-          totalFailed++;
-          failedRecords.push({ personId: account.id });
-          console.error("Error creating OpenMRS user: " + JSON.stringify(newUser.response.data.error.message));
-          throw new CustomError("Error creating OpenMRS user: ", 500);
-        }
-
-        // Get the newly created user id and uuid
-        const newUserWithId = await openmrsApiClient.get(`user/${newUser.uuid}?v=custom:(id,uuid)`);
-        newUser = newUserWithId;
-
-        // Update the local database with the OpenMRS user id and uuid
-        const updateUser = await RecoveryRepository.updateOpenmrsPersonById(updatePerson.id, {
-          userId: newUser.id,
-          userUuid: newUser.uuid,
-        });
-        if (updateUser.error) {
-          totalFailed++;
-          failedRecords.push({ personId: account.id });
-          TeamMemberService.deletePerson(newPerson.id);
-          console.error("Error updating OpenMRS user for person:", updatePerson.personUuid);
-          continue;
-        }
-
-        // Fetch location UUIDs by username/identifier from OpenSRP team_member table
-        let opensrpData;
-        try {
-          // Check if the username exists in the OpenSRP team_member table
-          opensrpData = await postgresClient.query(
-            "SELECT DISTINCT tm.*, em.team_id AS team_uuid FROM public.team_members tm JOIN core.event_metadata em ON tm.identifier = em.provider_id WHERE em.team_id IS NOT NULL AND tm.identifier =$1",
-            [updatePerson.username]
-          );
-        } catch (error) {
-          console.error("Error fetching location UUID:", error.message);
-          TeamMemberService.deletePerson(updatePerson.personId);
-          totalFailed++;
-          failedRecords.push({ personId: account.id });
-          continue;
-        }
-
-        if (!opensrpData || !opensrpData[0] || !opensrpData[0].location_uuid) {
-          console.error("Team member data not found in OpenSRP events.");
-          await TeamMemberService.deletePerson(updateUser.personId);
-          totalFailed++;
-          failedRecords.push({ personId: newPerson.id });
-          await RecoveryRepository.updateOpenmrsPersonById(account.id, {
-            errorLog: "Team member data not found in OpenSRP events.",
+          failedRecords.push({
+            personId: result.value?.personId || null,
+            reason: result.reason?.message || result.value?.reason || "Unknown error",
           });
-          continue;
         }
-
-        await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
-          locationUuid: opensrpData[0].location_uuid,
-          locationName: opensrpData[0].location_name,
-          teamName: opensrpData[0].team_name,
-          teamUuid: opensrpData[0].team_uuid,
-        });
-
-        // Get Team details form OpenMRS, if no team, create one
-        let openmrsTeam;
-        let openmrsTeamWithId;
-        try {
-          let existingOpenmrsTeamWithId = await openmrsApiClient.get(`team/team/${opensrpData[0].team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
-
-          // If the team does not exist, create a new one
-          if (!existingOpenmrsTeamWithId || !existingOpenmrsTeamWithId.uuid) {
-            const teamObject = {
-              teamName: opensrpData[0].team_name,
-              location: opensrpData[0].location_uuid,
-              uuid: opensrpData[0].team_uuid,
-              teamIdentifier: opensrpData[0].team_name.replace(/-/g, "").replace(/\s+/g, "").toLowerCase(),
-            };
-            console.log("Creating new OpenMRS team...");
-            const newOpenmrsTeamWithId = await openmrsApiClient.post("team/team", teamObject);
-            console.log("New OpenMRS team created", JSON.stringify(teamObject.uuid));
-            if (!newOpenmrsTeamWithId || !newOpenmrsTeamWithId.uuid) {
-              console.error("Error creating OpenMRS team:", JSON.stringify(newOpenmrsTeamWithId.response.data.error.message));
-              await TeamMemberService.deletePerson(updateUser.personId);
-              totalFailed++;
-              failedRecords.push({ personId: newPerson.id });
-              continue;
-            }
-            openmrsTeamWithId = newOpenmrsTeamWithId;
-          }
-          openmrsTeamWithId = existingOpenmrsTeamWithId;
-        } catch (err) {
-          console.error("Error fetching OpenMRS team:", err.message);
-          await TeamMemberService.deletePerson(updateUser.personId);
-          totalFailed++;
-          failedRecords.push({ personId: newPerson.id });
-          await RecoveryRepository.updateOpenmrsPersonById(account.id, {
-            errorLog: "Error fetching OpenMRS team: " + err.message,
-          });
-          continue;
-        }
-
-        if (!openmrsTeamWithId || !openmrsTeamWithId.location || !openmrsTeamWithId.location.uuid) {
-          console.error("OpenMRS team missing location info.");
-          await TeamMemberService.deletePerson(updateUser.personId);
-          totalFailed++;
-          failedRecords.push({ personId: newPerson.id });
-          await RecoveryRepository.updateOpenmrsPersonById(account.id, {
-            errorLog: "OpenMRS team missing location info.",
-          });
-          continue;
-        }
-
-        openmrsTeam = openmrsTeamWithId;
-
-        // Create a new team member in OpenMRS using collected details
-        const teamMemberObject = {
-          identifier: updateUser.username,
-          locations: [
-            {
-              uuid: openmrsTeam.location.uuid,
-            },
-          ],
-          joinDate: new Date().toISOString().split("T")[0],
-          team: {
-            uuid: openmrsTeam.uuid,
-          },
-          teamRole: {
-            uuid: process.env.UCS_PROVIDER_TEAM_ROLE_UUID,
-          },
-          person: {
-            uuid: updateUser.personUuid,
-          },
-          isDataProvider: "false",
-        };
-
-        let newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
-        if (!newTeamMember.uuid) {
-          TeamMemberService.deletePerson(updateUser.personId);
-          totalFailed++;
-          failedRecords.push({ personId: newPerson.id });
-          console.error("Error creating OpenMRS team member:", JSON.stringify(newTeamMember.response.data.error.message));
-          continue;
-        }
-
-        // Get the newly created team member id and uuid
-        const newTeamMemberWithId = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}?v=custom:(id,uuid)`);
-        newTeamMember = newTeamMemberWithId;
-
-        // Update the local database with the OpenMRS team member id and uuid
-        const updateTeamMember = await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
-          memberId: newTeamMember.id,
-          memberUuid: newTeamMember.uuid,
-          memberIdentifier: updateUser.username,
-          teamRoleId: 1,
-          locationId: openmrsTeam.location.id,
-          teamRole: "UCS Provider",
-          teamId: openmrsTeam.id,
-        });
-        if (!updateTeamMember) {
-          TeamMemberService.deletePerson(updateUser.personId);
-          totalFailed++;
-          failedRecords.push({ personId: account.id });
-          console.error("Error updating OpenMRS team member for person:", updateUser.personUuid);
-          continue;
-        }
-        console.log("Successfully recovered OpenMRS team member:", updateTeamMember.memberUuid);
-        totalAdded++;
-        successRecords.push({ personId: account.id });
       }
 
-      // Log the results and return the response with success and failure counts
       console.log(`✅ ${totalAdded} People recovered successfully in OpenMRS.`);
-      var response = {
-        totalAdded: totalAdded,
-        totalFailed: totalFailed,
-        successRecords: successRecords,
-        failedRecords: failedRecords,
+      return {
+        totalAdded,
+        totalFailed,
+        successRecords,
+        failedRecords,
       };
-      return response;
     } catch (error) {
       console.error("Error in addPeopleInOpenmrs:", error);
       throw new CustomError("Error adding people in OpenMRS: " + error.message, 500);
@@ -446,6 +228,146 @@ class RecoveryService {
         });
       }
     } catch (error) {}
+  }
+
+  static async processAccount(account) {
+    let newPerson;
+    try {
+      // 1. Create OpenMRS Person
+      const personObject = {
+        names: [
+          {
+            givenName: account.firstName,
+            middleName: account.middleName,
+            familyName: account.familyName,
+            preferred: true,
+            prefix: account.gender.toLowerCase() === "male" ? "Mr" : "Ms",
+          },
+        ],
+        birthdate: "1950-01-01",
+        gender: account.gender.toLowerCase() === "male" ? "M" : "F",
+      };
+
+      newPerson = await openmrsApiClient.post("person", personObject);
+      if (!newPerson.uuid) throw new Error("Failed to create person");
+
+      const newPersonWithId = await openmrsApiClient.get(`person/${newPerson.uuid}?v=custom:(id,uuid)`);
+      newPerson = newPersonWithId;
+
+      const updatePerson = await RecoveryRepository.updateOpenmrsPerson(account.id, {
+        personId: newPerson.id,
+        personUuid: newPerson.uuid,
+      });
+      if (!updatePerson.personUuid) throw new Error("Failed to update person");
+
+      // 2. Create OpenMRS User
+      let password = updatePerson.password;
+      if (password.length < 8 || !/[a-z]/.test(password) || !/[A-Z]/.test(password)) {
+        password += "1Ucs";
+      }
+
+      const userObject = {
+        username: updatePerson.username,
+        password,
+        roles: [{ uuid: process.env.UCS_PROD_PROVIDER_ROLE_UUID }],
+        person: { uuid: updatePerson.personUuid },
+        systemId: updatePerson.username,
+      };
+
+      const newUser = await openmrsApiClient.post("user", userObject);
+      if (!newUser.uuid) throw new Error("Failed to create user");
+
+      const newUserWithId = await openmrsApiClient.get(`user/${newUser.uuid}?v=custom:(id,uuid)`);
+      const updateUser = await RecoveryRepository.updateOpenmrsPersonById(updatePerson.id, {
+        userId: newUserWithId.id,
+        userUuid: newUserWithId.uuid,
+      });
+
+      // 3. Get team member data from OpenSRP
+      const opensrpDataQuery = await postgresClient.query(
+        "SELECT DISTINCT tm.*, em.team_id AS team_uuid FROM public.team_members tm JOIN core.event_metadata em ON tm.identifier = em.provider_id WHERE em.team_id IS NOT NULL AND tm.identifier = $1",
+        [updateUser.username]
+      );
+
+      const opensrpData = opensrpDataQuery[0];
+      if (!opensrpData?.location_uuid) throw new Error("OpenSRP data missing location");
+
+      await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
+        locationUuid: opensrpData.location_uuid,
+        locationName: opensrpData.location_name,
+        teamName: opensrpData.team_name,
+        teamUuid: opensrpData.team_uuid,
+      });
+
+      // 4. Get or create team
+      let openmrsTeam = await openmrsApiClient.get(`team/team/${opensrpData.team_uuid}?v=custom:(id,uuid,teamName,location:(id,uuid,name))`);
+      if (!openmrsTeam?.uuid) {
+        const teamObject = {
+          teamName: opensrpData.team_name,
+          location: opensrpData.location_uuid,
+          uuid: opensrpData.team_uuid,
+          teamIdentifier: opensrpData.team_name.replace(/[-\s]/g, "").toLowerCase(),
+        };
+        openmrsTeam = await openmrsApiClient.post("team/team", teamObject);
+      }
+
+      if (!openmrsTeam.location?.uuid) throw new Error("OpenMRS team missing location");
+
+      // 5. Create team member
+      const teamMemberObject = {
+        identifier: updateUser.username,
+        locations: [{ uuid: openmrsTeam.location.uuid }],
+        joinDate: new Date().toISOString().split("T")[0],
+        team: { uuid: openmrsTeam.uuid },
+        teamRole: { uuid: process.env.UCS_PROVIDER_TEAM_ROLE_UUID },
+        person: { uuid: updateUser.personUuid },
+        isDataProvider: "false",
+      };
+
+      const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
+      const newTeamMemberWithId = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}?v=custom:(id,uuid)`);
+
+      await RecoveryRepository.updateOpenmrsPersonById(updateUser.id, {
+        memberId: newTeamMemberWithId.id,
+        memberUuid: newTeamMemberWithId.uuid,
+        memberIdentifier: updateUser.username,
+        teamRoleId: 1,
+        locationId: openmrsTeam.location.id,
+        teamRole: "UCS Provider",
+        teamId: openmrsTeam.id,
+      });
+
+      //6. Create Postgres TeamMember
+      const teamMember = {
+        openMrsUuid: newTeamMemberWithId.uuid,
+        firstName: account.firstName,
+        middleName: account.middleName,
+        lastName: account.familyName,
+        personUuid: updateUser.personUuid,
+        username: updateUser.username,
+        userUuid: updateUser.userUuid || null,
+        teamUuid: opensrpData.team_uuid,
+        teamName: opensrpData.team_name,
+        teamIdentifier: opensrpData.team_name.replace(/[-\s]/g, "").toLowerCase(),
+        locationUuid: openmrsTeam.location.uuid,
+        locationName: openmrsTeam.location.name,
+        locationDescription: "",
+        nin: null,
+        email: null,
+        phoneNumber: null,
+        updatedAt: new Date(),
+      };
+
+      await TeamMemberRepository.upsertTeamMember(teamMember);
+
+      return { success: true, personId: account.id };
+    } catch (err) {
+      if (newPerson?.id) await TeamMemberService.deletePerson(newPerson.id);
+      await RecoveryRepository.updateOpenmrsPersonById(account.id, {
+        errorLog: err.message,
+      });
+      return { success: false, personId: account.id, reason: err.message };
+    }
   }
 }
 
