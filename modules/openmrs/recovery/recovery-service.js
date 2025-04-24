@@ -26,7 +26,7 @@ class RecoveryService {
         throw new CustomError("No people found in the local database.", 404);
       }
 
-      const limit = pLimit(process.env.P_LIMIT_CONCURRENCY || 5); // Concurrency tuning for speed (5 ni poa)
+      const limit = pLimit(Number(process.env.P_LIMIT_CONCURRENCY) || 5); // Concurrency tuning
       const results = await Promise.allSettled(recoveredAccounts.map((account) => limit(() => this.processAccount(account))));
 
       for (const result of results) {
