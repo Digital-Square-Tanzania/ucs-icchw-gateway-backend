@@ -303,8 +303,8 @@ class RecoveryService {
 
       await RecoveryRepository.updateOpenmrsPersonById(account.id, {
         errorLog: "SUCCESS: OpenMRS recovery completed",
-        recovery_status: "COMPLETED",
-        recovery_date: new Date(),
+        recoveryStatus: "COMPLETED",
+        recoveryDate: new Date(),
       });
 
       return { success: true, personId: account.id };
@@ -321,7 +321,7 @@ class RecoveryService {
 
       await RecoveryRepository.updateOpenmrsPersonById(account.id, {
         errorLog: `Step: ${step} | ${err.message}`,
-        recovery_status: "FAILED",
+        recoveryStatus: "FAILED",
       });
 
       return { success: false, personId: account.id, reason: `Step: ${step} | ${err.message}` };
