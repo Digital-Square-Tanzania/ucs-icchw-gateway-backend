@@ -38,5 +38,6 @@ router.post("/hierarchy/refresh", AuthMiddleware.authenticate, AuthMiddleware.au
 // Search query routes
 router.get("/facilities/search", AuthMiddleware.authenticate, OpenMRSLocationController.searchFacilities);
 router.get("/hamlets/search", AuthMiddleware.authenticate, OpenMRSLocationController.searchHamlets);
+router.get("/facilities/hamlets/search", AuthMiddleware.authenticate, OpenMRSLocationController.searchFacilityHamlets);
 
 export default router;

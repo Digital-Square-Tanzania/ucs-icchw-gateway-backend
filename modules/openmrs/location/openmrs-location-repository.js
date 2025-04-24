@@ -279,6 +279,26 @@ class OpenMRSLocationRepository {
       },
     });
   }
+
+  // Search for facility hamlets by facility parent
+  static async searchFacilityHamlets(facilityParent) {
+    return prisma.openMRSLocation.findMany({
+      where: {
+        parent: {
+          uuid: facilityParent,
+        },
+        type: {
+          in: ["Hamlet", "Village"],
+        },
+      },
+      select: {
+        name: true,
+        uuid: true,
+        locationCode: true,
+        type: true,
+      },
+    });
+  }
 }
 
 export default OpenMRSLocationRepository;

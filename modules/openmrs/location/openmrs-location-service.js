@@ -246,6 +246,17 @@ class OpenMRSLocationService {
       throw new CustomError("❌ Hamlet Search Error: " + error.message);
     }
   }
+
+  // Search facility hamlets by facility parent
+  static async searchFacilityHamlets(facilityParent) {
+    try {
+      console.log(`🔍 Searching for hamlets with facility parent: ${facilityParent}`);
+      const results = await OpenMRSLocationRepository.searchFacilityHamlets(facilityParent);
+      return results;
+    } catch (error) {
+      throw new CustomError("❌ Facility Hamlet Search Error: " + error.message);
+    }
+  }
 }
 
 export default OpenMRSLocationService;

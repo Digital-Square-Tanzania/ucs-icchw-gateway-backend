@@ -186,6 +186,20 @@ class OpenMRSLocationController {
       next(new CustomError(error.message, 500));
     }
   }
+
+  // Search facility hamlets by facility parent
+  static async searchFacilityHamlets(req, res, next) {
+    try {
+      const { q: parentUuid } = req.query;
+      if (!parentUuid) {
+        throw new CustomError("Query parameter 'q' is required", 400);
+      }
+      const villagesAndHamlets = await OpenMRSLocationService.searchFacilityHamlets(parentUuid);
+      return BaseResponse.success(res, "Facilities and hamlets retrieved successfully", villagesAndHamlets);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
 }
 
 export default OpenMRSLocationController;
