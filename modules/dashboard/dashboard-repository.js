@@ -11,7 +11,7 @@ class DashboardRepository {
     const query2 = mysqlClient.query("SELECT COUNT(*) FROM users WHERE retired = 0");
     const [result] = await query2;
     const count = result["COUNT(*)"];
-    const total = Number(query) + Number(count);
+    const total = Number(query2) + Number(count);
     return total;
   }
 
