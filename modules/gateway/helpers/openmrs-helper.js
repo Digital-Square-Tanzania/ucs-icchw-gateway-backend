@@ -7,6 +7,8 @@ import MemberRoleRepository from "../../openmrs/member-role/openmrs-member-role-
 import GenerateSwahiliPassword from "../../../utils/generate-swahili-password.js";
 import TeamRepository from "../../openmrs/team/openmrs-team-repository.js";
 import mysqlClient from "../../../utils/mysql-client.js";
+import TeamMemberRepository from "../../openmrs/team-member/openmrs-team-member-repository.js";
+import TeamMemberService from "../../openmrs/team-member/openmrs-team-member-service.js";
 
 class OpenmrsHelper {
   /**
@@ -111,7 +113,7 @@ class OpenmrsHelper {
       if (!newUser.uuid) {
         await mysqlClient.query("USE openmrs");
         console.log("Deleting person with ID:", newPerson.id);
-        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+        await TeamMemberService.deletePerson(newPerson.id);
         console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
         throw new ApiError("User could not be created: Probable duplicate", 400, 5);
       }
