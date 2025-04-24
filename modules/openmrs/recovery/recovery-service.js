@@ -370,6 +370,9 @@ class RecoveryService {
         email: null,
         phoneNumber: null,
         updatedAt: new Date(),
+        identifier: updateUser.username,
+        roleName: "UCS Provider",
+        roleUuid: process.env.UCS_PROVIDER_TEAM_ROLE_UUID,
       };
 
       await TeamMemberRepository.upsertTeamMember(teamMember);
