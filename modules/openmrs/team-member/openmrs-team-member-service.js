@@ -136,6 +136,10 @@ class TeamMemberService {
 
   // Create a new team member in OpenMRS and in Postgres
   static async createTeamMember(newUser, payload, validatedContent, newPerson) {
+    console.log("New User", newUser);
+    console.log("Payload", payload);
+    console.log("Validated Content", validatedContent);
+    console.log("New Person", newPerson);
     let personId = newPerson.id;
     try {
       console.log("🔄 Creating team member in OpenMRS...");
