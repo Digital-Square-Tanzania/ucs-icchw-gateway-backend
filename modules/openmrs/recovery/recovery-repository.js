@@ -27,7 +27,7 @@ class RecoveryRepository {
     return prisma.recoveredAccounts.findMany({
       where: {
         isDuplicate: false,
-        OR: [{ recoveryStatus: null }, { recoveryStatus: PENDING }],
+        recoveryStatus: PENDING,
       },
     });
   }
