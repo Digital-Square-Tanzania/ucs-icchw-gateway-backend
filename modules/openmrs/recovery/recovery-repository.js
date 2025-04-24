@@ -1,5 +1,7 @@
-import prisma from "../../../config/prisma.js";
-import { recoveryStatus } from "@prisma/client";
+// import prisma from "../../../config/prisma.js";
+import { PrismaClient, recoveryStatus } from "@prisma/client";
+const prisma = new PrismaClient();
+const PENDING = recoveryStatus.PENDING;
 
 class RecoveryRepository {
   static async getAllUcsMasterPeople() {
@@ -25,7 +27,7 @@ class RecoveryRepository {
     return prisma.recoveredAccounts.findMany({
       where: {
         isDuplicate: false,
-        OR: [{ recoveryStatus: null }, { recoveryStatus: recoveryStatus.PENDING }],
+        OR: [{ recoveryStatus: null }, { recoveryStatus: PENDING }],
       },
     });
   }
