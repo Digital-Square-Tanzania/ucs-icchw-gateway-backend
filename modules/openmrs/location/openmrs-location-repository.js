@@ -284,9 +284,7 @@ class OpenMRSLocationRepository {
   static async searchFacilityHamlets(facilityParent) {
     return prisma.openMRSLocation.findMany({
       where: {
-        parent: {
-          uuid: facilityParent,
-        },
+        parent: facilityParent,
         type: {
           in: ["Hamlet", "Village"],
         },
