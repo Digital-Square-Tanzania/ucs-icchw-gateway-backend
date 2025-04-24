@@ -254,6 +254,7 @@ class OpenMRSLocationRepository {
         name: true,
         uuid: true,
         hfrCode: true,
+        parent: true,
       },
     });
   }
