@@ -13,6 +13,7 @@ import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-rep
 import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
 import TeamRepository from "../openmrs/team/openmrs-team-repository.js";
 import TeamService from "../openmrs/team/openmrs-team-service.js";
+import PayloadContent from "../gateway/helpers/payload-content.js";
 
 const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
 
@@ -294,6 +295,7 @@ class UserService {
   static async createChwAccount(req, _res, _next) {
     console.log("🔄 Registering CHW from the frontend...");
     try {
+      // Get the payload from the request body
       const payload = req.body;
 
       // Validate incoming CHW deployment payload
@@ -332,9 +334,26 @@ class UserService {
 
       // Create a new OpenMRS user
       const newUser = await OpenMRSUserHelper.create(payload, newPerson.uuid);
+      let newPayload = {};
+      newPayload.message = {};
+      newPayload.message.body = [];
+      newPayload.message.body.push({
+        uuid: newUser.uuid,
+        username: newUser.username,
+        password: payload.password,
+        email: payload.email,
+        phoneNumber: payload.phoneNumber,
+        locationCode: payload.locationCode,
+        hfrCode: payload.hfrCode,
+        nin: payload.NIN,
+      });
+
+      let validatedContent = {};
+      validatedContent.teamMemberLocation = teamMemberLocation;
+      validatedContent.team = team;
 
       // Create a new team member in OpenMRS and in local Repo
-      const newTeamMember = await TeamMemberService.createTeamMember(newUser.username, newUser.uuid, location.hfrCode, teamMemberLocation.uuid, team.uuid, newPerson.uuid);
+      const newTeamMember = await TeamMemberService.createTeamMember(newUser, newPayload, validatedContent, newPerson);
       console.log("✅ CHW registered successfuly.");
 
       // Generate an activation slug and record
