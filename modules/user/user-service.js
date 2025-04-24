@@ -358,7 +358,7 @@ class UserService {
       return newTeamMember;
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
-      console.error("❌ Error while registering CHW from HRHIS:", error.message);
+      console.error("❌ Error while registering CHW from HRHIS:", error.stack);
 
       // Rethrow with CustomError for the controller to catch
       throw new CustomError(error.message, error.statusCode || 400);
