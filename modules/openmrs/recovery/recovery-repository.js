@@ -1,6 +1,6 @@
 // import prisma from "../../../config/prisma.js";
 import { recoveryStatus } from "@prisma/client";
-import { prisma } from "../../../config/prisma.js";
+import prisma from "../../../config/prisma.js";
 
 class RecoveryRepository {
   static async getAllUcsMasterPeople() {
