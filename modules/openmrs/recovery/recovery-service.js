@@ -20,7 +20,7 @@ class RecoveryService {
     let successRecords = [];
 
     try {
-      const recoveredAccounts = await RecoveryRepository.getAllRecoveredAccounts();
+      const recoveredAccounts = await RecoveryRepository.getPendingRecoveredAccounts();
       if (!recoveredAccounts || recoveredAccounts.length === 0) {
         console.log("No people found in the local database.");
         throw new CustomError("No people found in the local database.", 404);
@@ -52,37 +52,6 @@ class RecoveryService {
     } catch (error) {
       console.error("Error in addPeopleInOpenmrs:", error);
       throw new CustomError("Error adding people in OpenMRS: " + error.message, 500);
-    }
-  }
-
-  static async checkAvailableTeamsInOpenmrs() {
-    console.log("🔄 Checking available teams in OpenMRS...");
-    try {
-      const response = await openmrsApiClient.get("team/team");
-      const openmrsTeams = response.results || [];
-
-      if (openmrsTeams.length === 0) {
-        console.log("No teams found in OpenMRS.");
-        throw new CustomError("No teams found in OpenMRS.", 404);
-      }
-
-      const ucsMasterPeople = await RecoveryRepository.getAllUcsMasterPeople();
-      if (!ucsMasterPeople || ucsMasterPeople.length === 0) {
-        console.log("No records found in the local database.");
-        throw new CustomError("No records found in the local database.", 404);
-      }
-
-      const ucsValidRecords = ucsMasterPeople.filter((team) => openmrsTeams.some((openmrsTeam) => openmrsTeam.name === team.teamName));
-
-      if (ucsValidRecords.length === 0) {
-        console.log("No matching teams found in OpenMRS.");
-        throw new CustomError("No matching teams found in OpenMRS.", 404);
-      }
-
-      return ucsValidRecords;
-    } catch (error) {
-      console.error("Error in checkAvailableTeamsInOpenmrs:", error.stack);
-      throw new CustomError("Error checking available teams in OpenMRS: " + error.message, 500);
     }
   }
 
@@ -184,50 +153,6 @@ class RecoveryService {
       console.error("[ERROR] Recovery failed:", error.message);
       throw error;
     }
-  }
-
-  static async createMissingOpenmrsTeams() {
-    try {
-      // 1. Get all missing teams from recovered_records
-      const missingTeams = await RecoveryRepository.getMissingOpenmrsTeams();
-      if (!missingTeams || missingTeams.length === 0) {
-        console.log("No missing teams found in the local database.");
-        throw new CustomError("No missing teams found in the local database.", 404);
-      }
-
-      // 2. For each record, check if location exists in OpenMRS
-      for (const team of missingTeams) {
-        const locationUuid = team.locationUuid;
-        const teamName = team.teamName;
-        const teamUuid = team.teamUuid;
-
-        // 3. Check if the location exists in OpenMRS
-        const openmrsLocation = await openmrsApiClient.get(`location/${locationUuid}?v=custom:(id,uuid,name)`);
-        if (!openmrsLocation || !openmrsLocation.uuid) {
-          console.error("OpenMRS location not found:", locationUuid);
-          continue;
-        }
-
-        // 4. Create a new team in OpenMRS
-        const teamObject = {
-          teamName: `${locationName}-Team`,
-          location: openmrsLocation.uuid,
-        };
-
-        const newTeam = await openmrsApiClient.post("team/team", teamObject);
-        if (!newTeam || !newTeam.uuid) {
-          console.error("Error creating OpenMRS team:", JSON.stringify(newTeam.response.data.error.message));
-          continue;
-        }
-
-        // 5. Update the local database with the OpenMRS team id and uuid
-        await RecoveryRepository.updateOpenmrsPersonById(team.id, {
-          teamId: newTeam.id,
-          teamUuid: newTeam.uuid,
-          errorLog: null,
-        });
-      }
-    } catch (error) {}
   }
 
   static async processAccount(account) {
@@ -378,6 +303,8 @@ class RecoveryService {
 
       await RecoveryRepository.updateOpenmrsPersonById(account.id, {
         errorLog: "SUCCESS: OpenMRS recovery completed",
+        recovery_status: "COMPLETED",
+        recovery_date: new Date(),
       });
 
       return { success: true, personId: account.id };
@@ -394,6 +321,7 @@ class RecoveryService {
 
       await RecoveryRepository.updateOpenmrsPersonById(account.id, {
         errorLog: `Step: ${step} | ${err.message}`,
+        recovery_status: "FAILED",
       });
 
       return { success: false, personId: account.id, reason: `Step: ${step} | ${err.message}` };

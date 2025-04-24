@@ -19,6 +19,16 @@ class RecoveryRepository {
     });
   }
 
+  // Get pending recovered accounts
+  static async getPendingRecoveredAccounts() {
+    return prisma.recoveredAccounts.findMany({
+      where: {
+        isDuplicate: false,
+        OR: [{ recovery_status: null }, { recovery_status: "PENDING" }],
+      },
+    });
+  }
+
   // Update the OpenMRS person with the given ID
   static async updateOpenmrsPerson(id, payload) {
     try {

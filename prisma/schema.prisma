@@ -367,36 +367,44 @@ model UcsMaster {
   @@map("ucs_master")
 }
 
+enum recoveryStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
 model RecoveredAccounts {
-  id               Int       @id @default(autoincrement())
-  recoveredName    String?   @map("recovered_name")
-  firstName        String?   @map("first_name")
-  middleName       String?   @map("middle_name")
-  familyName       String?   @map("family_name")
+  id               Int            @id @default(autoincrement())
+  recoveredName    String?        @map("recovered_name")
+  firstName        String?        @map("first_name")
+  middleName       String?        @map("middle_name")
+  familyName       String?        @map("family_name")
   dob              DateTime
   gender           String
   username         String
   password         String
-  memberIdentifier String    @map("member_identifier")
-  teamId           Int?      @map("team_id")
-  teamUuid         String?   @map("team_uuid")
-  teamName         String?   @map("team_name")
-  teamRole         String?   @map("team_role")
-  teamRoleId       Int?      @map("team_role_id")
-  personId         Int?      @map("person_id")
-  personUuid       String?   @map("person_uuid")
-  userRole         String?   @default("Provider") @map("user_role")
-  userId           Int?      @map("user_id")
-  userUuid         String?   @map("user_uuid")
-  locationId       Int?      @map("location_id")
-  locationUuid     String?   @map("location_uuid")
-  locationName     String?   @map("location_name")
-  memberId         Int?      @map("member_id")
-  memberUuid       String?   @map("member_uuid")
-  errorLog         String?   @map("error_log")
-  isDuplicate      Boolean?  @default(false) @map("is_duplicate")
-  createdAt        DateTime? @default(now()) @map("created_at")
-  updatedAt        DateTime? @updatedAt @map("updated_at")
+  memberIdentifier String         @map("member_identifier")
+  teamId           Int?           @map("team_id")
+  teamUuid         String?        @map("team_uuid")
+  teamName         String?        @map("team_name")
+  teamRole         String?        @map("team_role")
+  teamRoleId       Int?           @map("team_role_id")
+  personId         Int?           @map("person_id")
+  personUuid       String?        @map("person_uuid")
+  userRole         String?        @default("Provider") @map("user_role")
+  userId           Int?           @map("user_id")
+  userUuid         String?        @map("user_uuid")
+  locationId       Int?           @map("location_id")
+  locationUuid     String?        @map("location_uuid")
+  locationName     String?        @map("location_name")
+  memberId         Int?           @map("member_id")
+  memberUuid       String?        @map("member_uuid")
+  errorLog         String?        @map("error_log")
+  isDuplicate      Boolean?       @default(false) @map("is_duplicate")
+  createdAt        DateTime?      @default(now()) @map("created_at")
+  updatedAt        DateTime?      @updatedAt @map("updated_at")
+  recoveryStatus   recoveryStatus @default(PENDING) @map("recovery_status")
+  recoveryDate     DateTime?      @map("recovery_date")
 
   @@map("recovered_accounts")
 }
