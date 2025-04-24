@@ -374,6 +374,12 @@ class RecoveryService {
 
       await TeamMemberRepository.upsertTeamMember(teamMember);
 
+      console.log(`✅ Successfully recovered person ${account.id} (${account.firstName} ${account.familyName}) in OpenMRS`);
+
+      await RecoveryRepository.updateOpenmrsPersonById(account.id, {
+        errorLog: "SUCCESS: OpenMRS recovery completed",
+      });
+
       return { success: true, personId: account.id };
     } catch (err) {
       console.error(`❌ Error during ${step}:`, err.message);
