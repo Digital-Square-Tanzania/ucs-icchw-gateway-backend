@@ -47,7 +47,7 @@ router.put("/:id", AuthMiddleware.authenticate, updateUserRateLimiter, UserContr
 router.delete("/:id", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), deleteUserRateLimiter, UserController.deleteUser);
 
 // Check for username availability
-router.get("/username/:username", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.isUsernameAvailable);
+router.get("/username/:username", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.checkUsernameAvailability);
 
 // Activate new CHW account route
 router.get("/chw/activate/:slug", UserController.renderActivationPage);
