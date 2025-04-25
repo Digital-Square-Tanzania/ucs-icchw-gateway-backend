@@ -271,6 +271,12 @@ class TeamMemberService {
       throw new CustomError(`❌ Failed to delete person with ID: ${personId} ${error.message}`, 500);
     }
   }
+
+  // Search for username availability
+  static async isUsernameAvailable(username) {
+    const isAvailable = await TeamMemberRepository.isUsernameAvailable(username);
+    return isAvailable;
+  }
 }
 
 export default TeamMemberService;

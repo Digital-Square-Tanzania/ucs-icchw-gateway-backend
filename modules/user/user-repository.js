@@ -101,14 +101,6 @@ class UserRepository {
       data: { isDeleted: true },
     });
   }
-
-  // Search username availability
-  static async isUsernameAvailable(username) {
-    const user = await prisma.user.findUnique({
-      where: { username },
-    });
-    return !user;
-  }
 }
 
 export default UserRepository;

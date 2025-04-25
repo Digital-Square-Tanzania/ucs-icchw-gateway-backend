@@ -127,21 +127,6 @@ class UserController {
       next(new CustomError(error.message, 500));
     }
   }
-
-  // Check for username availability
-  static async checkUsernameAvailability(req, res, next) {
-    try {
-      const { username } = req.params;
-      if (!username) {
-        return BaseResponse.error(res, "Username is required", 400);
-      }
-      // Check if the username is available
-      const isAvailable = await UserService.isUsernameAvailable(username);
-      return BaseResponse.success(res, "Username availability checked", { isAvailable });
-    } catch (error) {
-      next(new CustomError(error.message, 500));
-    }
-  }
 }
 
 export default UserController;

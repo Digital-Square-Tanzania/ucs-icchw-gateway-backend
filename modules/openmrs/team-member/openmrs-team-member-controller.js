@@ -74,6 +74,21 @@ class TeamMemberController {
       next(error);
     }
   }
+
+  // Check for username availability
+  static async checkUsernameAvailability(req, res, next) {
+    try {
+      const { username } = req.query;
+      if (!username) {
+        return BaseResponse.error(res, "Username is required", 400);
+      }
+      // Check if the username is available
+      const isAvailable = await TeamMemberService.isUsernameAvailable(username);
+      return BaseResponse.success(res, "Username availability checked", { isAvailable });
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
 }
 
 export default TeamMemberController;

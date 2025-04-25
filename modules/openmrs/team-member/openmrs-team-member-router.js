@@ -11,4 +11,7 @@ router.put("/:uuid", AuthMiddleware.authenticate, TeamMemberController.updateTea
 router.get("/:uuid", AuthMiddleware.authenticate, TeamMemberController.getTeamMemberByUuid);
 router.delete("/person/:maxPersonId", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), TeamMemberController.deletePerson);
 
+// Check for username availability
+router.get("/username/search", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), TeamMemberController.checkUsernameAvailability);
+
 export default router;

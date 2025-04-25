@@ -1,5 +1,6 @@
 import prisma from "../../../config/prisma.js";
 import CustomError from "../../../utils/custom-error.js";
+import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 
 class TeamMemberRepository {
   /**
@@ -288,6 +289,20 @@ class TeamMemberRepository {
     return prisma.openMRSTeamMember.findFirst({
       where: { identifier },
     });
+  }
+
+  /**
+   * Check if username is available
+   * @param {string} username - Username to check
+   * @returns {Promise<boolean>} - True if available, false otherwise
+   */
+  static async isUsernameAvailable(username) {
+    const openmrssUser = await openmrsApiClient.get(`user?username=${username}`);
+    if (openmrssUser.results.length > 0) {
+      return false;
+    } else {
+      return true;
+    }
   }
 }
 
