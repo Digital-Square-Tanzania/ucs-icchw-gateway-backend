@@ -383,6 +383,15 @@ class UserService {
       throw new CustomError(error.message, error.statusCode || 400);
     }
   }
+
+  // Search for username availability
+  static async isUsernameAvailable(username) {
+    const isAvailable = await UserRepository.isUsernameAvailable(username);
+    if (!isAvailable) {
+      return true;
+    }
+    return false;
+  }
 }
 
 export default UserService;
