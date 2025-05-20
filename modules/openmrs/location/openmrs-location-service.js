@@ -1,6 +1,7 @@
 import OpenMRSLocationRepository from "./openmrs-location-repository.js";
 import OpenMRSApiClient from "../../../utils/openmrs-api-client.js";
 import CustomError from "../../../utils/custom-error.js";
+import pLimit from "p-limit";
 
 class OpenMRSLocationService {
   // Get all locations with pagination
@@ -111,8 +112,11 @@ class OpenMRSLocationService {
   static async syncLocations(pageSize) {
     try {
       console.log("🔄 Syncing OpenMRS Locations in batches...");
-      let fetchedRecords = 0; // Track total fetched records
-      let totalFetched = 0; // Track overall total fetched
+      let fetchedRecords = 0;
+      let totalFetched = 0;
+
+      const concurrency = 10; // Set the level of concurrency you want
+      const limit = pLimit(concurrency);
 
       while (true) {
         console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
@@ -123,6 +127,7 @@ class OpenMRSLocationService {
           startIndex: fetchedRecords,
           limit: pageSize,
         });
+
         const locations = response.results || [];
         const fetchedCount = locations.length;
 
@@ -131,14 +136,13 @@ class OpenMRSLocationService {
           break;
         }
 
-        const transformedLocations = response.results.map((location) => {
+        const transformedLocations = locations.map((location) => {
           let hfrCode = null;
           let locationCode = null;
 
           if (Array.isArray(location.attributes)) {
             for (const attr of location.attributes) {
               const display = attr.display || "";
-
               if (display.startsWith("HFR Code:")) {
                 hfrCode = display.split("HFR Code:")[1].trim();
               } else if (display.startsWith("Code:")) {
@@ -163,21 +167,25 @@ class OpenMRSLocationService {
           };
         });
 
-        // Store the batch in the database
+        // Upsert the whole batch sequentially (typically a DB transaction)
         await OpenMRSLocationRepository.upsertLocations(transformedLocations);
 
-        // Log each sync operation
-        for (const location of locations) {
-          await OpenMRSLocationRepository.saveSyncLog("openmrs_location", location.uuid, "SYNC", "SUCCESS", {
-            name: location.name,
-            retired: location.retired,
-            uuid: location.uuid || null,
-            parentUuid: location.parent || null,
-            type: location.type || null,
-            hfrCode: location.hfrCode || null,
-            locationCode: location.locationCode || null,
-          });
-        }
+        // Save sync logs concurrently using p-limit
+        const logTasks = locations.map((location) =>
+          limit(() =>
+            OpenMRSLocationRepository.saveSyncLog("openmrs_location", location.uuid, "SYNC", "SUCCESS", {
+              name: location.name,
+              retired: location.retired,
+              uuid: location.uuid || null,
+              parentUuid: location.parent || null,
+              type: location.type || null,
+              hfrCode: location.hfrCode || null,
+              locationCode: location.locationCode || null,
+            })
+          )
+        );
+
+        await Promise.all(logTasks); // Run all sync log saves with concurrency
 
         totalFetched += fetchedCount;
         fetchedRecords += fetchedCount;
