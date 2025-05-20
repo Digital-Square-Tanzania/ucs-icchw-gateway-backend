@@ -240,7 +240,7 @@ class OpenMRSLocationRepository {
     });
   }
 
-  // Search for facilities by name
+  // Search for facilities by name allowing variations like Facility, Favility, facility, etc.
   static async searchFacilities(name) {
     return prisma.openMRSLocation.findMany({
       where: {
@@ -248,7 +248,9 @@ class OpenMRSLocationRepository {
           contains: name,
           mode: "insensitive",
         },
-        type: "Facility",
+        type: {
+          in: ["Facility", "Facility_msd_code", "facility"],
+        },
       },
       select: {
         name: true,
