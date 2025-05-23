@@ -1,8 +1,21 @@
 import { Router } from "express";
 import TeamMemberController from "./openmrs-team-member-controller.js";
 import AuthMiddleware from "../../../middlewares/authentication-middleware.js";
+import multer from "multer";
 
 const router = Router();
+
+// Multer configuration for handling file uploads
+const storage = multer.memoryStorage();
+const fileFilter = (_req, file, cb) => {
+  const allowedMimes = ["text/csv"];
+  if (allowedMimes.includes(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Invalid file type. Only CSV files are allowed!"), false);
+  }
+};
+const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 router.get("/", AuthMiddleware.authenticate, TeamMemberController.getTeamMembers);
 router.post("/", AuthMiddleware.authenticate, TeamMemberController.createTeamMember);
@@ -13,5 +26,8 @@ router.delete("/person/:maxPersonId", AuthMiddleware.authenticate, AuthMiddlewar
 
 // Check for username availability
 router.get("/username/search", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), TeamMemberController.checkUsernameAvailability);
+
+// Upload CSV file
+router.post("/upload", AuthMiddleware.authenticate, upload.single("file"), TeamMemberController.uploadCsv);
 
 export default router;

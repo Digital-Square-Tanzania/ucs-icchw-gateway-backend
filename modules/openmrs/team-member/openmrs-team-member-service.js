@@ -277,6 +277,19 @@ class TeamMemberService {
     const isAvailable = await TeamMemberRepository.isUsernameAvailable(username);
     return isAvailable;
   }
+
+  // Upload CSV file and process it
+  static async uploadCsv(file) {
+    try {
+      const csvProcessor = new CsvProcessor();
+      const rows = await csvProcessor.readCsv(file.path);
+      console.log("CSV rows:", rows);
+      // Process the rows as needed
+      return rows;
+    } catch (error) {
+      throw new CustomError("Failed to process CSV file: " + error.message, 500);
+    }
+  }
 }
 
 export default TeamMemberService;

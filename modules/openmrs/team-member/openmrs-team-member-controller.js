@@ -89,6 +89,20 @@ class TeamMemberController {
       next(new CustomError(error.message, 500));
     }
   }
+
+  // Upload CSV file
+  static async uploadCsv(req, res, next) {
+    try {
+      const file = req.file;
+      if (!file) {
+        return BaseResponse.error(res, "No file uploaded", 400);
+      }
+      const csvData = await TeamMemberService.processCsv(file.buffer);
+      return BaseResponse.success(res, "CSV file processed successfully", csvData);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default TeamMemberController;
