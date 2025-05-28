@@ -8,7 +8,7 @@ const router = Router();
 // Multer configuration for handling file uploads
 const storage = multer.memoryStorage();
 const fileFilter = (_req, file, cb) => {
-  const allowedMimes = ["text/csv"];
+  const allowedMimes = ["text/csv", "application/vnd.ms-excel"];
   if (allowedMimes.includes(file.mimetype)) {
     cb(null, true);
   } else {
