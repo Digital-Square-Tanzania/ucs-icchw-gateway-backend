@@ -44,6 +44,8 @@ class AppServer {
     this.app.use(express.urlencoded({ extended: false }));
     this.app.use(cors());
     // this.app.use(SecurityMiddleware.applyHelmet());
+    // Expose env variable to pug
+    this.app.locals.ssrUrlPrefix = process.env.SSR_URL_PREFIX || "";
     this.app.set("views", path.join(__dirname, "views"));
     this.app.set("view engine", "pug");
     this.app.use(express.static(path.join(__dirname, "public")));
