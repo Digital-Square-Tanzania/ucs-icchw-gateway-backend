@@ -18,7 +18,7 @@ html
           h1 Unda nenosiri la WAJA
           small <span style="color: #ccc;">Kitambulisho chako cha WAJA ni: <strong>#{username}</strong></span>
           br
-          form(action=`/api/v1/user/chw/activate/${slug}` method="POST")
+          form(action=`${ssrUrlPrefix}/api/v1/user/chw/activate/${slug}` method="POST")
             div#strength-meter
               - for (let i = 0; i < 5; i++)
                 div.strength-bar
@@ -47,7 +47,7 @@ html
           hr(style="border: 1px solid #ccc; width: 80%;")
           br
           if resend
-            a(href=`/api/v1/user/chw/resend/${slug}`) Tuma Email Mpya
+            a(href=`${ssrUrlPrefix}/api/v1/user/chw/resend/${slug}`) Tuma Email Mpya
           else
             p(style="font-size: 0.9rem; color: gray") Unaweza kuufunga ukurasa huu.
     script(src=`${ssrUrlPrefix}/js/account-activation.js`)
