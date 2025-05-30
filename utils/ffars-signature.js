@@ -9,17 +9,11 @@ export class FfarsSignature {
     const publicKeyPath = path.resolve("keys/public_key.pem");
     const ffarsPublicKeyPath = path.resolve("keys/ffars_public_key.pem");
 
-    console.log("Trying to load keys from:");
-    console.log("Private:", privateKeyPath);
-    console.log("Public:", publicKeyPath);
-    console.log("FFARS Public:", ffarsPublicKeyPath);
-
     try {
       this.privateKey = fs.readFileSync(privateKeyPath, "utf8");
       this.publicKey = fs.readFileSync(publicKeyPath, "utf8");
       this.ffarsPublicKey = fs.readFileSync(ffarsPublicKeyPath, "utf8");
     } catch (err) {
-      console.error("Key loading error:", err);
       throw new CustomError("Failed to load keys. Please ensure the key files exist and are accessible.", 500);
     }
   }
