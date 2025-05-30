@@ -41,6 +41,6 @@ export class FfarsSignature {
     const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
     const signature = this.signMessage(message);
     const verified = this.verifyMessage(message, signature);
-    return `message: ${message}\nsignature: ${signature}\nverified: ${verified}`;
+    return { message: message, signature: signature, verified: verified };
   }
 }
