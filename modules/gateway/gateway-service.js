@@ -15,13 +15,12 @@ import PayloadContent from "./helpers/payload-content.js";
 import OpenmrsHelper from "./helpers/openmrs-helper.js";
 import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
 import mysqlClient from "../../utils/mysql-client.js";
+import FfarsSignature from "../../utils/ffars-signature.js";
 
 dotenv.config();
 
 class GatewayService {
-  /*
-   * Generate message ID
-   */
+  // Generate message ID
   static async generateMessageId() {
     const now = new Date();
 
@@ -38,6 +37,7 @@ class GatewayService {
   }
 
   // Get CHW monthly status by HFR code
+
   static async getChwMonthlyStatus(req, res, next) {
     try {
       const body = req.body.message.body;
@@ -131,9 +131,7 @@ class GatewayService {
     }
   }
 
-  /*
-   * Update CHW demographics from HRHIS
-   */
+  // Update CHW demographics from HRHIS
   static async updateChwDemographics(req, _res, _next) {
     try {
       const payload = req.body;
@@ -235,9 +233,7 @@ class GatewayService {
     }
   }
 
-  /*
-   * Change CHW duty station
-   */
+  // Change CHW duty station
   static async changeChwDutyStation(req, _res, _next) {
     console.log("🔄 Changing CHW Duty Station...");
     try {
@@ -398,9 +394,7 @@ class GatewayService {
     }
   }
 
-  /*
-   * Random password generator
-   */
+  // Random password generator
   static generateRandomPassword() {
     const length = 8;
     const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -411,10 +405,7 @@ class GatewayService {
     return retVal;
   }
 
-  /*
-   * Generate HRHIS Response Parts
-   */
-
+  // Generate HRHIS Response Parts
   static async generateHrhisReponseParts(req) {
     const header = req.body.message.header;
     const signature = req.body.signature;
@@ -429,6 +420,43 @@ class GatewayService {
     req.signature = signature;
 
     return responseObject;
+  }
+
+  // Test Signature
+  static async testSignature(messageBody, messageHeader) {
+    if (!messageBody || !messageHeader) {
+      throw new ApiError("Both message body and header are required for signing.", 400, 5);
+    }
+    const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
+    const ffarsSignature = new FfarsSignature();
+    const signature = ffarsSignature.signMessage(message);
+    const verified = ffarsSignature.verifyMessage(message, signature);
+    return `message: ${message}\nsignature: ${signature}\nverified: ${verified}`;
+  }
+
+  // Verify Signature
+  static async verifySignature(messageBody, messageHeader, signature) {
+    if (!messageBody || !messageHeader) {
+      throw new ApiError("Both message body and header are required for verification.", 400, 5);
+    }
+    if (!signature) {
+      throw new ApiError("Signature is required for verification.", 400, 5);
+    }
+    const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
+    const ffarsSignature = new FfarsSignature();
+    const isVerified = ffarsSignature.verifyMessage(message, signature);
+    return isVerified;
+  }
+
+  // Sign Message
+  static async signMessage(messageBody, messageHeader) {
+    if (!messageBody || !messageHeader) {
+      throw new ApiError("Both message body and header are required for signing.", 400, 5);
+    }
+    const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
+    const ffarsSignature = new FfarsSignature();
+    const signature = ffarsSignature.signMessage(message);
+    return signature;
   }
 }
 

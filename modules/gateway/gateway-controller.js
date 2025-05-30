@@ -1,6 +1,7 @@
 import GatewayService from "./gateway-service.js";
 import GatewayResponder from "../../responders/gateway-responder.js";
 import FfarsResponder from "../../responders/ffars-responder.js";
+import CustomError from "../../utils/custom-error.js";
 
 class GatewayController {
   /**
@@ -48,6 +49,60 @@ class GatewayController {
       return GatewayResponder.success(req, res, response, 1, 200);
     } catch (error) {
       return GatewayResponder.error(req, res, error.message, error.customCode || 3, error.statusCode);
+    }
+  }
+
+  /**
+   * Test Message Signing
+   */
+  static async testSignature(req, res, next) {
+    try {
+      const { message, signature } = req.body;
+      if (!message || !message.header || !message.body) {
+        throw new CustomError("Both message body and header are required for signing.", 400);
+      }
+      if (!signature) {
+        throw new CustomError("Signature is required for verification.", 400);
+      }
+      const result = GatewayService.testSignature(message.body, message.header);
+      return GatewayResponder.success(req, res, result, 1, 200);
+    } catch (error) {
+      return GatewayResponder.error(req, res, error.message, 3, error.statusCode || 500);
+    }
+  }
+
+  /**
+   * Verify Message Signature
+   */
+  static async verifySignature(req, res, next) {
+    try {
+      const { message, signature } = req.body;
+      if (!message || !message.header || !message.body) {
+        throw new CustomError("Both message body and header are required for verification.", 400);
+      }
+      if (!signature) {
+        throw new CustomError("Signature is required for verification.", 400);
+      }
+      const isVerified = GatewayService.verifySignature(message.body, message.header, signature);
+      return GatewayResponder.success(req, res, { verified: isVerified }, 1, 200);
+    } catch (error) {
+      return GatewayResponder.error(req, res, error.message, 3, error.statusCode || 500);
+    }
+  }
+
+  /**
+   * Sign Message
+   */
+  static async signMessage(req, res, next) {
+    try {
+      const { message } = req.body;
+      if (!message || !message.header || !message.body) {
+        throw new CustomError("Both message body and header are required for signing.", 400);
+      }
+      const signature = GatewayService.signMessage(message.body, message.header);
+      return GatewayResponder.success(req, res, { signature }, 1, 200);
+    } catch (error) {
+      return GatewayResponder.error(req, res, error.message, 3, error.statusCode || 500);
     }
   }
 }
