@@ -2,6 +2,7 @@ import GatewayService from "./gateway-service.js";
 import GatewayResponder from "../../responders/gateway-responder.js";
 import FfarsResponder from "../../responders/ffars-responder.js";
 import CustomError from "../../utils/custom-error.js";
+import BaseResponse from "../../responders/base-responder.js";
 
 class GatewayController {
   /**
@@ -65,9 +66,9 @@ class GatewayController {
         throw new CustomError("Signature is required for verification.", 400);
       }
       const result = GatewayService.testSignature(message.body, message.header);
-      return GatewayResponder.success(req, res, result, 1, 200);
+      return BaseResponse.success(res, "Signature testing results", result);
     } catch (error) {
-      return GatewayResponder.error(req, res, error.message, 3, error.statusCode || 500);
+      next(error);
     }
   }
 
@@ -84,9 +85,9 @@ class GatewayController {
         throw new CustomError("Signature is required for verification.", 400);
       }
       const isVerified = GatewayService.verifySignature(message.body, message.header, signature);
-      return GatewayResponder.success(req, res, { verified: isVerified }, 1, 200);
+      return BaseResponse.success(res, "Signature verification result", { verified: isVerified });
     } catch (error) {
-      return GatewayResponder.error(req, res, error.message, 3, error.statusCode || 500);
+      next(error);
     }
   }
 
@@ -100,9 +101,9 @@ class GatewayController {
         throw new CustomError("Both message body and header are required for signing.", 400);
       }
       const signature = GatewayService.signMessage(message.body, message.header);
-      return GatewayResponder.success(req, res, { signature }, 1, 200);
+      return BaseResponse.success(res, "Message signed successfully", { signature });
     } catch (error) {
-      return GatewayResponder.error(req, res, error.message, 3, error.statusCode || 500);
+      next(error);
     }
   }
 }
