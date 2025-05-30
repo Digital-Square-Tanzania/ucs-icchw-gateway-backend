@@ -5,9 +5,9 @@ import CustomError from "../utils/custom-error.js";
 
 export class FfarsSignature {
   constructor() {
-    const privateKeyPath = path.resolve("../keys/private_key.pem");
-    const publicKeyPath = path.resolve("../keys/public_key.pem");
-    const ffarsPublicKeyPath = path.resolve("../keys/ffars_public_key.pem");
+    const privateKeyPath = path.resolve("keys/private_key.pem");
+    const publicKeyPath = path.resolve("keys/public_key.pem");
+    const ffarsPublicKeyPath = path.resolve("keys/ffars_public_key.pem");
 
     try {
       this.privateKey = fs.readFileSync(privateKeyPath, "utf8");
