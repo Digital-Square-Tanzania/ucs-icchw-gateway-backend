@@ -3,7 +3,7 @@ import path from "path";
 import crypto from "crypto";
 import CustomError from "../utils/custom-error.js";
 
-export class SignatureService {
+export class FfarsSignature {
   constructor() {
     const privateKeyPath = path.resolve("../keys/private_key.pem");
     const publicKeyPath = path.resolve("../keys/public_key.pem");
