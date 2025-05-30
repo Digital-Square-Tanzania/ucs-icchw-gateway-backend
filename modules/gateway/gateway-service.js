@@ -15,7 +15,7 @@ import PayloadContent from "./helpers/payload-content.js";
 import OpenmrsHelper from "./helpers/openmrs-helper.js";
 import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
 import mysqlClient from "../../utils/mysql-client.js";
-import FfarsSignature from "../../utils/ffars-signature.js";
+import { FfarsSignature } from "../../utils/ffars-signature.js";
 
 dotenv.config();
 
