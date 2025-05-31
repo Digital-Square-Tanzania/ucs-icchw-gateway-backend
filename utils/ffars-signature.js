@@ -51,11 +51,12 @@ export class FfarsSignature {
 
       const signature = this.signMessage(message);
       const isVerified = this.verifyMessageFromUcs(message, signature);
+      const jsonMessage = JSON.parse(message);
 
       return {
-        message,
+        jsonMessage,
         signature,
-        verified: isVerified,
+        isVerified,
       };
     } catch (err) {
       return {
