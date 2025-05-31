@@ -454,8 +454,6 @@ class GatewayService {
   static async signMessage(message) {
     const ffarsSignature = new FfarsSignature();
     const signature = ffarsSignature.signMessage(message);
-    console.log("Generated Signature:", signature);
-    console.log("Message to be signed:", message);
     return signature;
   }
 }

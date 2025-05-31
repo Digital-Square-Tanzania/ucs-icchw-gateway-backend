@@ -24,7 +24,10 @@ export class FfarsSignature {
     const signer = crypto.createSign("RSA-SHA256");
     signer.update(rawMessage);
     signer.end();
-    return signer.sign(this.privateKey, "base64");
+    const signature = signer.sign(this.privateKey, "base64");
+    console.log("Generated Signature:", signature);
+    console.log("Message to be signed:", rawMessage);
+    return signature;
   }
 
   // Verify Message From UCS
