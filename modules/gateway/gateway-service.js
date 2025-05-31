@@ -49,7 +49,7 @@ class GatewayService {
       }
       const isVerified = await GatewayService.verifyMessageFromFfars(message, signature);
       if (!isVerified) {
-        throw new CustomError("Signature verification failed. Invalid message signature.", 401);
+        throw new Error("Signature verification failed. Invalid message signature.");
       }
 
       const body = req.body.message.body;
