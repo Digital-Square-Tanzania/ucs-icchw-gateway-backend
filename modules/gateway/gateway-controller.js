@@ -103,7 +103,7 @@ class GatewayController {
       if (!message || !message.header || !message.body) {
         throw new CustomError("Both message body and header are required for signing.", 400);
       }
-      const signature = await GatewayService.signMessage(message.body, message.header);
+      const signature = await GatewayService.signMessage(message);
       return BaseResponse.success(res, "Message signed successfully", { signature });
     } catch (error) {
       next(error);

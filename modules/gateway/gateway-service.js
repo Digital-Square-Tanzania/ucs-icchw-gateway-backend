@@ -451,11 +451,7 @@ class GatewayService {
   }
 
   // Sign Message
-  static async signMessage(messageBody, messageHeader) {
-    if (!messageBody || !messageHeader) {
-      throw new ApiError("Both message body and header are required for signing.", 400, 5);
-    }
-    const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
+  static async signMessage(message) {
     const ffarsSignature = new FfarsSignature();
     const signature = ffarsSignature.signMessage(message);
     return signature;
