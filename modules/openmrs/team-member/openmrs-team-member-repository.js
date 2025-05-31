@@ -25,6 +25,7 @@ class TeamMemberRepository {
         roleName: true,
         teamName: true,
         locationName: true,
+        createdAt: true,
       },
     });
 
