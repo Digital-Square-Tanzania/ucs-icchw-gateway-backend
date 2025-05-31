@@ -18,34 +18,34 @@ export class FfarsSignature {
     }
   }
 
-  signMessage(rawMessage) {
+  // Sign Message in UCS
+  signMessage(messageObj) {
+    const rawMessage = JSON.stringify(messageObj); // ensures deterministic string
     const signer = crypto.createSign("RSA-SHA256");
     signer.update(rawMessage);
     signer.end();
     return signer.sign(this.privateKey, "base64");
   }
 
-  // Verifies a message signed by FFARS
-  verifyMessageFromFfars(rawMessage, signature) {
+  // Verify Message From UCS
+  verifyMessageFromUcs(messageObj, signature) {
+    const rawMessage = JSON.stringify(messageObj); // again: stringify first
+    const verifier = crypto.createVerify("RSA-SHA256");
+    verifier.update(rawMessage);
+    verifier.end();
+    return verifier.verify(this.publicKey, signature, "base64");
+  }
+
+  // Verify Message From FFARS
+  verifyMessageFromFfars(messageObj, signature) {
+    const rawMessage = JSON.stringify(messageObj);
     const verifier = crypto.createVerify("RSA-SHA256");
     verifier.update(rawMessage);
     verifier.end();
     return verifier.verify(this.ffarsPublicKey, signature, "base64");
   }
 
-  // Verifies a message signed by this system (UCS)
-  verifyMessageFromUcs(rawMessage, signature) {
-    const verifier = crypto.createVerify("RSA-SHA256");
-    verifier.update(rawMessage);
-    verifier.end();
-
-    console.log("Raw Message:", rawMessage);
-    console.log("Signature:", signature);
-    console.log("Public Key:", this.publicKey);
-    return verifier.verify(this.publicKey, signature, "base64");
-  }
-
-  // Test UCS sign and UCS verify to confirm keys are valid
+  // Test UCS signing and verification
   test() {
     try {
       const message = JSON.stringify({
