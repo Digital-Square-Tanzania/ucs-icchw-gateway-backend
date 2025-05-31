@@ -40,6 +40,18 @@ class GatewayService {
 
   static async getChwMonthlyStatus(req, res, next) {
     try {
+      const { message, signature } = req.body;
+      if (!message || !message.header || !message.body) {
+        throw new CustomError("Both message body and header are required for verification.", 400);
+      }
+      if (!signature) {
+        throw new CustomError("Signature is required for verification.", 400);
+      }
+      const isVerified = await GatewayService.verifyMessageFromFfars(message, signature);
+      if (!isVerified) {
+        throw new ApiError("Signature verification failed. Invalid message signature.", 401, 1);
+      }
+
       const body = req.body.message.body;
       const month = body.month;
       const year = body.year;
@@ -408,7 +420,7 @@ class GatewayService {
   // Generate HRHIS Response Parts
   static async generateHrhisReponseParts(req) {
     const header = req.body.message.header;
-    const signature = req.body.signature;
+    // const signature = req.body.signature;
     const responseHeader = {};
     responseHeader.sender = header.receiver;
     responseHeader.receiver = header.sender;
@@ -417,7 +429,7 @@ class GatewayService {
     responseHeader.createdAt = new Date().toISOString();
     const responseObject = {};
     responseObject.header = responseHeader;
-    req.signature = signature;
+    // req.signature = signature;
 
     return responseObject;
   }

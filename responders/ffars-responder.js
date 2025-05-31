@@ -1,10 +1,13 @@
 import GatewayService from "../modules/gateway/gateway-service.js";
+import { FfarsSignature } from "../utils/ffars-signature.js";
 
 class FfarsHelper {
-  static send(req, res, responseObject, statusCode) {
+  static async send(_req, res, responseObject, statusCode) {
+    const ffarsSignature = new FfarsSignature();
+    const signature = ffarsSignature.signMessage(responseObject);
     return res.status(statusCode).json({
       message: responseObject,
-      signature: req.signature,
+      signature: signature,
     });
   }
 
