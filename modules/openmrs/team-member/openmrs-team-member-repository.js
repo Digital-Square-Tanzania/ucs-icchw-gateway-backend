@@ -168,10 +168,13 @@ class TeamMemberRepository {
         throw new CustomError("Location with provided HFR code not found.", 404);
       }
 
-      // Step 2: Find team members by location UUID
       const teamMembers = await prisma.openMRSTeamMember.findMany({
         where: {
           locationUuid: location.uuid,
+          NIN: {
+            not: null,
+            notIn: [""], // exclude empty string as well
+          },
         },
         select: {
           username: true,
