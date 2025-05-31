@@ -54,7 +54,7 @@ export class FfarsSignature {
       const jsonMessage = JSON.parse(message);
 
       return {
-        jsonMessage,
+        message: jsonMessage,
         signature,
         isVerified,
       };
