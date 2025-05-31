@@ -49,7 +49,7 @@ class GatewayService {
       }
       const isVerified = await GatewayService.verifyMessageFromFfars(message, signature);
       if (!isVerified) {
-        return ApiError("Signature verification failed. Invalid message signature.", 401, 1);
+        throw new ApiError("Signature verification failed. Invalid message signature.", 401, 1);
       }
 
       const body = req.body.message.body;
@@ -73,7 +73,10 @@ class GatewayService {
       return payload;
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
-      throw new ApiError(error.message, error.statusCode, 5);
+      if (!(error instanceof ApiError)) {
+        throw new ApiError(error.message, 500, 5);
+      }
+      throw error;
     }
   }
 

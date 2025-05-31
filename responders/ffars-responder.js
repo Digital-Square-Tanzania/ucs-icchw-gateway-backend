@@ -19,7 +19,13 @@ class FfarsHelper {
 
   static async error(req, res, message, code = 3, statusCode = 500) {
     const responseObject = await GatewayService.generateHrhisReponseParts(req);
-    responseObject.body = [];
+    responseObject.body = {
+      error: {
+        message,
+        code,
+        statusCode,
+      },
+    };
     return this.send(req, res, responseObject, statusCode);
   }
 }

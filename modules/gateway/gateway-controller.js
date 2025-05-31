@@ -11,7 +11,7 @@ class GatewayController {
       const monthlyStatuses = await GatewayService.getChwMonthlyStatus(req, res, next);
       return FfarsResponder.success(req, res, monthlyStatuses, 1, 200, req.signature);
     } catch (error) {
-      return FfarsResponder.error(req, res, error.message, 3, error.statusCode, null);
+      return FfarsResponder.error(req, res, error.message, error.customCode || 3, error.statusCode || 500);
     }
   }
 
