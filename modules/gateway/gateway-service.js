@@ -423,13 +423,9 @@ class GatewayService {
   }
 
   // Test Signature
-  static async testSignature(messageBody, messageHeader) {
-    if (!messageBody || !messageHeader) {
-      throw new ApiError("Both message body and header are required for signing.", 400, 5);
-    }
+  static async testSignature(messageBody, messageHeader, signature) {
     const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
     const ffarsSignature = new FfarsSignature();
-    const signature = ffarsSignature.signMessage(message);
     const verified = ffarsSignature.verifyMessage(message, signature);
     return `message: ${message}\nsignature: ${signature}\nverified: ${verified}`;
   }

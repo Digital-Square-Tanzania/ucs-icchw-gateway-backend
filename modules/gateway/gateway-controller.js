@@ -65,7 +65,7 @@ class GatewayController {
       if (!signature) {
         throw new CustomError("Signature is required for verification.", 400);
       }
-      const result = await GatewayService.testSignature(message.body, message.header);
+      const result = await GatewayService.testSignature(message.body, message.header, signature);
       return BaseResponse.success(res, "Signature testing results", result);
     } catch (error) {
       next(error);

@@ -34,13 +34,28 @@ export class FfarsSignature {
     return isVerified;
   }
 
-  test(messageBody, messageHeader) {
-    if (!messageBody || !messageHeader) {
-      throw new CustomError("Both message body and header are required for signing.", 500);
+  test(messageBody = "sample-body", messageHeader = "sample-header") {
+    try {
+      const message = JSON.stringify({ body: messageBody, header: messageHeader });
+
+      const signature = this.signMessage(message);
+      const isVerified = this.verifyMessage(message, signature);
+
+      return `
+        🔐 FFARS Signature Test
+        ------------------------------
+        Message:
+        ${message}
+
+        Generated Signature (base64):
+        ${signature}
+
+        Verification Result:
+        ${isVerified ? "✅ Signature is valid" : "❌ Signature is invalid"}
+        ------------------------------
+      `;
+    } catch (err) {
+      return `⚠️ Error during signature test: ${err.message}`;
     }
-    const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
-    const signature = this.signMessage(message);
-    const verified = this.verifyMessage(message, signature);
-    return { message: message, signature: signature, verified: verified };
   }
 }
