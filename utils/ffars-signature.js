@@ -41,7 +41,7 @@ export class FfarsSignature {
       const signature = this.signMessage(message);
       const isVerified = this.verifyMessage(message, signature);
 
-      return isVerified ? true : false;
+      return isVerified;
     } catch (err) {
       return err.message;
     }
