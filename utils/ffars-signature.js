@@ -41,21 +41,9 @@ export class FfarsSignature {
       const signature = this.signMessage(message);
       const isVerified = this.verifyMessage(message, signature);
 
-      return `
-        🔐 FFARS Signature Test
-        ------------------------------
-        Message:
-        ${message}
-
-        Generated Signature (base64):
-        ${signature}
-
-        Verification Result:
-        ${isVerified ? "✅ Signature is valid" : "❌ Signature is invalid"}
-        ------------------------------
-      `;
+      return isVerified ? true : false;
     } catch (err) {
-      return `⚠️ Error during signature test: ${err.message}`;
+      return err.message;
     }
   }
 }
