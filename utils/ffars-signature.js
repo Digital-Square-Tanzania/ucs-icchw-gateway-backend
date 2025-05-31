@@ -1,3 +1,8 @@
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+import CustomError from "../utils/custom-error.js";
+
 export class FfarsSignature {
   constructor() {
     const privateKeyPath = path.resolve("keys/private_key.pem");
