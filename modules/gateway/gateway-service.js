@@ -49,7 +49,7 @@ class GatewayService {
       }
       const isVerified = await GatewayService.verifyMessageFromFfars(message, signature);
       if (!isVerified) {
-        throw new ApiError("Signature verification failed. Invalid message signature.", 401, 1);
+        return ApiError("Signature verification failed. Invalid message signature.", 401, 1);
       }
 
       const body = req.body.message.body;
@@ -61,7 +61,7 @@ class GatewayService {
       const teamMembers = await TeamMemberRepository.getTeamMembersByLocationHfrCode(hfrCode);
 
       if (!teamMembers) {
-        return ApiError("CHW monthly activity statistics not found.", 404, 5);
+        throw new ApiError("CHW monthly activity statistics not found.", 404, 5);
       }
 
       console.log("🔄 Getting monthly status for team members...");
