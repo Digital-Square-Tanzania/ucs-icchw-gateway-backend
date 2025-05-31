@@ -423,21 +423,14 @@ class GatewayService {
   }
 
   // Test Signature
-  static async testSignature(messageBody, messageHeader, signature) {
+  static async testSignature() {
     const ffarsSignature = new FfarsSignature();
     const verified = ffarsSignature.test();
     return verified;
   }
 
   // Verify Message from FFARS
-  static async verifyMessageFromFfars(messageBody, messageHeader, signature) {
-    if (!messageBody || !messageHeader) {
-      throw new ApiError("Both message body and header are required for verification.", 400, 5);
-    }
-    if (!signature) {
-      throw new ApiError("Signature is required for verification.", 400, 5);
-    }
-    const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
+  static async verifyMessageFromFfars(message, signature) {
     const ffarsSignature = new FfarsSignature();
     const isVerified = ffarsSignature.verifyMessageFromFfars(message, signature);
     return isVerified;
