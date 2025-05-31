@@ -424,10 +424,9 @@ class GatewayService {
 
   // Test Signature
   static async testSignature(messageBody, messageHeader, signature) {
-    const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
     const ffarsSignature = new FfarsSignature();
-    const verified = ffarsSignature.verifyMessage(message, signature);
-    return `message: ${message}\nsignature: ${signature}\nverified: ${verified}`;
+    const verified = ffarsSignature.test();
+    return verified;
   }
 
   // Verify Signature
