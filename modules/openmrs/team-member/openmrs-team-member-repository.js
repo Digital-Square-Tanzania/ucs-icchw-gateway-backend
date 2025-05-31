@@ -39,6 +39,7 @@ class TeamMemberRepository {
       roleName: member.roleName,
       teamName: member.teamName,
       locationName: member.locationName,
+      createdAt: member.createdAt,
     }));
 
     return { users: formattedTeamMembers, total: openmrsTeamMembersCount };
