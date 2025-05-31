@@ -5,9 +5,7 @@ import CustomError from "../../utils/custom-error.js";
 import BaseResponse from "../../responders/base-responder.js";
 
 class GatewayController {
-  /**
-   * Fetch CHW monthly activity statistics
-   */
+  // Fetch CHW monthly activity statistics
   static async checkChwMonthlyStatus(req, res, next) {
     try {
       const monthlyStatuses = await GatewayService.getChwMonthlyStatus(req, res, next);
@@ -17,9 +15,7 @@ class GatewayController {
     }
   }
 
-  /**
-   * Register new CHW from HRHIS
-   */
+  // Register new CHW from HRHIS
   static async registerChwFromHrhis(req, res, next) {
     try {
       const response = await GatewayService.registerChwFromHrhis(req, res, next);
@@ -29,9 +25,7 @@ class GatewayController {
     }
   }
 
-  /*
-   * Change CHW demographics from HRHIS
-   */
+  // Change CHW demographics from HRHIS
   static async updateChwDemographics(req, res, next) {
     try {
       const response = await GatewayService.updateChwDemographics(req, res, next);
@@ -41,9 +35,7 @@ class GatewayController {
     }
   }
 
-  /*
-   * Change CHW duty station
-   */
+  // Change CHW duty station
   static async changeChwDutyStation(req, res, next) {
     try {
       const response = await GatewayService.changeChwDutyStation(req, res, next);
@@ -53,9 +45,7 @@ class GatewayController {
     }
   }
 
-  /**
-   * Test Message Signing
-   */
+  // Test Message Signing
   static async testSignature(req, res, next) {
     try {
       const { message, signature } = req.body;
@@ -72,10 +62,8 @@ class GatewayController {
     }
   }
 
-  /**
-   * Verify Message Signature
-   */
-  static async verifySignature(req, res, next) {
+  // Verify Message From FFARS
+  static async verifyMessageFromFfars(req, res, next) {
     try {
       const { message, signature } = req.body;
       if (!message || !message.header || !message.body) {
@@ -91,9 +79,24 @@ class GatewayController {
     }
   }
 
-  /**
-   * Sign Message
-   */
+  // Verify Message From UCS
+  static async verifyMessageFromUcs(req, res, next) {
+    try {
+      const { message, signature } = req.body;
+      if (!message || !message.header || !message.body) {
+        throw new CustomError("Both message body and header are required for verification.", 400);
+      }
+      if (!signature) {
+        throw new CustomError("Signature is required for verification.", 400);
+      }
+      const result = await GatewayService.verifyMessageFromUcs(message.body, message.header, signature);
+      return BaseResponse.success(res, "Signature verification result", { isVerified: result });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  // Sign Message
   static async signMessage(req, res, next) {
     try {
       const { message } = req.body;

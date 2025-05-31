@@ -22,7 +22,10 @@ router.put("/chw/station", BasicAuthMiddleware.authenticate, AuthMiddleware.auth
 router.post("/signature/test", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.testSignature);
 
 // Verify Message Signature
-router.post("/signature/verify", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.verifySignature);
+router.post("/signature/verify-ffars", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.verifyMessageFromFfars);
+
+// Verify Message Signature from UCS
+router.post("/signature/verify-ucs", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.verifyMessageFromUcs);
 
 // Sign Message
 router.post("/signature/sign", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.signMessage);
