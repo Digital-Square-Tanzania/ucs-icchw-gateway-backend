@@ -48,9 +48,10 @@ class GatewayService {
         throw new CustomError("Signature is required for verification.", 400);
       }
       const isVerified = await GatewayService.verifyMessageFromFfars(message, signature);
-      if (!isVerified) {
-        throw new ApiError("Signature verification failed. Invalid message signature.", 401, 1);
-      }
+      // @TODO: Uncomment this when signature verification is needed
+      // if (!isVerified) {
+      //   throw new ApiError("Signature verification failed. Invalid message signature.", 401, 1);
+      // }
 
       const body = req.body.message.body;
       const month = body.month;
