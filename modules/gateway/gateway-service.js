@@ -142,7 +142,10 @@ class GatewayService {
       console.error("❌ Error while registering CHW from HRHIS:", error.stack);
 
       // Rethrow with CustomError for the controller to catch
-      throw new ApiError(error.message, error.statusCode || 400, 5);
+      if (!(error instanceof ApiError)) {
+        throw new ApiError(error.message, 500, 5);
+      }
+      throw error;
     }
   }
 
@@ -244,7 +247,10 @@ class GatewayService {
       console.log("✅ CHW demographic updates processed.");
       return results;
     } catch (error) {
-      throw new ApiError(error.message, error.statusCode || 400, 5);
+      if (!(error instanceof ApiError)) {
+        throw new ApiError(error.message, 500, 5);
+      }
+      throw error;
     }
   }
 
@@ -405,7 +411,10 @@ class GatewayService {
       return "CHW duty station changed successfully!";
     } catch (error) {
       console.error("❌ Error in changing duty station:", error.message);
-      throw new ApiError(error.message, error.statusCode || 400, 5);
+      if (!(error instanceof ApiError)) {
+        throw new ApiError(error.message, 500, 5);
+      }
+      throw error;
     }
   }
 
