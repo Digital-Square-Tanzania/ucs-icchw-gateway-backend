@@ -84,7 +84,7 @@ class GatewayController {
       if (!signature) {
         throw new CustomError("Signature is required for verification.", 400);
       }
-      const isVerified = await GatewayService.verifySignature(message.body, message.header, signature);
+      const isVerified = await GatewayService.verifyMessageFromFfars(message.body, message.header, signature);
       return BaseResponse.success(res, "Signature verification result", { verified: isVerified });
     } catch (error) {
       next(error);

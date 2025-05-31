@@ -430,7 +430,7 @@ class GatewayService {
   }
 
   // Verify Signature
-  static async verifySignature(messageBody, messageHeader, signature) {
+  static async verifyMessageFromFfars(messageBody, messageHeader, signature) {
     if (!messageBody || !messageHeader) {
       throw new ApiError("Both message body and header are required for verification.", 400, 5);
     }
@@ -439,7 +439,7 @@ class GatewayService {
     }
     const message = `{ 'body': ${messageBody}, 'header': ${messageHeader} }`;
     const ffarsSignature = new FfarsSignature();
-    const isVerified = ffarsSignature.verifyMessage(message, signature);
+    const isVerified = ffarsSignature.verifyMessageFromFfars(message, signature);
     return isVerified;
   }
 

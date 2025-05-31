@@ -1,8 +1,3 @@
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
-import CustomError from "../utils/custom-error.js";
-
 export class FfarsSignature {
   constructor() {
     const privateKeyPath = path.resolve("keys/private_key.pem");
@@ -22,28 +17,45 @@ export class FfarsSignature {
     const signer = crypto.createSign("RSA-SHA256");
     signer.update(rawMessage);
     signer.end();
-    const signature = signer.sign(this.privateKey, "base64");
-    return signature;
+    return signer.sign(this.privateKey, "base64");
   }
 
-  verifyMessage(rawMessage, signature) {
+  // Verifies a message signed by FFARS
+  verifyMessageFromFfars(rawMessage, signature) {
     const verifier = crypto.createVerify("RSA-SHA256");
     verifier.update(rawMessage);
     verifier.end();
-    const isVerified = verifier.verify(this.ffarsPublicKey, signature, "base64");
-    return isVerified;
+    return verifier.verify(this.ffarsPublicKey, signature, "base64");
   }
 
-  test(messageBody = "sample-body", messageHeader = "sample-header") {
+  // Verifies a message signed by this system (UCS)
+  verifyMessageFromUcs(rawMessage, signature) {
+    const verifier = crypto.createVerify("RSA-SHA256");
+    verifier.update(rawMessage);
+    verifier.end();
+    return verifier.verify(this.publicKey, signature, "base64");
+  }
+
+  // Test UCS sign and UCS verify to confirm keys are valid
+  test() {
     try {
-      const message = JSON.stringify({ body: messageBody, header: messageHeader });
+      const message = JSON.stringify({
+        body: "sample-body",
+        header: "sample-header",
+      });
 
       const signature = this.signMessage(message);
-      const isVerified = this.verifyMessage(message, signature);
+      const isVerified = this.verifyMessageFromUcs(message, signature);
 
-      return isVerified;
+      return {
+        message,
+        signature,
+        verified: isVerified,
+      };
     } catch (err) {
-      return err.message;
+      return {
+        error: err.message,
+      };
     }
   }
 }
