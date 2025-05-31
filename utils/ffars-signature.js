@@ -25,8 +25,6 @@ export class FfarsSignature {
     signer.update(rawMessage);
     signer.end();
     const signature = signer.sign(this.privateKey, "base64");
-    console.log("Generated Signature:", signature);
-    console.log("Message to be signed:", rawMessage);
     return signature;
   }
 
@@ -38,8 +36,6 @@ export class FfarsSignature {
     verifier.end();
 
     console.log("Verifying with public key:", this.publicKey);
-    console.log("Signature:", signature);
-    console.log("Raw message:", rawMessage);
     return verifier.verify(this.publicKey, signature, "base64");
   }
 
