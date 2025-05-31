@@ -48,16 +48,9 @@ export class FfarsSignature {
         body: "sample-body",
         header: "sample-header",
       });
-
       const signature = this.signMessage(message);
       const isVerified = this.verifyMessageFromUcs(message, signature);
-      const jsonMessage = JSON.parse(message);
-
-      return {
-        message: jsonMessage,
-        signature,
-        isVerified,
-      };
+      return isVerified;
     } catch (err) {
       return {
         error: err.message,
