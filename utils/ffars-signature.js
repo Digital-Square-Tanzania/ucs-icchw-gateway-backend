@@ -33,6 +33,10 @@ export class FfarsSignature {
     const verifier = crypto.createVerify("RSA-SHA256");
     verifier.update(rawMessage);
     verifier.end();
+
+    console.log("Verifying with public key:", this.publicKey);
+    console.log("Signature:", signature);
+    console.log("Raw message:", rawMessage);
     return verifier.verify(this.publicKey, signature, "base64");
   }
 
