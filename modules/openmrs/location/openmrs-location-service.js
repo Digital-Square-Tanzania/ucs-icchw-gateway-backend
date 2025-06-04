@@ -106,22 +106,19 @@ class OpenMRSLocationService {
     return await OpenMRSLocationRepository.refreshLocationHierarchyView();
   }
 
-  /**
-   * Sync OpenMRS Locations in Batches
-   */
+  // Sync OpenMRS Locations in Batches
   static async syncLocations(pageSize) {
     try {
       console.log("🔄 Syncing OpenMRS Locations in batches...");
+
       let fetchedRecords = 0;
       let totalFetched = 0;
-
-      const concurrency = 10; // Set the level of concurrency you want
+      const concurrency = 10;
       const limit = pLimit(concurrency);
 
       while (true) {
         console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
 
-        // Fetch current batch from OpenMRS
         const response = await OpenMRSApiClient.get("location", {
           v: "custom:(locationId,name,description,latitude,longitude,retired,uuid,parentLocation:(name,uuid),tags:(name,uuid),attributes:(display),dateCreated)",
           startIndex: fetchedRecords,
@@ -159,7 +156,7 @@ class OpenMRSLocationService {
             longitude: location.longitude,
             retired: location.retired,
             uuid: location.uuid || null,
-            parentLocation: location.parentLocation,
+            parentLocation: location.parentLocation || null,
             tags: location.tags || [],
             hfrCode,
             locationCode,
@@ -167,25 +164,27 @@ class OpenMRSLocationService {
           };
         });
 
-        // Upsert the whole batch sequentially (typically a DB transaction)
+        // Upsert locations in batch
         await OpenMRSLocationRepository.upsertLocations(transformedLocations);
 
-        // Save sync logs concurrently using p-limit
-        const logTasks = locations.map((location) =>
+        // Save logs concurrently
+        const logTasks = transformedLocations.map((loc) =>
           limit(() =>
-            OpenMRSLocationRepository.saveSyncLog("openmrs_location", location.uuid, "SYNC", "SUCCESS", {
-              name: location.name,
-              retired: location.retired,
-              uuid: location.uuid || null,
-              parentUuid: location.parent || null,
-              type: location.type || null,
-              hfrCode: location.hfrCode || null,
-              locationCode: location.locationCode || null,
+            OpenMRSLocationRepository.saveSyncLog("openmrs_location", loc.uuid, "SYNC", "SUCCESS", {
+              name: loc.name,
+              retired: loc.retired,
+              uuid: loc.uuid,
+              parentUuid: loc.parentLocation?.uuid || null,
+              type: null, // Add if needed
+              hfrCode: loc.hfrCode,
+              locationCode: loc.locationCode,
             })
           )
         );
 
-        await Promise.all(logTasks); // Run all sync log saves with concurrency
+        // Run concurrently with safe option to avoid crashing on single log failure
+        await Promise.allSettled(logTasks);
+        // If you prefer to crash on error, replace above with: await Promise.all(logTasks);
 
         totalFetched += fetchedCount;
         fetchedRecords += fetchedCount;
@@ -195,7 +194,8 @@ class OpenMRSLocationService {
 
       console.log("✅ OpenMRS Location Sync Completed.");
     } catch (error) {
-      throw new CustomError("❌ OpenMRS Location Sync Error: " + error.message);
+      console.error("❌ Error syncing OpenMRS locations:", error.message);
+      throw new CustomError("OpenMRS Location Sync Error: " + error.message);
     }
   }
 
