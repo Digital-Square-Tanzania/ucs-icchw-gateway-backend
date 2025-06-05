@@ -264,21 +264,53 @@ class GatewayService {
           locationDescription: teamMember.locationDescription,
           openMrsUuid: teamMember.openMrsUuid,
           NIN: chw.NIN,
+          updatedAt: new Date(),
         };
 
-        // Dynamically add only updated fields
-        if (updatedFields.includes("firstName")) teamMemberUpsertPayload.firstName = chw.firstName;
-        if (updatedFields.includes("middleName")) teamMemberUpsertPayload.middleName = chw.middleName;
-        if (updatedFields.includes("lastName")) teamMemberUpsertPayload.lastName = chw.lastName;
-        if (updatedFields.includes("email")) teamMemberUpsertPayload.email = chw.email;
-        if (updatedFields.includes("phoneNumber")) teamMemberUpsertPayload.phoneNumber = chw.phoneNumber;
-        // If sex is tracked locally, also do: if (updatedFields.includes("sex")) ...
+        // Only assign if value is present and changed
+        if (updatedFields.includes("firstName") && chw.firstName) {
+          teamMemberUpsertPayload.firstName = chw.firstName;
+        }
+        if (updatedFields.includes("middleName") && chw.middleName !== undefined) {
+          teamMemberUpsertPayload.middleName = chw.middleName;
+        }
+        if (updatedFields.includes("lastName") && chw.lastName) {
+          teamMemberUpsertPayload.lastName = chw.lastName;
+        }
+        if (updatedFields.includes("email") && chw.email) {
+          teamMemberUpsertPayload.email = chw.email;
+        }
+        if (updatedFields.includes("phoneNumber") && chw.phoneNumber) {
+          teamMemberUpsertPayload.phoneNumber = chw.phoneNumber;
+        }
 
-        // Push to local DB
-        await TeamMemberRepository.upsertTeamMembers([teamMemberUpsertPayload]);
+        // You must also make sure the `create` object has **all required fields**:
+        const teamMemberCreatePayload = {
+          identifier: teamMember.identifier,
+          username: teamMember.username,
+          personUuid,
+          userUuid: teamMember.userUuid,
+          teamUuid: teamMember.teamUuid,
+          teamName: teamMember.teamName,
+          teamIdentifier: teamMember.teamIdentifier,
+          locationUuid: teamMember.locationUuid,
+          locationName: teamMember.locationName,
+          locationDescription: teamMember.locationDescription,
+          openMrsUuid: teamMember.openMrsUuid,
+          NIN: chw.NIN,
+          firstName: chw.firstName || teamMember.firstName,
+          middleName: chw.middleName ?? teamMember.middleName,
+          lastName: chw.lastName || teamMember.lastName,
+          email: chw.email || teamMember.email,
+          phoneNumber: chw.phoneNumber || teamMember.phoneNumber,
+        };
 
-        // Push changes to Postgres replica
-        await TeamMemberRepository.upsertTeamMembers([teamMemberUpsertPayload]);
+        await TeamMemberRepository.upsertTeamMembers([
+          {
+            update: teamMemberUpsertPayload,
+            create: teamMemberCreatePayload,
+          },
+        ]);
 
         results.push({
           message: updatedFields.length > 0 ? "CHW demographic updated." : "No changes detected for CHW.",
