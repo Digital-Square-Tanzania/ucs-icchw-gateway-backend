@@ -253,11 +253,6 @@ class GatewayService {
         // Prepare local DB upsert payload
         const teamMemberUpsertPayload = {
           identifier: teamMember.identifier,
-          firstName: chw.firstName ?? teamMember.firstName,
-          middleName: chw.middleName ?? teamMember.middleName,
-          lastName: chw.lastName ?? teamMember.lastName,
-          email: chw.email ?? teamMember.email,
-          phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
           username: teamMember.username,
           personUuid,
           userUuid: teamMember.userUuid,
@@ -269,8 +264,18 @@ class GatewayService {
           locationDescription: teamMember.locationDescription,
           openMrsUuid: teamMember.openMrsUuid,
           NIN: chw.NIN,
-          updatedFields,
         };
+
+        // Dynamically add only updated fields
+        if (updatedFields.includes("firstName")) teamMemberUpsertPayload.firstName = chw.firstName;
+        if (updatedFields.includes("middleName")) teamMemberUpsertPayload.middleName = chw.middleName;
+        if (updatedFields.includes("lastName")) teamMemberUpsertPayload.lastName = chw.lastName;
+        if (updatedFields.includes("email")) teamMemberUpsertPayload.email = chw.email;
+        if (updatedFields.includes("phoneNumber")) teamMemberUpsertPayload.phoneNumber = chw.phoneNumber;
+        // If sex is tracked locally, also do: if (updatedFields.includes("sex")) ...
+
+        // Push to local DB
+        await TeamMemberRepository.upsertTeamMembers([teamMemberUpsertPayload]);
 
         // Push changes to Postgres replica
         await TeamMemberRepository.upsertTeamMembers([teamMemberUpsertPayload]);
