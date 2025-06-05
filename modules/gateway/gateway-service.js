@@ -251,48 +251,28 @@ class GatewayService {
         }
 
         // Local DB upsert payload
-        await prisma.openMRSTeamMember.upsert({
-          where: { identifier: teamMember.identifier },
-          update: {
-            firstName: chw.firstName ?? teamMember.firstName,
-            middleName: chw.middleName ?? teamMember.middleName,
-            lastName: chw.lastName ?? teamMember.lastName,
-            email: chw.email ?? teamMember.email,
-            phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
-            personUuid,
-            userUuid: teamMember.userUuid,
-            username: teamMember.username,
-            teamUuid: teamMember.teamUuid,
-            teamName: teamMember.teamName,
-            teamIdentifier: teamMember.teamIdentifier,
-            locationUuid: teamMember.locationUuid,
-            locationName: teamMember.locationName,
-            locationDescription: teamMember.locationDescription,
-            openmrsUuid: teamMember.openMrsUuid,
-            NIN: chw.NIN,
-            updatedAt: new Date(),
-          },
-          create: {
-            identifier: teamMember.identifier,
-            firstName: chw.firstName ?? teamMember.firstName,
-            middleName: chw.middleName ?? teamMember.middleName,
-            lastName: chw.lastName ?? teamMember.lastName,
-            email: chw.email ?? teamMember.email,
-            phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
-            personUuid,
-            userUuid: teamMember.userUuid,
-            username: teamMember.username,
-            teamUuid: teamMember.teamUuid,
-            teamName: teamMember.teamName,
-            teamIdentifier: teamMember.teamIdentifier,
-            locationUuid: teamMember.locationUuid,
-            locationName: teamMember.locationName,
-            locationDescription: teamMember.locationDescription,
-            openmrsUuid: teamMember.openMrsUuid,
-            NIN: chw.NIN,
-            updatedAt: new Date(),
-          },
-        });
+        const member = {
+          identifier: teamMember.identifier,
+          firstName: chw.firstName ?? teamMember.firstName,
+          middleName: chw.middleName ?? teamMember.middleName,
+          lastName: chw.lastName ?? teamMember.lastName,
+          email: chw.email ?? teamMember.email,
+          phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
+          personUuid,
+          userUuid: teamMember.userUuid,
+          username: teamMember.username,
+          teamUuid: teamMember.teamUuid,
+          teamName: teamMember.teamName,
+          teamIdentifier: teamMember.teamIdentifier,
+          locationUuid: teamMember.locationUuid,
+          locationName: teamMember.locationName,
+          locationDescription: teamMember.locationDescription,
+          openMrsUuid: teamMember.openMrsUuid,
+          nin: chw.NIN, // lowercase 'nin' to match Prisma field
+          updatedAt: new Date(),
+        };
+
+        await TeamMemberRepository.upsertTeamMembers([member]);
 
         results.push({
           message: updatedFields.length > 0 ? "CHW demographic updated." : "No changes detected for CHW.",
