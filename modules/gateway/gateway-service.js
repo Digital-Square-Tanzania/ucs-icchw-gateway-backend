@@ -268,7 +268,7 @@ class GatewayService {
           locationName: teamMember.locationName,
           locationDescription: teamMember.locationDescription,
           openMrsUuid: teamMember.openMrsUuid,
-          nin: chw.NIN, // lowercase 'nin' to match Prisma field
+          NIN: chw.NIN, // lowercase 'nin' to match Prisma field
           updatedAt: new Date(),
         };
 
