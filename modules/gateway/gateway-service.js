@@ -250,6 +250,30 @@ class GatewayService {
           await openmrsApiClient.post(`person/${personUuid}`, personUpdatePayload);
         }
 
+        // Prepare local DB upsert payload
+        const teamMemberUpsertPayload = {
+          identifier: teamMember.identifier,
+          firstName: chw.firstName ?? teamMember.firstName,
+          middleName: chw.middleName ?? teamMember.middleName,
+          lastName: chw.lastName ?? teamMember.lastName,
+          email: chw.email ?? teamMember.email,
+          phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
+          username: teamMember.username,
+          personUuid,
+          userUuid: teamMember.userUuid,
+          teamUuid: teamMember.teamUuid,
+          teamName: teamMember.teamName,
+          teamIdentifier: teamMember.teamIdentifier,
+          locationUuid: teamMember.locationUuid,
+          locationName: teamMember.locationName,
+          locationDescription: teamMember.locationDescription,
+          nin: chw.NIN,
+          updatedFields,
+        };
+
+        // Push changes to Postgres replica
+        await TeamMemberRepository.upsertTeamMembers([teamMemberUpsertPayload]);
+
         results.push({
           message: updatedFields.length > 0 ? "CHW demographic updated." : "No changes detected for CHW.",
           nin: chw.NIN,
