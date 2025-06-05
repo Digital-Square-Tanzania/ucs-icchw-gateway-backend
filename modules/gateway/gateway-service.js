@@ -268,7 +268,7 @@ class GatewayService {
           locationName: teamMember.locationName,
           locationDescription: teamMember.locationDescription,
           openMrsUuid: teamMember.openMrsUuid,
-          nin: chw.NIN,
+          NIN: chw.NIN,
           updatedFields,
         };
 
