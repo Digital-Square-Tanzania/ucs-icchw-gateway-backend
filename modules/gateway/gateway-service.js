@@ -250,67 +250,49 @@ class GatewayService {
           await openmrsApiClient.post(`person/${personUuid}`, personUpdatePayload);
         }
 
-        // Prepare local DB upsert payload
-        const teamMemberUpsertPayload = {
-          identifier: teamMember.identifier,
-          username: teamMember.username,
-          personUuid,
-          userUuid: teamMember.userUuid,
-          teamUuid: teamMember.teamUuid,
-          teamName: teamMember.teamName,
-          teamIdentifier: teamMember.teamIdentifier,
-          locationUuid: teamMember.locationUuid,
-          locationName: teamMember.locationName,
-          locationDescription: teamMember.locationDescription,
-          openMrsUuid: teamMember.openMrsUuid,
-          NIN: chw.NIN,
-          updatedAt: new Date(),
-        };
-
-        // Only assign if value is present and changed
-        if (updatedFields.includes("firstName") && chw.firstName) {
-          teamMemberUpsertPayload.firstName = chw.firstName;
-        }
-        if (updatedFields.includes("middleName") && chw.middleName !== undefined) {
-          teamMemberUpsertPayload.middleName = chw.middleName;
-        }
-        if (updatedFields.includes("lastName") && chw.lastName) {
-          teamMemberUpsertPayload.lastName = chw.lastName;
-        }
-        if (updatedFields.includes("email") && chw.email) {
-          teamMemberUpsertPayload.email = chw.email;
-        }
-        if (updatedFields.includes("phoneNumber") && chw.phoneNumber) {
-          teamMemberUpsertPayload.phoneNumber = chw.phoneNumber;
-        }
-
-        // You must also make sure the `create` object has **all required fields**:
-        const teamMemberCreatePayload = {
-          identifier: teamMember.identifier,
-          username: teamMember.username,
-          personUuid,
-          userUuid: teamMember.userUuid,
-          teamUuid: teamMember.teamUuid,
-          teamName: teamMember.teamName,
-          teamIdentifier: teamMember.teamIdentifier,
-          locationUuid: teamMember.locationUuid,
-          locationName: teamMember.locationName,
-          locationDescription: teamMember.locationDescription,
-          openMrsUuid: teamMember.openMrsUuid,
-          NIN: chw.NIN,
-          firstName: chw.firstName || teamMember.firstName,
-          middleName: chw.middleName ?? teamMember.middleName,
-          lastName: chw.lastName || teamMember.lastName,
-          email: chw.email || teamMember.email,
-          phoneNumber: chw.phoneNumber || teamMember.phoneNumber,
-        };
-
-        await TeamMemberRepository.upsertTeamMembers([
-          {
-            update: teamMemberUpsertPayload,
-            create: teamMemberCreatePayload,
+        // Local DB upsert payload
+        await prisma.openMRSTeamMember.upsert({
+          where: { identifier: teamMember.identifier },
+          update: {
+            firstName: chw.firstName ?? teamMember.firstName,
+            middleName: chw.middleName ?? teamMember.middleName,
+            lastName: chw.lastName ?? teamMember.lastName,
+            email: chw.email ?? teamMember.email,
+            phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
+            personUuid,
+            userUuid: teamMember.userUuid,
+            username: teamMember.username,
+            teamUuid: teamMember.teamUuid,
+            teamName: teamMember.teamName,
+            teamIdentifier: teamMember.teamIdentifier,
+            locationUuid: teamMember.locationUuid,
+            locationName: teamMember.locationName,
+            locationDescription: teamMember.locationDescription,
+            openmrsUuid: teamMember.openMrsUuid,
+            NIN: chw.NIN,
+            updatedAt: new Date(),
           },
-        ]);
+          create: {
+            identifier: teamMember.identifier,
+            firstName: chw.firstName ?? teamMember.firstName,
+            middleName: chw.middleName ?? teamMember.middleName,
+            lastName: chw.lastName ?? teamMember.lastName,
+            email: chw.email ?? teamMember.email,
+            phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
+            personUuid,
+            userUuid: teamMember.userUuid,
+            username: teamMember.username,
+            teamUuid: teamMember.teamUuid,
+            teamName: teamMember.teamName,
+            teamIdentifier: teamMember.teamIdentifier,
+            locationUuid: teamMember.locationUuid,
+            locationName: teamMember.locationName,
+            locationDescription: teamMember.locationDescription,
+            openmrsUuid: teamMember.openMrsUuid,
+            NIN: chw.NIN,
+            updatedAt: new Date(),
+          },
+        });
 
         results.push({
           message: updatedFields.length > 0 ? "CHW demographic updated." : "No changes detected for CHW.",
