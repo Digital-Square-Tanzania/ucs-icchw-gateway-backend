@@ -71,7 +71,7 @@ class TeamMemberRepository {
           NIN: member.nin,
           email: member.email,
           phoneNumber: member.phoneNumber,
-          openmrsUuid: member.openMrsUuid,
+          openMrsUuid: member.openMrsUuid,
           updatedAt: new Date(),
         },
         create: member, // Create if not exists
