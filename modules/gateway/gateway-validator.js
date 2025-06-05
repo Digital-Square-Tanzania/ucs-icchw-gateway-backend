@@ -105,6 +105,7 @@ class GatewayValidator {
       middleName: Joi.string().allow(null, "").optional(),
       lastName: Joi.string().min(2),
       sex: Joi.string().valid("MALE", "FEMALE", "Male", "Female"),
+      email: Joi.string().email(),
     });
 
     const schema = Joi.object({

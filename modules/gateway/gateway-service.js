@@ -158,7 +158,6 @@ class GatewayService {
       // Validate the payload
       GatewayValidator.validateChwDemographicUpdate(payload);
 
-      // Normalize to array if single object is provided
       const chwUpdates = Array.isArray(payload.message.body) ? payload.message.body : [payload.message.body];
 
       const results = [];
@@ -170,23 +169,20 @@ class GatewayService {
           throw new ApiError(`CHW with NIN ${chw.NIN} not found in UCS.`, 404, 6);
         }
 
-        // Get full team member info to access person uuid
-        const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, {
-          v: "custom:(uuid,person:(uuid))",
-        });
+        const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, { v: "custom:(uuid,person:(uuid))" });
 
         const personUuid = teamMemberDetails.person?.uuid;
         if (!personUuid) {
           throw new ApiError(`Person UUID not found for NIN ${chw.NIN}`, 400, 7);
         }
 
-        // Fetch the full person details to fallback missing values
         const existingPerson = await openmrsApiClient.get(`person/${personUuid}`, {
           v: "full",
         });
 
         const personUpdatePayload = {};
         const updatedFields = [];
+        const emailAttributeTypeUuid = process.env.OPENMRS_EMAIL_ATTRIBUTE_TYPE_UUID || "c60b17ba-1c41-454b-89a1-6c329c75417e";
 
         // ✅ Gender
         if (chw.sex && (chw.sex.toUpperCase() === "MALE" || chw.sex.toUpperCase() === "FEMALE")) {
@@ -200,49 +196,66 @@ class GatewayService {
         // ✅ Names
         const existingName = existingPerson.preferredName || {};
         const nameUpdate = {};
-        const nameFieldsChanged = {};
+        let nameChanged = false;
 
         if (chw.firstName && chw.firstName !== existingName.givenName) {
           nameUpdate.givenName = chw.firstName;
-          nameFieldsChanged.firstName = true;
+          updatedFields.push("firstName");
+          nameChanged = true;
         }
         if (chw.middleName !== undefined && chw.middleName !== existingName.middleName) {
           nameUpdate.middleName = chw.middleName;
-          nameFieldsChanged.middleName = true;
+          updatedFields.push("middleName");
+          nameChanged = true;
         }
         if (chw.lastName && chw.lastName !== existingName.familyName) {
           nameUpdate.familyName = chw.lastName;
-          nameFieldsChanged.lastName = true;
+          updatedFields.push("lastName");
+          nameChanged = true;
         }
 
-        if (Object.keys(nameFieldsChanged).length > 0) {
-          // Ensure required values are always present
+        if (nameChanged) {
           nameUpdate.givenName = nameUpdate.givenName || existingName.givenName || "";
           nameUpdate.middleName = nameUpdate.middleName !== undefined ? nameUpdate.middleName : existingName.middleName || null;
           nameUpdate.familyName = nameUpdate.familyName || existingName.familyName || "";
 
           personUpdatePayload.names = [nameUpdate];
-
-          updatedFields.push(...Object.keys(nameFieldsChanged));
         }
 
-        // 🧠 Only update if there is something to update
+        // ✅ Email
+        if (chw.email) {
+          const newEmail = chw.email.trim();
+          const existingEmailAttr = (existingPerson.attributes || []).find((attr) => attr.attributeType.uuid === emailAttributeTypeUuid && !attr.voided);
+
+          const existingEmail = existingEmailAttr?.value?.trim();
+
+          if (!existingEmailAttr) {
+            // Create new email attribute
+            await openmrsApiClient.post(`person/${personUuid}/attribute`, {
+              attributeType: emailAttributeTypeUuid,
+              value: newEmail,
+            });
+            updatedFields.push("email");
+          } else if (existingEmail !== newEmail) {
+            // Update existing email attribute
+            await openmrsApiClient.post(`person/${personUuid}/attribute/${existingEmailAttr.uuid}`, {
+              value: newEmail,
+            });
+            updatedFields.push("email");
+          }
+        }
+
+        // ✅ Apply core person updates (gender/names)
         if (Object.keys(personUpdatePayload).length > 0) {
           await openmrsApiClient.post(`person/${personUuid}`, personUpdatePayload);
-          results.push({
-            message: "CHW demographic updated.",
-            nin: chw.NIN,
-            personUuid,
-            updatedFields,
-          });
-        } else {
-          results.push({
-            message: "No changes detected for CHW.",
-            nin: chw.NIN,
-            personUuid,
-            updatedFields: [],
-          });
         }
+
+        results.push({
+          message: updatedFields.length > 0 ? "CHW demographic updated." : "No changes detected for CHW.",
+          nin: chw.NIN,
+          personUuid,
+          updatedFields,
+        });
       }
 
       console.log("✅ CHW demographic updates processed.");
