@@ -228,7 +228,16 @@ class GatewayService {
           const newEmail = chw.email.trim();
           const existingEmailAttr = (existingPerson.attributes || []).find((attr) => attr.attributeType.uuid === emailAttributeTypeUuid && !attr.voided);
 
-          console.log("Exsting Person", existingPerson);
+          // Find the attribute with the matching attributeType UUID
+          const attribute = existingPerson.attributes.find((attr) => attr.attributeType && attr.attributeType.uuid === emailAttributeTypeUuid);
+
+          // Log the attributeType if found
+          if (attribute) {
+            console.log("Matched attributeType:", attribute.attributeType);
+            console.log("Value:", attribute.value); // Optional: log the actual value
+          } else {
+            console.log(`No attribute found with attributeType UUID ${targetAttributeTypeUuid}`);
+          }
 
           const existingEmail = existingEmailAttr?.value?.trim();
 
