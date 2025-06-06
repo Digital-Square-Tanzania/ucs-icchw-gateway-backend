@@ -236,7 +236,7 @@ class GatewayService {
             console.log("Matched attributeType:", attribute.attributeType);
             console.log("Value:", attribute.value); // Optional: log the actual value
           } else {
-            console.log(`No attribute found with attributeType UUID ${targetAttributeTypeUuid}`);
+            console.log(`No attribute found with attributeType UUID ${emailAttributeTypeUuid}`);
           }
 
           const existingEmail = existingEmailAttr?.value?.trim();
