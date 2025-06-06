@@ -240,6 +240,7 @@ class GatewayService {
           } else if (existingEmail !== newEmail) {
             // Update existing email attribute
             console.log("Existing Email Attribute::::", existingEmailAttr);
+
             await openmrsApiClient.post(`person/${personUuid}/attribute/${existingEmailAttr.uuid}`, {
               value: newEmail,
             });
@@ -282,13 +283,12 @@ class GatewayService {
           personUuid,
           updatedFields,
         });
+        console.log("TEAM Member", teamMember);
 
         const slug = await prisma.accountActivation.findFirst({
           where: { userUuid: teamMember.userUuid, type: "ACTIVATION", isUsed: false },
           select: { slug: true },
         });
-
-        console.log("SLUG", slug);
 
         if (updatedFields.includes("email") && slug) {
           req.params.slug = slug;
