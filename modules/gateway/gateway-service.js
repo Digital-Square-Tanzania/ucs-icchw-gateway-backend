@@ -284,7 +284,8 @@ class GatewayService {
         });
 
         const slug = await prisma.accountActivation.findFirst({
-          where: { userUuid: teamMember.userUuid, slugType: "ACTIVATION" },
+          where: { userUuid: teamMember.userUuid, slugType: "ACTIVATION", isUsed: false },
+          select: { slug: true },
         });
 
         console.log("SLUG", slug);
