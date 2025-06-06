@@ -159,6 +159,7 @@ class UserService {
   static async handleResendEmail(req, res, next) {
     try {
       const slug = req.params.slug;
+      console.log("🔄 Resending activation email for slug: ", slug);
       const activation = await prisma.accountActivation.findUnique({
         where: {
           slug,
