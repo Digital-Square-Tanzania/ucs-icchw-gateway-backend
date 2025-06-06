@@ -17,6 +17,7 @@ import TeamMemberService from "../openmrs/team-member/openmrs-team-member-servic
 import mysqlClient from "../../utils/mysql-client.js";
 import { FfarsSignature } from "../../utils/ffars-signature.js";
 import prisma from "../../config/prisma.js";
+import UserService from "../user/user-service.js";
 
 dotenv.config();
 
@@ -292,7 +293,7 @@ class GatewayService {
 
         if (updatedFields.includes("email") && slug) {
           req.params.slug = slug;
-          handleResendEmail(req);
+          UserService.handleResendEmail(req);
         }
       }
 
