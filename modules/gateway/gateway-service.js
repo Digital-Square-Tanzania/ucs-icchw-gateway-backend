@@ -230,6 +230,8 @@ class GatewayService {
 
           const existingEmail = existingEmailAttr?.value?.trim();
 
+          console.log("Existing Email Attribute:", existingEmailAttr);
+
           if (!existingEmailAttr) {
             // Create new email attribute
             await openmrsApiClient.post(`person/${personUuid}/attribute`, {
@@ -239,8 +241,6 @@ class GatewayService {
             updatedFields.push("email");
           } else if (existingEmail !== newEmail) {
             // Update existing email attribute
-            console.log("Existing Email Attribute::::", existingEmailAttr);
-
             await openmrsApiClient.post(`person/${personUuid}/attribute/${existingEmailAttr.uuid}`, {
               value: newEmail,
             });
