@@ -153,7 +153,7 @@ class GatewayService {
   }
 
   // Update CHW demographics from HRHIS
-  static async updateChwDemographics(req, _res, _next) {
+  static async updateChwDemographics(req, res, next) {
     try {
       const payload = req.body;
 
@@ -290,7 +290,7 @@ class GatewayService {
 
         if (updatedFields.includes("email") && slug) {
           req.params.slug = slug.slug;
-          UserService.handleResendEmail(req);
+          UserService.handleResendEmail(req, res, next);
         }
         console.log("Request Parameters Slug", req.params.slug);
       }
