@@ -228,20 +228,7 @@ class GatewayService {
           const newEmail = chw.email.trim();
           const existingEmailAttr = (existingPerson.attributes || []).find((attr) => attr.attributeType.uuid === emailAttributeTypeUuid && !attr.voided);
 
-          // Find the attribute with the matching attributeType UUID
-          const attribute = existingPerson.attributes.find((attr) => attr.attributeType && attr.attributeType.uuid === emailAttributeTypeUuid);
-
-          // Log the attributeType if found
-          if (attribute) {
-            console.log("Matched attributeType:", attribute.attributeType);
-            console.log("Value:", attribute.value); // Optional: log the actual value
-          } else {
-            console.log(`No attribute found with attributeType UUID ${emailAttributeTypeUuid}`);
-          }
-
           const existingEmail = existingEmailAttr?.value?.trim();
-
-          console.log("Existing Email Attribute:", existingEmailAttr);
 
           if (!existingEmailAttr) {
             // Create new email attribute
@@ -300,6 +287,8 @@ class GatewayService {
           where: { userUuid: teamMember.userUuid, type: "ACTIVATION", isUsed: false },
           select: { slug: true },
         });
+
+        console.log("SLUG", slug);
 
         if (updatedFields.includes("email") && slug) {
           req.params.slug = slug;
