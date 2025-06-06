@@ -290,7 +290,7 @@ class GatewayService {
 
         if (updatedFields.includes("email") && slug) {
           req.params.slug = slug.slug;
-          UserService.handleResendEmail(req, res, next);
+          await UserService.handleResendEmail(req, res, next);
         }
         console.log("Request Parameters Slug", req.params.slug);
       }
