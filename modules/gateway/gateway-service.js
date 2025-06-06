@@ -16,6 +16,7 @@ import OpenmrsHelper from "./helpers/openmrs-helper.js";
 import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
 import mysqlClient from "../../utils/mysql-client.js";
 import { FfarsSignature } from "../../utils/ffars-signature.js";
+import prisma from "../../config/prisma.js";
 
 dotenv.config();
 
@@ -280,6 +281,16 @@ class GatewayService {
           personUuid,
           updatedFields,
         });
+
+        const slug = await prisma.accountActivation.findFirst({
+          where: { userUuid: teamMember.userUuid, type: "ACTIVATION", isUsed: false },
+          select: { slug: true },
+        });
+
+        if (updatedFields.includes("email") && slug) {
+          req.params.slug = slug;
+          handleResendEmail(req);
+        }
       }
 
       console.log("✅ CHW demographic updates processed.");
