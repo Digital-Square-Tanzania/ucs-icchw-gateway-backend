@@ -228,6 +228,8 @@ class GatewayService {
           const newEmail = chw.email.trim();
           const existingEmailAttr = (existingPerson.attributes || []).find((attr) => attr.attributeType.uuid === emailAttributeTypeUuid && !attr.voided);
 
+          console.log("Exsting Person", existingPerson);
+
           const existingEmail = existingEmailAttr?.value?.trim();
 
           console.log("Existing Email Attribute:", existingEmailAttr);
