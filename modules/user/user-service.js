@@ -187,7 +187,8 @@ class UserService {
       });
 
       console.log("🔄 Open slugs for user: ", openSlugs);
-      if (openSlugs.length > 0) return { alert: true, message: "Tumia linki mpya uliyotumiwa kwenye email.", slug, login: false, resend: false };
+      console.log("Request is Email Change: ", req.params.emailChange);
+      if (openSlugs.length > 0 && !req.params.emailChange) return { alert: true, message: "Tumia linki mpya uliyotumiwa kwenye email.", slug, login: false, resend: false };
       console.log("🔄 Valid email resend request received, resending the email for slug: ", slug);
 
       // Generate an activation slug and record

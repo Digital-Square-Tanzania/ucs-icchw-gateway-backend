@@ -290,6 +290,7 @@ class GatewayService {
 
         if (updatedFields.includes("email") && slug) {
           req.params.slug = slug.slug;
+          req.params.emailChange = true;
           await UserService.handleResendEmail(req, res, next);
         }
       }
