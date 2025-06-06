@@ -288,8 +288,6 @@ class GatewayService {
           select: { slug: true },
         });
 
-        console.log("SLUG", slug);
-
         if (updatedFields.includes("email") && slug) {
           req.params.slug = slug;
           UserService.handleResendEmail(req);
