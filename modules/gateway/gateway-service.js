@@ -289,9 +289,10 @@ class GatewayService {
         });
 
         if (updatedFields.includes("email") && slug) {
-          req.params.slug = slug;
+          req.params.slug = slug.slug;
           UserService.handleResendEmail(req);
         }
+        console.log("Request Parameters Slug", req.params.slug);
       }
 
       console.log("✅ CHW demographic updates processed.");
