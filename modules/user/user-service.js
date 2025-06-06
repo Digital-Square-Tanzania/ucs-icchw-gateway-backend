@@ -166,13 +166,9 @@ class UserService {
         },
       });
 
-      console.log("🔄 Activation record found: ", activation);
-
       const member = await prisma.openMRSTeamMember.findUnique({
         where: { userUuid: activation.userUuid },
       });
-
-      console.log("🔄 Member record found: ", member);
 
       if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
 
@@ -189,6 +185,8 @@ class UserService {
           },
         },
       });
+
+      console.log("🔄 Open slugs for user: ", openSlugs);
       if (openSlugs.length > 0) return { alert: true, message: "Tumia linki mpya uliyotumiwa kwenye email.", slug, login: false, resend: false };
       console.log("🔄 Valid email resend request received, resending the email for slug: ", slug);
 

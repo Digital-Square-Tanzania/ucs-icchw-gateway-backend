@@ -292,7 +292,6 @@ class GatewayService {
           req.params.slug = slug.slug;
           await UserService.handleResendEmail(req, res, next);
         }
-        console.log("Request Parameters Slug", req.params.slug);
       }
 
       console.log("✅ CHW demographic updates processed.");
