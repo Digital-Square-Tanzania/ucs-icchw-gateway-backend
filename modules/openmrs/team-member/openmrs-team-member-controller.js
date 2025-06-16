@@ -93,7 +93,9 @@ class TeamMemberController {
   // Upload CSV file
   static async uploadCsv(req, res, next) {
     try {
-      const file = req.file;
+      const file = req.file || (req.files ? req.files[0] : null);
+      console.log("Received file:", file);
+      console.log("Whole Request:", req.body);
       if (!file) {
         return BaseResponse.error(res, "No file uploaded", 400);
       }
