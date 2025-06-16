@@ -279,7 +279,7 @@ class TeamMemberService {
   }
 
   // Upload CSV file and process it
-  static async uploadCsv(file) {
+  static async processCsv(file) {
     try {
       const csvProcessor = new CsvProcessor();
       const rows = await csvProcessor.readCsv(file.path);
