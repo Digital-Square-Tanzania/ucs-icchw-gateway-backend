@@ -111,8 +111,13 @@ class TeamMemberController {
         return BaseResponse.error(res, "No file uploaded", 400);
       }
 
-      // const csvData = await TeamMemberService.processCsv(fileBuffer);
-      return BaseResponse.success(res, "CSV file processed successfully", fileBuffer);
+      // Convert the Buffer to a UTF-8 string so that CSV content is readable
+      const fileContent = fileBuffer.toString("utf8");
+
+      // Optionally, process the CSV content here
+      // const csvData = await TeamMemberService.processCsv(fileContent);
+
+      return BaseResponse.success(res, "CSV file processed successfully", fileContent);
     } catch (error) {
       next(error);
     }
