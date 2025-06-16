@@ -95,7 +95,7 @@ class TeamMemberController {
     try {
       const file = req.file || (req.files ? req.files[0] : null);
       console.log("Received file:", file);
-      console.log("Whole Request:", req.body);
+      console.log("Whole Request:", req);
       if (!file) {
         return BaseResponse.error(res, "No file uploaded", 400);
       }
