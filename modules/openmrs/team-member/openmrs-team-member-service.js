@@ -282,8 +282,7 @@ class TeamMemberService {
   // Upload CSV file and process it
   static async processCsv(file) {
     try {
-      const csvProcessor = new CsvProcessor();
-      const rows = await csvProcessor.processCsv(file.path);
+      const rows = await CsvProcessor.readCsv(file.path);
       console.log("CSV rows:", rows);
       // Process the rows as needed
       return rows;
