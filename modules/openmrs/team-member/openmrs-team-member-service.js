@@ -490,7 +490,7 @@ class TeamMemberService {
           ${result.rejected
             .map(
               (row) => `
-          <p><strong>Row ${row.rowNumber}:</strong> ${row.firstName} ${row.lastName} (${row.username}) - ${row.ward} - Rejection Reason: ${row.rejectionReason}</p>
+          <p><strong>Row ${row.rowNumber}:</strong> ${row.originalRow.first_name} ${row.originalRow.last_name} (${row.username}) - ${row.ward} - Rejection Reason: ${row.rejectionReason}</p>
           `
             )
             .join("")}
