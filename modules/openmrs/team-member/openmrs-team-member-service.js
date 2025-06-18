@@ -501,7 +501,6 @@ class TeamMemberService {
           <p>Asante kwa kutumia UCS!</p>`,
       });
 
-      console.log(" > ✉️  Email sent to:", emailReceiver);
       console.log("✅ CSV file processed successfully.");
       return result;
     } catch (error) {
