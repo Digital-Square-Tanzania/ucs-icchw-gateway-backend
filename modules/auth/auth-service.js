@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 import AuthRepository from "./auth-repository.js";
 
 class AuthService {
-  static async login(email, password) {
+  static async login(req, email, password) {
     const user = await AuthRepository.findUserByEmail(email);
 
     if (!user || user.isDeleted) {

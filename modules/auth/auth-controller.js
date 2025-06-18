@@ -5,7 +5,7 @@ class AuthController {
   static async login(req, res) {
     try {
       const { email, password } = req.body;
-      const { accessToken, refreshToken } = await AuthService.login(email, password);
+      const { accessToken, refreshToken } = await AuthService.login(req, email, password);
 
       return BaseResponse.success(res, "Authentication successful", { accessToken, refreshToken });
     } catch (error) {
