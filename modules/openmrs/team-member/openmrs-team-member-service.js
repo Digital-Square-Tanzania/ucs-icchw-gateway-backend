@@ -303,6 +303,10 @@ class TeamMemberService {
       const teamCache = {};
 
       for (const [index, row] of rows.entries()) {
+        if (!row || typeof row !== "object") {
+          console.warn(`⚠️ Skipping invalid row at index ${index}:`, row);
+          continue;
+        }
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
         const userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
@@ -341,21 +345,21 @@ class TeamMemberService {
         }
 
         const cleaned = {
-          firstName: (row.first_name || "").trim(),
-          middleName: (row.middle_name || "").trim(),
-          lastName: (row.last_name || "").trim(),
-          sex: (row.gender || "").toUpperCase(),
-          region: (row.regional_name || "").trim(),
-          council: (row.council_name || "").trim(),
-          ward: (row.ward || "").trim(),
+          firstName: row.first_name?.trim() || "",
+          middleName: row.middle_name?.trim() || "",
+          lastName: row.last_name?.trim() || "",
+          sex: row.gender?.trim().toUpperCase() || "",
+          region: row.regional_name?.trim() || "",
+          council: row.council_name?.trim() || "",
+          ward: row.ward?.trim() || "",
           wardUuid: locationUuid,
-          username: (row.username || "").trim(),
+          username: row.username?.trim() || "",
           userUuid: (userResult.length > 0 ? userResult[0].uuid : null) || null,
           personUuid: personUuid || null,
-          password: (row.password || "").trim(),
-          identifier: (row.user_identifier || "").trim(),
-          intervention: (row.intervention || "").trim(),
-          role: (row.user_role || "").trim(),
+          password: row.password?.trim() || "",
+          identifier: row.user_identifier?.trim() || "",
+          intervention: row.intervention?.trim() || "",
+          role: row.user_role?.trim() || "",
           teamName: team.teamName || null,
           teamUuid: team.uuid || null,
           teamIdentifier: team.teamIdentifier || null,
