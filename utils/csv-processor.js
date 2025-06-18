@@ -4,7 +4,7 @@ import csv from "csv-parser";
 export class CsvProcessor {
   static async readCsvFromBuffer(buffer) {
     const rows = [];
-    const stream = Readable.from(buffer); // 🔥 No fs.createReadStream here
+    const stream = Readable.from(buffer);
 
     return new Promise((resolve, reject) => {
       stream

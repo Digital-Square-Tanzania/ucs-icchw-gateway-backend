@@ -93,13 +93,10 @@ class TeamMemberController {
   // Upload CSV file
   static async uploadCsv(req, res, next) {
     try {
-      // if (!req.file) {
-      //   return BaseResponse.error(res, "No file uploaded", 400);
-      // }
-
-      console.log("🧾 FILE:", req.file);
-      console.log("📨 req.body:", req.body);
-      const csvData = await TeamMemberService.processCsv(req.file); // <--- pass the multer `file` object
+      if (!req.file) {
+        return BaseResponse.error(res, "No file uploaded", 400);
+      }
+      const csvData = await TeamMemberService.processCsv(req.file);
       return BaseResponse.success(res, "CSV file processed successfully", csvData);
     } catch (error) {
       next(error);
