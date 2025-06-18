@@ -323,7 +323,7 @@ class TeamMemberService {
             console.warn(`⚠️ No team found for ward: ${row.ward.trim()}`);
             team = await openmrsApiClient.post("team/team", {
               teamName: row.ward_name.trim() + " Ward Team",
-              teamIdentifier: row.ward.trim() + "WardTeam",
+              teamIdentifier: row.ward_name.trim() + "WardTeam",
               location: { uuid: locationUuid },
             });
           }
