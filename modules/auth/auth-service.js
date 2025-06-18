@@ -25,6 +25,10 @@ class AuthService {
       { expiresIn: process.env.JWT_ACCESS_EXPIRY || "1h" } // Access token valid for 1 hour
     );
 
+    const currentUser = { id: user.id, email: user.email, role: user.role.name, firstName: user.firstName, lastName: user.lastName };
+
+    req.user = currentUser;
+
     // Create Refresh Token (Long-lived)
     const refreshToken = jwt.sign(
       { id: user.id, email: user.email, role: user.role.name },

@@ -286,6 +286,8 @@ class TeamMemberService {
         throw new Error("No valid file buffer provided.");
       }
 
+      console.log("***** Current User ******", req.user);
+
       const rows = await CsvProcessor.readCsvFromBuffer(file.buffer);
       console.log(`DATA >> Parsed ${rows.length} rows from CSV.`);
 
@@ -445,13 +447,52 @@ class TeamMemberService {
         console.log(`✅ Team member ${cleaned.firstName + " " + cleaned.lastName} CHW account created.`);
       }
 
-      return {
+      const result = {
         total: rows.length,
         acceptedCount: accepted.length,
         rejectedCount: rejected.length,
         accepted,
         rejected,
       };
+
+      // Send result object via email
+      const email = await EmailService.sendEmail({
+        to: payload.message.body[0].email,
+        subject: "UCS Accounts File Upload Completed",
+        text: `Hongera, \n Faili lako ulilopakia kwenye mfumo wa UCS limepokelewa na kufanyiwa kazi kikamilifu. Matokeo ya upakiaji huo yameambatanishwa hapa chini.\n`,
+        html: `<h1><strong>Hongera!</strong></h1>
+          <p>aili lako ulilopakia kwenye mfumo wa UCS limepokelewa na kufanyiwa kazi kikamilifu..</p>
+          <p>Matokeo ya upakiaji huo yameambatanishwa hapa chini.</p>
+          <hr>
+          <h2>Matokeo ya Upakiaji</h2>
+          <p>Jumla ya safu zilizopakiwa: <strong>${result.total}</strong></p>
+          <p>Idadi ya safu zilizopokelewa: <strong>${result.acceptedCount}</strong></p>
+          <p>Idadi ya safu zilizokataliwa: <strong>${result.rejectedCount}</strong></p>
+          <h3>Safu Zilizopokelewa</h3>
+          <br>
+          ${result.accepted
+            .map(
+              (row) => `
+          <p><strong>Row ${row.rowNumber}:</strong> ${row.firstName} ${row.lastName} (${row.username}) - ${row.ward}</p>
+          `
+            )
+            .join("")}
+          <h3>Safu Zilizokataliwa</h3>
+          <br>
+          ${result.rejected
+            .map(
+              (row) => `
+          <p><strong>Row ${row.rowNumber}:</strong> ${row.originalRow.first_name} ${row.originalRow.last_name} (${row.originalRow.username}) - ${row.originalRow.ward} - Rejection Reason: ${row.rejectionReason}</p>
+          `
+            )
+            .join("")}
+          <hr>
+          <p>Kwa maelezo zaidi, tafadhali wasiliana na timu ya msaada wa UCS.</p>
+          <p>Asante kwa kutumia UCS!</p>
+          <hr>`,
+      });
+
+      return result;
     } catch (error) {
       throw new CustomError("Failed to process CSV file: " + error, 500);
     }
