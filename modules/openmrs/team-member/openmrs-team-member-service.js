@@ -348,7 +348,7 @@ class TeamMemberService {
         rejected,
       };
     } catch (error) {
-      throw new CustomError("Failed to process CSV file: " + error.message, 500);
+      throw new CustomError("Failed to process CSV file: " + error, 500);
     }
   }
 }
