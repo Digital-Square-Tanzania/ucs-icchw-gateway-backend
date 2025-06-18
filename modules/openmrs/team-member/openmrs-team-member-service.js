@@ -349,7 +349,7 @@ class TeamMemberService {
           wardUuid: locationUuid,
           username: (row.username || "").trim(),
           userUuid: (userResult.length > 0 ? userResult[0].uuid : null) || null,
-          personUuid: (personUuid.length > 0 ? personUuid[0].uuid : null) || null,
+          personUuid: personUuid || null,
           password: (row.password || "").trim(),
           identifier: (row.user_identifier || "").trim(),
           intervention: (row.intervention || "").trim(),
