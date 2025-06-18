@@ -300,7 +300,17 @@ class TeamMemberService {
         let locationUuid = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
 
         const locationUuidVal = locationUuid.length > 0 ? locationUuid[0].uuid : null;
-        const team = teams.results.find((t) => t.location && t.location.uuid === locationUuidVal);
+        let team = teams.results.find((t) => t.location && t.location.uuid === locationUuidVal);
+        if (!team) {
+          console.warn(`⚠️ No team found for ward: ${row.ward.trim()}`);
+          team = await openmrsApiClient.post("team/team", {
+            teamName: row.ward_name.trim() + " Ward Team",
+            teamIdentifier: row.ward.trim() + "WardTeam",
+            location: {
+              uuid: locationUuidVal,
+            },
+          });
+        }
 
         // console.log("Team fetched:", team);
 
@@ -319,8 +329,8 @@ class TeamMemberService {
           intervention: (row.intervention || "").trim(),
           role: (row.user_role || "").trim(),
           teamName: team && team.teamName ? team.teamName : null,
-          teamUuid: team && team.teamName ? team.uuid : null,
-          teamIdentifier: team && team.teamName ? team.teamIdentifier : null,
+          teamUuid: team && team.uuid ? team.uuid : null,
+          teamIdentifier: team && team.teamIdentifier ? team.teamIdentifier : null,
           originalRow: row,
           rowNumber: index + 2, // +2 to account for header and zero-indexing
         };
