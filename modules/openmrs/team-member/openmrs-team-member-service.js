@@ -294,14 +294,13 @@ class TeamMemberService {
 
       for (const [index, row] of rows.entries()) {
         let locationUuid = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
-        const team = await openmrsApiClient.get("team", {
+        const teams = await openmrsApiClient.get("team", {
           v: "custom:(uuid,teamName,teamIdentifier,display,location:(uuid,name,description))",
-          location: locationUuid,
-          limit: 1,
         });
-        if (!team || !team.results || team.results.length === 0) {
-          console.warn(`⚠️ Team not found for ward: ${row.ward.trim()}`);
-        }
+
+        const locationUuidVal = locationUuid.length > 0 ? locationUuid[0].uuid : null;
+        const team = teams.results.find((t) => t.location && t.location.uuid === locationUuidVal);
+
         console.log("Team fetched:", team);
 
         const cleaned = {
