@@ -398,8 +398,6 @@ class TeamMemberService {
 
         console.log("Team Member Object", teamMemberObject);
 
-        console.log("Team Member Creation Response:", newTeamMember);
-
         if (!newTeamMember.uuid) {
           throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
         }
