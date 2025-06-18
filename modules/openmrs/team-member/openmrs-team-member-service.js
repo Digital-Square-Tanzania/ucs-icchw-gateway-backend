@@ -289,19 +289,20 @@ class TeamMemberService {
       const rows = await CsvProcessor.readCsvFromBuffer(file.buffer);
       console.log(`✅ Parsed ${rows.length} rows from CSV.`);
 
+      const teams = await openmrsApiClient.get("team/team", {
+        v: "custom:(uuid,teamName,teamIdentifier,display,location:(uuid,name,description))",
+      });
+
       const accepted = [];
       const rejected = [];
 
       for (const [index, row] of rows.entries()) {
         let locationUuid = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
-        const teams = await openmrsApiClient.get("team/team", {
-          v: "custom:(uuid,teamName,teamIdentifier,display,location:(uuid,name,description))",
-        });
 
         const locationUuidVal = locationUuid.length > 0 ? locationUuid[0].uuid : null;
         const team = teams.results.find((t) => t.location && t.location.uuid === locationUuidVal);
 
-        console.log("Team fetched:", team);
+        // console.log("Team fetched:", team);
 
         const cleaned = {
           firstName: (row.first_name || "").trim(),
@@ -317,6 +318,9 @@ class TeamMemberService {
           identifier: (row.user_identifier || "").trim(),
           intervention: (row.intervention || "").trim(),
           role: (row.user_role || "").trim(),
+          teamName: team.teamName || null,
+          teamUuid: team.uuid || null,
+          teamIdentifier: team.teamIdentifier || null,
           originalRow: row,
           rowNumber: index + 2, // +2 to account for header and zero-indexing
         };
