@@ -302,7 +302,7 @@ class TeamMemberService {
       for (const [index, row] of rows.entries()) {
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
-        const userUuid = await mysqlClient.query("SELECT uuid FROM users WHERE username = ?", [row.username.trim()]);
+        const userUuid = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
         if (userUuid.length > 0) {
           rejected.push({
             ...row,
@@ -359,6 +359,7 @@ class TeamMemberService {
           wardUuid: locationUuid,
           username: (row.username || "").trim(),
           userUuid: (userUuid.length > 0 ? userUuid[0].uuid : null) || null,
+          personUuid: (userUuid.length > 0 ? userUuid[0].person_id : null) || null,
           password: (row.password || "").trim(),
           identifier: (row.user_identifier || "").trim(),
           intervention: (row.intervention || "").trim(),
@@ -380,6 +381,74 @@ class TeamMemberService {
             rejectionReason: "Missing required fields",
           });
         }
+
+        const teamRoleUuid = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.UCS_PROD_PROVIDER_ROLE_UUID_PROD);
+        const teamMemberObject = {
+          identifier: cleaned.identifier,
+          locations: [
+            {
+              uuid: cleaned.wardUuid,
+            },
+          ],
+          joinDate: new Date().toISOString().split("T")[0],
+          team: {
+            uuid: cleaned.teamUuid,
+          },
+          teamRole: {
+            uuid: teamRoleUuid,
+          },
+          person: {
+            uuid: cleaned.personUuid,
+          },
+          isDataProvider: "false",
+        };
+
+        // Send the request to OpenMRS server using OpenMRS API Client
+        const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
+
+        if (!newTeamMember.uuid) {
+          throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
+        }
+        console.log("New Team Member Created in OpenMRS:");
+        console.log("🔄 Creating a local team member account in UCS.");
+
+        // Check if the CHW exists in team members by NIN
+        const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
+
+        if (identifiedTeamMember) {
+          throw new ApiError("Duplicate CHW ID found.", 409, 2);
+        }
+
+        let formattedMember = {};
+
+        // Format team member data
+        formattedMember = {
+          identifier: cleaned.identifier,
+          firstName: cleaned.givenName || "",
+          middleName: cleaned.middleName || null,
+          lastName: cleaned.lastName || "",
+          personUuid: cleaned.personUuid,
+          username: cleaned.username,
+          userUuid: cleaned.userUuid,
+          openMrsUuid: newTeamMember.uuid,
+          teamUuid: cleaned.teamUuid || null,
+          teamName: cleaned.teamName || null,
+          teamIdentifier: cleaned.teamIdentifier || null,
+          locationUuid: cleaned.wardUuid || null,
+          locationName: cleaned.ward || null,
+          locationDescription: "ADDO ward in UCS" || null,
+          roleUuid: teamRoleUuid || null,
+          roleName: "UCS Provider" || null,
+          NIN: null,
+          email: null,
+          phoneNumber: null,
+          createdAt: new Date("2024-10-01T12:01:00Z"), // Placeholder date, adjust as needed
+        };
+
+        // Save the returned object as a new team member in the database
+        await TeamMemberRepository.upsertTeamMember(formattedMember);
+        console.log(`Team member ${firstName + " " + lastName} created locally.`);
+        console.log(`✅ CHW account created successfuly.`);
       }
 
       return {
