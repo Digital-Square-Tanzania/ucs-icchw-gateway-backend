@@ -304,7 +304,7 @@ class TeamMemberService {
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
         const userUuid = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
         console.log("User UUID Query PERSON ID:", userUuid[0].person_id);
-        if (userUuid.length > 0) {
+        if (userUuid.length <= 0) {
           rejected.push({
             ...row,
             rejectionReason: "Username already exists",
