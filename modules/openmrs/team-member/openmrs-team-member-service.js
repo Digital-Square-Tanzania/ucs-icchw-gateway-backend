@@ -282,10 +282,57 @@ class TeamMemberService {
   // Upload CSV file and process it
   static async processCsv(file) {
     try {
-      const rows = await CsvProcessor.readCsv(file.path);
-      console.log("CSV rows:", rows);
-      // Process the rows as needed
-      return rows;
+      if (!file || !file.buffer) {
+        throw new Error("No valid file buffer provided.");
+      }
+
+      const rows = await CsvProcessor.readCsvFromBuffer(file.buffer);
+      console.log(`✅ Parsed ${rows.length} rows from CSV.`);
+
+      const accepted = [];
+      const rejected = [];
+
+      for (const [index, row] of rows.entries()) {
+        const cleaned = {
+          firstName: (row.first_name || "").trim(),
+          middleName: (row.middle_name || "").trim(),
+          lastName: (row.last_name || "").trim(),
+          sex: (row.sex || "").toUpperCase(),
+          phoneNumber: (row.phone_number || "").trim(),
+          email: (row.email || "").trim(),
+          nin: (row.nin || "").trim(),
+          wardName: (row.ward_name || "").trim(),
+          facilityName: (row.facility_name || "").trim(),
+          facilityCode: (row.facility_code || "").trim(),
+          teamName: (row.team_name || "").trim(),
+          teamIdentifier: (row.team_identifier || "").trim(),
+          teamUuid: (row.team_uuid || "").trim(),
+          locationUuid: (row.location_uuid || "").trim(),
+          locationName: (row.location_name || "").trim(),
+          originalRow: row,
+          rowNumber: index + 2, // +2 to account for header and zero-indexing
+        };
+
+        // Basic validation
+        const isValid = cleaned.firstName && cleaned.lastName && cleaned.sex && cleaned.phoneNumber && cleaned.nin && cleaned.teamUuid && cleaned.locationUuid;
+
+        if (isValid) {
+          accepted.push(cleaned);
+        } else {
+          rejected.push({
+            ...cleaned,
+            rejectionReason: "Missing required fields",
+          });
+        }
+      }
+
+      return {
+        total: rows.length,
+        acceptedCount: accepted.length,
+        rejectedCount: rejected.length,
+        accepted,
+        rejected,
+      };
     } catch (error) {
       throw new CustomError("Failed to process CSV file: " + error.message, 500);
     }

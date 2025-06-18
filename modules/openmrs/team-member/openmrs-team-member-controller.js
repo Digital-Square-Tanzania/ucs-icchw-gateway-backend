@@ -93,25 +93,11 @@ class TeamMemberController {
   // Upload CSV file
   static async uploadCsv(req, res, next) {
     try {
-      let fileBuffer;
-
-      if (req.file && req.file.buffer) {
-        fileBuffer = req.file.buffer;
-      } else {
-        // If req.file is missing, attempt to read from the request stream
-        fileBuffer = await new Promise((resolve, reject) => {
-          const chunks = [];
-          req.on("data", (chunk) => chunks.push(chunk));
-          req.on("end", () => resolve(Buffer.concat(chunks)));
-          req.on("error", (err) => reject(err));
-        });
-      }
-
-      if (!fileBuffer || fileBuffer.length === 0) {
+      if (!req.file) {
         return BaseResponse.error(res, "No file uploaded", 400);
       }
 
-      const csvData = await TeamMemberService.processCsv(fileBuffer);
+      const csvData = await TeamMemberService.processCsv(req.file); // <--- pass the multer `file` object
       return BaseResponse.success(res, "CSV file processed successfully", csvData);
     } catch (error) {
       next(error);
