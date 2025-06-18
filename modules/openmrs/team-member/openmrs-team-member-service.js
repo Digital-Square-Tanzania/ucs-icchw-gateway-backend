@@ -398,7 +398,7 @@ class TeamMemberService {
         if (!newTeamMember.uuid) {
           throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
         }
-        console.log("🚧 New Team Member Created in OpenMRS: \n 🔄 Creating the new member locally!");
+        console.log(" > 🚧 New Team Member Created in OpenMRS: \n > 🔄 Creating the new member locally!");
 
         // Check if the CHW exists in team members by NIN
         const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
