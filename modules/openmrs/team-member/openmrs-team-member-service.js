@@ -303,6 +303,7 @@ class TeamMemberService {
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
         const userUuid = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
+        const personUuid = await mysqlClient.query("SELECT uuid FROM person WHERE person_id = ?", [userUuid[0].person_id]);
         if (userUuid.length > 0) {
           rejected.push({
             ...row,
@@ -359,7 +360,7 @@ class TeamMemberService {
           wardUuid: locationUuid,
           username: (row.username || "").trim(),
           userUuid: (userUuid.length > 0 ? userUuid[0].uuid : null) || null,
-          personUuid: (userUuid.length > 0 ? userUuid[0].person_id : null) || null,
+          personUuid: (personUuid.length > 0 ? personUuid[0].uuid : null) || null,
           password: (row.password || "").trim(),
           identifier: (row.user_identifier || "").trim(),
           intervention: (row.intervention || "").trim(),
@@ -382,7 +383,7 @@ class TeamMemberService {
           });
         }
 
-        const teamRoleUuid = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.UCS_PROD_PROVIDER_ROLE_UUID_PROD);
+        const teamRoleUuid = process.env.UCS_PROD_PROVIDER_ROLE_UUID_PROD;
         const teamMemberObject = {
           identifier: cleaned.identifier,
           locations: [
