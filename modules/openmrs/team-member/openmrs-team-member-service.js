@@ -302,7 +302,7 @@ class TeamMemberService {
           region: (row.regional_name || "").trim(),
           council: (row.council_name || "").trim(),
           ward: (row.ward || "").trim(),
-          wardUuid: locationUuid[0].uuid ? locationUuid[0].uuid : null,
+          wardUuid: locationUuid.length > 0 && locationUuid[0].uuid ? locationUuid[0].uuid : null,
           username: (row.username || "").trim(),
           password: (row.password || "").trim(),
           identifier: (row.user_identifier || "").trim(),
