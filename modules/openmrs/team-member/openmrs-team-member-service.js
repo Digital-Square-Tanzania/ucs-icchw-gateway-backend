@@ -296,23 +296,40 @@ class TeamMemberService {
       const accepted = [];
       const rejected = [];
 
-      for (const [index, row] of rows.entries()) {
-        let locationUuid = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
+      // 🧠 Cache to track teams per locationUuid
+      const teamCache = {};
 
-        const locationUuidVal = locationUuid.length > 0 ? locationUuid[0].uuid : null;
-        let team = teams.results.find((t) => t.location && t.location.uuid === locationUuidVal);
-        if (!team) {
-          console.warn(`⚠️ No team found for ward: ${row.ward.trim()}`);
-          team = await openmrsApiClient.post("team/team", {
-            teamName: row.ward_name.trim() + " Ward Team",
-            teamIdentifier: row.ward.trim() + "WardTeam",
-            location: {
-              uuid: locationUuidVal,
-            },
+      for (const [index, row] of rows.entries()) {
+        let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
+        const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
+
+        if (!locationUuid) {
+          rejected.push({
+            ...row,
+            rejectionReason: "Unknown Ward Name",
+            rowNumber: index + 2,
           });
+          continue;
         }
 
-        // console.log("Team fetched:", team);
+        let team = teamCache[locationUuid];
+
+        if (!team) {
+          // First check in OpenMRS existing teams
+          team = teams.results.find((t) => t.location && t.location.uuid === locationUuid);
+
+          // If not found, create and cache it
+          if (!team) {
+            console.warn(`⚠️ No team found for ward: ${row.ward.trim()}`);
+            team = await openmrsApiClient.post("team/team", {
+              teamName: row.ward_name.trim() + " Ward Team",
+              teamIdentifier: row.ward.trim() + "WardTeam",
+              location: { uuid: locationUuid },
+            });
+          }
+
+          teamCache[locationUuid] = team;
+        }
 
         const cleaned = {
           firstName: (row.first_name || "").trim(),
@@ -322,28 +339,22 @@ class TeamMemberService {
           region: (row.regional_name || "").trim(),
           council: (row.council_name || "").trim(),
           ward: (row.ward || "").trim(),
-          wardUuid: locationUuid.length > 0 && locationUuid[0].uuid ? locationUuid[0].uuid : null,
+          wardUuid: locationUuid,
           username: (row.username || "").trim(),
           password: (row.password || "").trim(),
           identifier: (row.user_identifier || "").trim(),
           intervention: (row.intervention || "").trim(),
           role: (row.user_role || "").trim(),
-          teamName: team && team.teamName ? team.teamName : null,
-          teamUuid: team && team.uuid ? team.uuid : null,
-          teamIdentifier: team && team.teamIdentifier ? team.teamIdentifier : null,
+          teamName: team.teamName || null,
+          teamUuid: team.uuid || null,
+          teamIdentifier: team.teamIdentifier || null,
           originalRow: row,
-          rowNumber: index + 2, // +2 to account for header and zero-indexing
+          rowNumber: index + 2,
         };
 
-        // Basic validation for required fields (excluding wardUuid)
         const isValid = cleaned.firstName && cleaned.lastName && cleaned.sex && cleaned.council && cleaned.ward && cleaned.username && cleaned.password && cleaned.identifier;
 
-        if (!cleaned.wardUuid) {
-          rejected.push({
-            ...cleaned,
-            rejectionReason: "Unknown Ward Name",
-          });
-        } else if (isValid) {
+        if (isValid) {
           accepted.push(cleaned);
         } else {
           rejected.push({
