@@ -287,8 +287,6 @@ class TeamMemberService {
         throw new Error("No valid file buffer provided.");
       }
 
-      console.log("***** Current User ******", req.user);
-
       const rows = await CsvProcessor.readCsvFromBuffer(file.buffer);
       console.log(`DATA >> Parsed ${rows.length} rows from CSV.`);
 
@@ -456,9 +454,11 @@ class TeamMemberService {
         rejected,
       };
 
+      const emailReceiver = req.user.email || "kizomanizo@gmail.com";
+
       // Send result object via email
-      const email = await EmailService.sendEmail({
-        to: payload.message.body[0].email,
+      await EmailService.sendEmail({
+        to: emailReceiver,
         subject: "UCS Accounts File Upload Completed",
         text: `Hongera, \n Faili lako ulilopakia kwenye mfumo wa UCS limepokelewa na kufanyiwa kazi kikamilifu. Matokeo ya upakiaji huo yameambatanishwa hapa chini.\n`,
         html: `<h1><strong>Hongera!</strong></h1>
