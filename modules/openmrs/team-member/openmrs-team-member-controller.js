@@ -97,7 +97,7 @@ class TeamMemberController {
       //   return BaseResponse.error(res, "No file uploaded", 400);
       // }
 
-      console.log("🧾 REQ:", req);
+      console.log("🧾 FILE:", req.file);
       console.log("📨 req.body:", req.body);
       const csvData = await TeamMemberService.processCsv(req.file); // <--- pass the multer `file` object
       return BaseResponse.success(res, "CSV file processed successfully", csvData);
