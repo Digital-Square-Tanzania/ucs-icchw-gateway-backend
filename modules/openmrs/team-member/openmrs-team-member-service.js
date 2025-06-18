@@ -311,7 +311,7 @@ class TeamMemberService {
         };
 
         // Basic validation
-        const isValid = cleaned.firstName && cleaned.lastName && cleaned.sex && cleaned.phoneNumber && cleaned.nin && cleaned.teamUuid && cleaned.locationUuid;
+        const isValid = cleaned.firstName && cleaned.lastName && cleaned.sex && cleaned.council && cleaned.ward && cleaned.username && cleaned.password && cleaned.identifier;
 
         if (isValid) {
           accepted.push(cleaned);
