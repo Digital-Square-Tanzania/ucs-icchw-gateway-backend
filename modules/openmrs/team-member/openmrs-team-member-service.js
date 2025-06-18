@@ -303,7 +303,7 @@ class TeamMemberService {
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
         const userUuid = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
-        console.log("User UUID Query Result:", userUuid);
+        console.log("User UUID Query PERSON ID:", userUuid[0].person_id);
         const personUuid = await mysqlClient.query("SELECT uuid FROM person WHERE person_id = ?", [userUuid[0].person_id]);
         if (userUuid.length > 0) {
           rejected.push({
