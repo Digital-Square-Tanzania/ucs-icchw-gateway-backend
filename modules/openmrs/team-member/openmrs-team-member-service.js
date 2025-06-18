@@ -89,7 +89,7 @@ class TeamMemberService {
               createdAt: new Date(member.dateCreated),
             });
           } catch (err) {
-            console.warn(`⚠️ Skipping team member due to error: ${err.message} (UUID: ${member?.uuid || "N/A"})`);
+            console.warn(` > ⚠️ Skipping team member due to error: ${err.message} (UUID: ${member?.uuid || "N/A"})`);
           }
         }
 
@@ -101,7 +101,7 @@ class TeamMemberService {
             seenIdentifiers.add(member.identifier);
             uniqueMembers.push(member);
           } else {
-            console.warn(`⚠️ Duplicate identifier in batch: ${member.identifier}, skipping...`);
+            console.warn(` > ⚠️ Duplicate identifier in batch: ${member.identifier}, skipping...`);
           }
         }
 
@@ -110,7 +110,7 @@ class TeamMemberService {
             await TeamMemberRepository.upsertTeamMember(member);
           } catch (err) {
             if (err.code === "P2002") {
-              console.warn(`⚠️ Skipping duplicate identifier: ${member.identifier}`);
+              console.warn(` > ⚠️ Skipping duplicate identifier: ${member.identifier}`);
               continue;
             }
             console.error(`❌ Error upserting member ${member.identifier}:`, err.message);
@@ -304,7 +304,7 @@ class TeamMemberService {
 
       for (const [index, row] of rows.entries()) {
         if (!row || typeof row !== "object") {
-          console.warn(`⚠️ Skipping invalid row at index ${index}:`, row);
+          console.warn(` > ⚠️ Skipping invalid row at index ${index}:`, row);
           continue;
         }
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
@@ -333,7 +333,7 @@ class TeamMemberService {
 
           // If not found, create and cache it
           if (!team) {
-            console.warn(`⚠️ No team found for ward: ${row.ward.trim()}`);
+            console.warn(` > ⚠️ No team found for ward: ${row.ward.trim()}`);
             team = await openmrsApiClient.post("team/team", {
               teamName: row.ward_name.trim() + " Ward Team",
               teamIdentifier: row.ward_name.trim() + "WardTeam",
@@ -417,7 +417,7 @@ class TeamMemberService {
             rejectionReason: "Duplicate team member already exists",
             rowNumber: index + 2,
           });
-          console.warn(`⚠️ Duplicate CHW ID found: ${cleaned.identifier}, skipping...`);
+          console.warn(` > ⚠️ Duplicate CHW ID found: ${cleaned.identifier}, skipping...`);
           continue;
         }
 
