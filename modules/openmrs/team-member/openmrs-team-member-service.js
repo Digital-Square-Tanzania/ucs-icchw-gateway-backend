@@ -406,7 +406,13 @@ class TeamMemberService {
         const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
 
         if (identifiedTeamMember) {
-          throw new CustomError("Duplicate CHW ID found.", 409, 2);
+          // throw new CustomError("Duplicate CHW ID found.", 409, 2);
+          rejected.push({
+            ...row,
+            rejectionReason: "⚠️ Duplicate team member already exists",
+            rowNumber: index + 2,
+          });
+          continue;
         }
 
         let formattedMember = {};
