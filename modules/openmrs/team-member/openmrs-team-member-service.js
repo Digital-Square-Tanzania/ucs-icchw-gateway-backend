@@ -296,12 +296,11 @@ class TeamMemberService {
         let locationUuid = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const team = await openmrsApiClient.get("team", {
           v: "custom:(uuid,teamName,teamIdentifier,display,location:(uuid,name,description))",
-          teamName: row.council.trim(),
           location: locationUuid,
           limit: 1,
         });
         if (!team || !team.results || team.results.length === 0) {
-          console.warn(`⚠️ Council not found for name: ${row.council.trim()}`);
+          console.warn(`⚠️ Team not found for ward: ${row.ward.trim()}`);
         }
         console.log("Team fetched:", team);
 
