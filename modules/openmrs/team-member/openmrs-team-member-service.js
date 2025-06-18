@@ -469,7 +469,7 @@ class TeamMemberService {
         subject: "UCS Accounts File Upload Completed",
         text: `Hongera, \n Faili lako ulilopakia kwenye mfumo wa UCS limepokelewa na kufanyiwa kazi kikamilifu. Matokeo ya upakiaji huo yameambatanishwa hapa chini.\n`,
         html: `<h1><strong>Hongera!</strong></h1>
-          <p>aili lako ulilopakia kwenye mfumo wa UCS limepokelewa na kufanyiwa kazi kikamilifu..</p>
+          <p>Faili lako ulilopakia kwenye mfumo wa UCS limepokelewa na kufanyiwa kazi kikamilifu.</p>
           <p>Matokeo ya upakiaji huo yameambatanishwa hapa chini.</p>
           <hr>
           <h2>Matokeo ya Upakiaji</h2>
@@ -495,9 +495,10 @@ class TeamMemberService {
             )
             .join("")}
           <hr>
+          <h3>Result Object</h3>
+          <pre>${JSON.stringify(result, null, 2)}</pre>
           <p>Kwa maelezo zaidi, tafadhali wasiliana na timu ya msaada wa UCS.</p>
-          <p>Asante kwa kutumia UCS!</p>
-          <hr>`,
+          <p>Asante kwa kutumia UCS!</p>`,
       });
 
       console.log(" > ✉️  Email sent to:", emailReceiver);
