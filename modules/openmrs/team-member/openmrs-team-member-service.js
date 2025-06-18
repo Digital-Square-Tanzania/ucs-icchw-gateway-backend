@@ -294,7 +294,7 @@ class TeamMemberService {
 
       for (const [index, row] of rows.entries()) {
         let locationUuid = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
-        console.log("Location UUID:", locationUuid);
+        console.log("Location UUID:", locationUuid[0].uuid || "Not found");
 
         const cleaned = {
           firstName: (row.first_name || "").trim(),
