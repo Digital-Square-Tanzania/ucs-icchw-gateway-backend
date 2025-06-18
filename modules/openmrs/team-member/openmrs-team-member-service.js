@@ -7,6 +7,7 @@ import mysqlClient from "../../../utils/mysql-client.js";
 import ApiError from "../../../utils/api-error.js";
 import { CsvProcessor } from "../../../utils/csv-processor.js";
 import EmailService from "../../../utils/email-service.js";
+import ApiLogger from "../../../utils/api-logger.js";
 
 dotenv.config();
 
@@ -443,8 +444,9 @@ class TeamMemberService {
         };
 
         // Save the returned object as a new team member in the database
-        await TeamMemberRepository.upsertTeamMember(formattedMember);
         console.log(`✅ Team member ${cleaned.firstName + " " + cleaned.lastName} CHW account created.`);
+
+        await ApiLogger.log(req, { member: newTeamMember, identifier: cleaned.identifier });
       }
 
       const result = {
@@ -494,6 +496,9 @@ class TeamMemberService {
           <hr>`,
       });
 
+      console.log("✅ Email sent to:", emailReceiver);
+      console.log("✅ CSV file processed successfully.");
+      console.log("📊 Result:", result);
       return result;
     } catch (error) {
       throw new CustomError("Failed to process CSV file: " + error, 500);
