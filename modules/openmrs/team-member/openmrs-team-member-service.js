@@ -302,6 +302,23 @@ class TeamMemberService {
       for (const [index, row] of rows.entries()) {
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
+        const userUuid = await mysqlClient.query("SELECT uuid FROM users WHERE username = ?", [row.username.trim()]);
+        if (userUuid.length > 0) {
+          rejected.push({
+            ...row,
+            rejectionReason: "Username already exists",
+            rowNumber: index + 2,
+          });
+          continue;
+        }
+        if (!row.ward || !row.ward.trim()) {
+          rejected.push({
+            ...row,
+            rejectionReason: "Ward name is required",
+            rowNumber: index + 2,
+          });
+          continue;
+        }
 
         if (!locationUuid) {
           rejected.push({
@@ -341,6 +358,7 @@ class TeamMemberService {
           ward: (row.ward || "").trim(),
           wardUuid: locationUuid,
           username: (row.username || "").trim(),
+          userUuid: (userUuid.length > 0 ? userUuid[0].uuid : null) || null,
           password: (row.password || "").trim(),
           identifier: (row.user_identifier || "").trim(),
           intervention: (row.intervention || "").trim(),
