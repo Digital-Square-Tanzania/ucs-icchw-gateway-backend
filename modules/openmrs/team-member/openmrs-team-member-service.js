@@ -396,10 +396,6 @@ class TeamMemberService {
         // Send the request to OpenMRS server using OpenMRS API Client
         const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
 
-        console.log("Team Member Object", teamMemberObject);
-
-        console.log("Team Member Creation Response:", newTeamMember);
-
         if (!newTeamMember.uuid) {
           throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
         }
@@ -410,7 +406,7 @@ class TeamMemberService {
         const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
 
         if (identifiedTeamMember) {
-          throw new ApiError("Duplicate CHW ID found.", 409, 2);
+          throw new CustomError("Duplicate CHW ID found.", 409, 2);
         }
 
         let formattedMember = {};
@@ -441,7 +437,7 @@ class TeamMemberService {
 
         // Save the returned object as a new team member in the database
         await TeamMemberRepository.upsertTeamMember(formattedMember);
-        console.log(`Team member ${firstName + " " + lastName} created locally.`);
+        console.log(`Team member ${cleaned.firstName + " " + cleaned.lastName} created locally.`);
         console.log(`✅ CHW account created successfuly.`);
       }
 
