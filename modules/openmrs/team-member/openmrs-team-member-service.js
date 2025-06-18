@@ -318,9 +318,9 @@ class TeamMemberService {
           identifier: (row.user_identifier || "").trim(),
           intervention: (row.intervention || "").trim(),
           role: (row.user_role || "").trim(),
-          teamName: team.teamName || null,
-          teamUuid: team.uuid || null,
-          teamIdentifier: team.teamIdentifier || null,
+          teamName: team.length > 0 && team.teamName ? team.teamName : null,
+          teamUuid: team.length > 0 && team.teamName ? team.uuid : null,
+          teamIdentifier: team.length > 0 && team.teamName ? team.teamIdentifier : null,
           originalRow: row,
           rowNumber: index + 2, // +2 to account for header and zero-indexing
         };
