@@ -305,6 +305,7 @@ class TeamMemberService {
           password: (row.password || "").trim(),
           identifier: (row.user_identifier || "").trim(),
           intervention: (row.intervention || "").trim(),
+          role: (row.user_role || "").trim(),
           originalRow: row,
           rowNumber: index + 2, // +2 to account for header and zero-indexing
         };
