@@ -294,7 +294,7 @@ class TeamMemberService {
 
       for (const [index, row] of rows.entries()) {
         let locationUuid = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
-        const teams = await openmrsApiClient.get("team", {
+        const teams = await openmrsApiClient.get("team/team", {
           v: "custom:(uuid,teamName,teamIdentifier,display,location:(uuid,name,description))",
         });
 
