@@ -11,11 +11,23 @@ export class CsvProcessor {
         .pipe(csv({ skipEmptyLines: true, trim: true }))
         .on("data", (row) => {
           const cleanedRow = {};
+          let hasValue = false;
+
           for (const key in row) {
             const cleanKey = key.trim().toLowerCase().replace(/\s+/g, "_");
-            cleanedRow[cleanKey] = typeof row[key] === "string" ? row[key].trim() : row[key];
+            const cleanValue = typeof row[key] === "string" ? row[key].trim() : row[key];
+
+            if (cleanValue !== "") {
+              hasValue = true;
+            }
+
+            cleanedRow[cleanKey] = cleanValue;
           }
-          rows.push(cleanedRow);
+
+          // Only add row if at least one value is not empty
+          if (hasValue) {
+            rows.push(cleanedRow);
+          }
         })
         .on("end", () => resolve(rows))
         .on("error", reject);
