@@ -406,6 +406,8 @@ class TeamMemberService {
         // Send the request to OpenMRS server using OpenMRS API Client
         const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
 
+        console.log("Team Member Creation Response:", newTeamMember);
+
         if (!newTeamMember.uuid) {
           throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
         }
