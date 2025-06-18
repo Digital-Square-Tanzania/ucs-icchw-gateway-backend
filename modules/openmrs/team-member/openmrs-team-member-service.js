@@ -304,7 +304,6 @@ class TeamMemberService {
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
         const userUuid = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
         console.log("User UUID Query PERSON ID:", userUuid[0].person_id);
-        const personUuid = await mysqlClient.query("SELECT uuid FROM person WHERE person_id = ?", [userUuid[0].person_id]);
         if (userUuid.length > 0) {
           rejected.push({
             ...row,
@@ -313,22 +312,11 @@ class TeamMemberService {
           });
           continue;
         }
-        if (!row.ward || !row.ward.trim()) {
-          rejected.push({
-            ...row,
-            rejectionReason: "Ward name is required",
-            rowNumber: index + 2,
-          });
-          continue;
-        }
 
-        if (!locationUuid) {
-          rejected.push({
-            ...row,
-            rejectionReason: "Unknown Ward Name",
-            rowNumber: index + 2,
-          });
-          continue;
+        let personUuid = null;
+        if (userResult.length > 0 && userResult[0].person_id) {
+          const personResult = await mysqlClient.query("SELECT uuid FROM person WHERE person_id = ?", [userResult[0].person_id]);
+          personUuid = personResult.length > 0 ? personResult[0].uuid : null;
         }
 
         let team = teamCache[locationUuid];
