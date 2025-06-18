@@ -287,7 +287,7 @@ class TeamMemberService {
       }
 
       const rows = await CsvProcessor.readCsvFromBuffer(file.buffer);
-      console.log(`✅ Parsed ${rows.length} rows from CSV.`);
+      console.log(`DATA >> Parsed ${rows.length} rows from CSV.`);
 
       const teams = await openmrsApiClient.get("team/team", {
         v: "custom:(uuid,teamName,teamIdentifier,display,location:(uuid,name,description))",
@@ -303,7 +303,6 @@ class TeamMemberService {
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
         const userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
-        console.log("User UUID Query PERSON ID:", userResult[0].person_id);
         if (userResult.length <= 0) {
           rejected.push({
             ...row,
@@ -399,8 +398,7 @@ class TeamMemberService {
         if (!newTeamMember.uuid) {
           throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
         }
-        console.log("New Team Member Created in OpenMRS:");
-        console.log("🔄 Creating a local team member account in UCS.");
+        console.log("🚧 New Team Member Created in OpenMRS: \n 🔄 Creating the new member locally!");
 
         // Check if the CHW exists in team members by NIN
         const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
@@ -409,9 +407,10 @@ class TeamMemberService {
           // throw new CustomError("Duplicate CHW ID found.", 409, 2);
           rejected.push({
             ...row,
-            rejectionReason: "⚠️ Duplicate team member already exists",
+            rejectionReason: "Duplicate team member already exists",
             rowNumber: index + 2,
           });
+          console.warn(`⚠️ Duplicate CHW ID found: ${cleaned.identifier}, skipping...`);
           continue;
         }
 
@@ -443,8 +442,7 @@ class TeamMemberService {
 
         // Save the returned object as a new team member in the database
         await TeamMemberRepository.upsertTeamMember(formattedMember);
-        console.log(`Team member ${cleaned.firstName + " " + cleaned.lastName} created locally.`);
-        console.log(`✅ CHW account created successfuly.`);
+        console.log(`✅ Team member ${cleaned.firstName + " " + cleaned.lastName} CHW account created.`);
       }
 
       return {
