@@ -280,7 +280,8 @@ class TeamMemberService {
   }
 
   // Upload CSV file and process it
-  static async processCsv(file) {
+  static async processCsv(req) {
+    const file = req.file;
     try {
       if (!file || !file.buffer) {
         throw new Error("No valid file buffer provided.");

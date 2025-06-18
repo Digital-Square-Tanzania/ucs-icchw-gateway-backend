@@ -96,7 +96,7 @@ class TeamMemberController {
       if (!req.file) {
         return BaseResponse.error(res, "No file uploaded", 400);
       }
-      const csvData = await TeamMemberService.processCsv(req.file);
+      const csvData = await TeamMemberService.processCsv(req);
       return BaseResponse.success(res, "CSV file processed successfully", csvData);
     } catch (error) {
       next(error);
