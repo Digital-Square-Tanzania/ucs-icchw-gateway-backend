@@ -418,7 +418,7 @@ class TeamMemberService {
         // Format team member data
         formattedMember = {
           identifier: cleaned.identifier,
-          firstName: cleaned.givenName || "",
+          firstName: cleaned.firstName || "",
           middleName: cleaned.middleName || null,
           lastName: cleaned.lastName || "",
           personUuid: cleaned.personUuid,
