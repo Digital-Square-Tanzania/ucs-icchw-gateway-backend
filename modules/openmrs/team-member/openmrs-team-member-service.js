@@ -302,9 +302,9 @@ class TeamMemberService {
       for (const [index, row] of rows.entries()) {
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
-        const userUuid = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
-        console.log("User UUID Query PERSON ID:", userUuid[0].person_id);
-        if (userUuid.length <= 0) {
+        const userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
+        console.log("User UUID Query PERSON ID:", userResult[0].person_id);
+        if (userResult.length <= 0) {
           rejected.push({
             ...row,
             rejectionReason: "Username already exists",
@@ -348,7 +348,7 @@ class TeamMemberService {
           ward: (row.ward || "").trim(),
           wardUuid: locationUuid,
           username: (row.username || "").trim(),
-          userUuid: (userUuid.length > 0 ? userUuid[0].uuid : null) || null,
+          userUuid: (userResult.length > 0 ? userResult[0].uuid : null) || null,
           personUuid: (personUuid.length > 0 ? personUuid[0].uuid : null) || null,
           password: (row.password || "").trim(),
           identifier: (row.user_identifier || "").trim(),
