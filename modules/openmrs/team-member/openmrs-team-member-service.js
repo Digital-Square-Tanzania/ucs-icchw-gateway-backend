@@ -293,7 +293,7 @@ class TeamMemberService {
       const rejected = [];
 
       for (const [index, row] of rows.entries()) {
-        let locationUuid = mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
+        let locationUuid = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         console.log("Location UUID:", locationUuid);
 
         const cleaned = {
