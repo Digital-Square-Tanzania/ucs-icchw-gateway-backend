@@ -490,7 +490,7 @@ class TeamMemberService {
           ${result.rejected
             .map(
               (row) => `
-          <p><strong>Row ${row.rowNumber}:</strong> ${row.originalRow.first_name} ${row.originalRow.last_name} (${row.username}) - ${row.ward} - Rejection Reason: ${row.rejectionReason}</p>
+          <p><strong>Row ${row.rowNumber}:</strong> ${row.firstName} ${row.lastName} (${row.username}) - ${row.ward} - Rejection Reason: ${row.rejectionReason}</p>
           `
             )
             .join("")}
@@ -500,9 +500,8 @@ class TeamMemberService {
           <hr>`,
       });
 
-      console.log("✅ Email sent to:", emailReceiver);
+      console.log(" > ✉️  Email sent to:", emailReceiver);
       console.log("✅ CSV file processed successfully.");
-      console.log("📊 Result:", result);
       return result;
     } catch (error) {
       throw new CustomError("Failed to process CSV file: " + error, 500);
