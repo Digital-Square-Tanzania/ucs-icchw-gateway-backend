@@ -312,10 +312,15 @@ class TeamMemberService {
           rowNumber: index + 2, // +2 to account for header and zero-indexing
         };
 
-        // Basic validation
+        // Basic validation for required fields (excluding wardUuid)
         const isValid = cleaned.firstName && cleaned.lastName && cleaned.sex && cleaned.council && cleaned.ward && cleaned.username && cleaned.password && cleaned.identifier;
 
-        if (isValid) {
+        if (!cleaned.wardUuid) {
+          rejected.push({
+            ...cleaned,
+            rejectionReason: "Unknown Ward Name",
+          });
+        } else if (isValid) {
           accepted.push(cleaned);
         } else {
           rejected.push({
