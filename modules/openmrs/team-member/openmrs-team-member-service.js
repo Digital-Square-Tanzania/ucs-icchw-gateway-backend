@@ -425,6 +425,10 @@ class TeamMemberService {
             rowNumber: index + 2,
           });
           console.warn(` > 🚨 Duplicate CHW ID found: ${row.user_identifier.trim()}, process aborted...`);
+          await mysqlClient.query("USE openmrs");
+          console.log(" > 🔄 Deleting person with ID:", personId);
+          await mysqlClient.query("CALL delete_person(?)", [personId]);
+          console.log(` > 🗑️ Successfully deleted person with ID: ${personId}`);
           continue;
         }
 
@@ -467,9 +471,9 @@ class TeamMemberService {
         if (!newTeamMember.uuid) {
           // Delete the person if team member creation fails
           await mysqlClient.query("USE openmrs");
-          console.log("Deleting person with ID:", personId);
+          console.log(" > 🔄 Deleting person with ID:", personId);
           await mysqlClient.query("CALL delete_person(?)", [personId]);
-          console.log(`✅ Successfully deleted person with ID: ${personId}`);
+          console.log(` > 🗑️ Successfully deleted person with ID: ${personId}`);
           console.error("❌ Failed to create team member in OpenMRS.");
           rejected.push({
             ...row,
@@ -515,7 +519,11 @@ class TeamMemberService {
             rejectionReason: "Duplicate team member already exists",
             rowNumber: index + 2,
           });
-          console.warn(`🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
+          await mysqlClient.query("USE openmrs");
+          console.log(" > 🔄 Deleting person with ID:", personId);
+          await mysqlClient.query("CALL delete_person(?)", [personId]);
+          console.log(` > 🗑️ Successfully deleted person with ID: ${personId}`);
+          console.warn(` > 🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
           continue;
         }
 

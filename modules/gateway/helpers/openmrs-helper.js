@@ -59,7 +59,7 @@ class OpenmrsHelper {
       for (const attr of personAttributes) {
         // Validate all attributeType UUIDs exist
         if (!attr.attributeType) {
-          console.warn(`⚠️ Skipping ${attr.label} due to missing attributeType UUID`);
+          console.warn(` > ⚠️ Skipping ${attr.label} due to missing attributeType UUID`);
           continue;
         }
 
@@ -95,7 +95,7 @@ class OpenmrsHelper {
    */
   static async createOpenmrsUser(payload, newPerson) {
     try {
-      console.log("🔄 Creating new user in OpenMRS...");
+      console.log(" > 🔄 Creating new user in OpenMRS...");
       const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName(process.env.DEFAULT_ICCHW_ROLE_NAME);
       const userObject = {};
       const phone = payload.message.body[0].phoneNumber;
@@ -115,9 +115,9 @@ class OpenmrsHelper {
 
       if (!newUser.uuid) {
         await mysqlClient.query("USE openmrs");
-        console.log("Deleting person with ID:", newPerson.id);
+        console.log(" > 🔄 Deleting person with ID:", newPerson.id);
         await TeamMemberService.deletePerson(newPerson.id);
-        console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
+        console.log(` > 🗑️ Successfully deleted person with ID: ${newPerson.id}`);
         throw new ApiError("User could not be created: Probable duplicate", 400, 5);
       }
 
