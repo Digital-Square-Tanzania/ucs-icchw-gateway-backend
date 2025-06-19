@@ -559,7 +559,7 @@ class TeamMemberService {
       console.log("✅ CSV file processed successfully.");
       return result;
     } catch (error) {
-      throw new CustomError("Failed to process CSV file: " + error, 500);
+      throw new CustomError("Failed to process CSV file: " + error.stack, 500);
     }
   }
 
