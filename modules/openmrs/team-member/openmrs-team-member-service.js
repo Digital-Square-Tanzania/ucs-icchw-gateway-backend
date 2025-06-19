@@ -380,27 +380,26 @@ class TeamMemberService {
 
         // Check if the CHW exists in team members by NIN
         const teamMemberExists = await mysqlClient.query("SELECT uuid, identifier FROM team WHERE identifier = ?", [row.user_identifier.trim()]);
+        console.log("Existing Team Member Check:", teamMemberExists);
         if (teamMemberExists.length > 0) {
           rejected.push({
             ...row,
             rejectionReason: "✔ Team Member is already registered.",
             rowNumber: index + 2,
           });
-          continue;
+          stop;
         }
 
-        // const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
-
-        // if (identifiedTeamMember) {
-        //   // throw new CustomError("Duplicate CHW ID found.", 409, 2);
-        //   rejected.push({
-        //     ...row,
-        //     rejectionReason: "Duplicate team member already exists",
-        //     rowNumber: index + 2,
-        //   });
-        //   console.warn(`🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
-        //   continue;
-        // }
+        const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
+        if (identifiedTeamMember) {
+          rejected.push({
+            ...row,
+            rejectionReason: "Duplicate team member already exists",
+            rowNumber: index + 2,
+          });
+          console.warn(`🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
+          continue;
+        }
 
         const teamRoleUuid = process.env.UCS_PROD_PROVIDER_ROLE_UUID_PROD;
         const teamMemberObject = {
