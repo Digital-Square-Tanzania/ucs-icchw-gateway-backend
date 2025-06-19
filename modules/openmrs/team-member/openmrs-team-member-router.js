@@ -33,6 +33,6 @@ router.post("/upload", AuthMiddleware.authenticate, upload.single("file"), TeamM
 
 // INTERNAL ROUTES
 // Get team members by team UUID
-router.get("/team/:teamUuid", basicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), TeamMemberController.getTeamMembersByTeamUuid);
+router.get("/team/:teamUuid", TeamMemberController.getTeamMembersByTeamUuid);
 
 export default router;
