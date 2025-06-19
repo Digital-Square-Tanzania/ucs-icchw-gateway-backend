@@ -403,6 +403,7 @@ class TeamMemberService {
             rejectionReason: "✔ Team Member is already registered.",
             rowNumber: index + 2,
           });
+          console.warn(` > 🚨 Duplicate CHW ID found: ${row.user_identifier.trim()}, process aborted...`);
           continue;
         }
 
