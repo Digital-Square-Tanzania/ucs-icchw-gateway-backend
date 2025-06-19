@@ -379,7 +379,7 @@ class TeamMemberService {
         }
 
         // Check if the CHW exists in team members by NIN
-        const teamMemberExists = await mysqlClient.query("SELECT uuid, identifier FROM users WHERE identifier = ?", [row.user_identifier.trim()]);
+        const teamMemberExists = await mysqlClient.query("SELECT uuid, identifier FROM team WHERE identifier = ?", [row.user_identifier.trim()]);
         if (teamMemberExists.length > 0) {
           rejected.push({
             ...row,
