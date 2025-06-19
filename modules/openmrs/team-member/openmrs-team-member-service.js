@@ -330,12 +330,7 @@ class TeamMemberService {
         let personUuid = null;
         let personId = null;
         if (userResult.length <= 0) {
-          rejected.push({
-            ...row,
-            rejectionReason: "User is not yet registered in OpenMRS.",
-            rowNumber: index + 2,
-          });
-          // TODO: Create this person and user in OpenMRS
+          // DONE: Create this person and user in OpenMRS
           let payload = {};
           payload.message = {};
           payload.message.body = [];
@@ -354,6 +349,11 @@ class TeamMemberService {
 
           newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
           if (!newPerson || !newPerson.uuid) {
+            rejected.push({
+              ...row,
+              rejectionReason: "Failed to create person in OpenMRS.",
+              rowNumber: index + 2,
+            });
             console.log(" > ❌ Failed to create person in OpenMRS.");
           }
 
@@ -366,9 +366,6 @@ class TeamMemberService {
             username: row.username.trim(),
           });
         }
-
-        // Log user result to see if it is populated correctly
-        console.log(` > User Result for ${row.username.trim()}:`, userResult);
 
         // If user exists, fetch the person UUID
         if (userResult.length > 0 && userResult[0].person_id) {
