@@ -442,7 +442,7 @@ class TeamMemberService {
           });
         }
 
-        const teamRoleUuid = process.env.UCS_PROD_PROVIDER_ROLE_UUID_PROD;
+        const teamRoleUuid = process.env.UCS_PROVIDER_ROLE_UUID;
         const teamMemberObject = {
           identifier: cleaned.identifier,
           locations: [
