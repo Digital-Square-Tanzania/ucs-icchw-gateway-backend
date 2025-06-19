@@ -35,7 +35,7 @@ class TeamMemberService {
         console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
 
         const response = await openmrsApiClient.get("team/teammember", {
-          v: "custom:(uuid,identifier,dateCreated,teamRole,person:(uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
+          v: "custom:(uuid,identifier,dateCreated,teamRole,person:(id,uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
           startIndex: fetchedRecords,
           limit: pageSize,
         });
@@ -54,6 +54,13 @@ class TeamMemberService {
           try {
             if (!member.identifier || !member.uuid || !member.person) {
               throw new Error("Missing identifier or person data");
+            }
+
+            // Get user details from MySQL
+            const userDetails = await mysqlClient.query("SELECT user_id, uuid, username, person_id FROM users WHERE person_id = ?", [member.person.id]);
+            if (userDetails.length === 0) {
+              console.warn(` > ⚠️ Skipping team member with UUID ${member.uuid} due to missing user details.`);
+              continue;
             }
 
             let nin = null;
@@ -86,6 +93,8 @@ class TeamMemberService {
               NIN: nin,
               email,
               phoneNumber,
+              username: userDetails[0].username,
+              userUuid: userDetails[0].uuid,
               createdAt: new Date(member.dateCreated),
             });
           } catch (err) {
