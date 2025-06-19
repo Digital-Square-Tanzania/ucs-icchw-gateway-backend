@@ -82,7 +82,7 @@ class OpenmrsHelper {
       console.log(`New person created in OpenMRS with uuid: ${newPerson.uuid}`);
       return newPerson;
     } catch (error) {
-      throw new ApiError(500, `An error occurred while creating the person: ${error.message}`, 10);
+      throw new ApiError(500, `An error occurred while creating the person: ${error.stack}`, 10);
     }
   }
 
