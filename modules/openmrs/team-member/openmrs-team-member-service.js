@@ -387,7 +387,7 @@ class TeamMemberService {
             rejectionReason: "✔ Team Member is already registered.",
             rowNumber: index + 2,
           });
-          stop;
+          continue;
         }
 
         const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
