@@ -376,9 +376,6 @@ class TeamMemberService {
           personId = personResult.length > 0 ? personResult[0].person_id : null;
         }
 
-        console.log("Person UUID:", personUuid);
-        console.log("Person ID:", personId);
-
         let team = teamCache[locationUuid];
 
         if (!team) {
@@ -465,6 +462,9 @@ class TeamMemberService {
           },
           isDataProvider: "false",
         };
+
+        // Log the team member object being sent to OpenMRS
+        console.log(" > 📝 Team Member Object to be sent to OpenMRS:", teamMemberObject);
 
         // Send the request to OpenMRS server using OpenMRS API Client
         const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
