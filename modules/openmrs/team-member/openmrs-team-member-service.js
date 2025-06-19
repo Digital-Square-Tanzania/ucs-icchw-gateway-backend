@@ -8,6 +8,7 @@ import ApiError from "../../../utils/api-error.js";
 import { CsvProcessor } from "../../../utils/csv-processor.js";
 import EmailService from "../../../utils/email-service.js";
 import ApiLogger from "../../../utils/api-logger.js";
+import OpenmrsHelper from "../../gateway/helpers/openmrs-helper.js";
 
 dotenv.config();
 
@@ -346,7 +347,7 @@ class TeamMemberService {
 
           console.log(`Creating person ${row.first_name.trim()} ${row.last_name.trim()} in OpenMRS:`);
 
-          newPerson = await openmrsApiClient.post("person", payload);
+          newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
           if (!newPerson || !newPerson.uuid) {
             console.log(" > ❌ Failed to create person in OpenMRS.");
           }
