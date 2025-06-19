@@ -348,6 +348,9 @@ class TeamMemberService {
             NIN: null,
           });
 
+          let personUuid = null;
+          let personId = null;
+
           console.log(`Creating person ${row.first_name.trim()} ${row.last_name.trim()} in OpenMRS:`);
 
           newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
@@ -355,8 +358,12 @@ class TeamMemberService {
             console.log(" > ❌ Failed to create person in OpenMRS.");
           }
 
+          personUuid = newPerson.uuid;
+          personId = await mysqlClient.query("SELECT id FROM person WHERE uuid = ?", [newPerson.uuid]).then((res) => res[0].id);
+
           userResult.push({
-            uuid: newPerson.uuid,
+            personUuid: newPerson.uuid,
+            personId: personId,
             username: row.username.trim(),
           });
         }
@@ -365,13 +372,11 @@ class TeamMemberService {
         console.log(` > User Result for ${row.username.trim()}:`, userResult);
 
         // If user exists, fetch the person UUID
-        let personUuid = null;
-        let personId = null;
         if (userResult.length > 0 && userResult[0].person_id) {
-          const personResult = await mysqlClient.query("SELECT person_id, uuid FROM person WHERE uuid = ?", [userResult[0].person_id]);
+          const personResult = await mysqlClient.query("SELECT person_id, uuid FROM person WHERE person_id = ?", [userResult[0].person_id]);
 
           // If person exists, use its UUID else use the new person UUID
-          personUuid = newPerson.uuid || personResult.length > 0 ? personResult[0].uuid : null;
+          personUuid = personResult.length > 0 ? personResult[0].uuid : null;
           personId = personResult.length > 0 ? personResult[0].person_id : null;
         }
 
