@@ -345,8 +345,6 @@ class TeamMemberService {
             NIN: null,
           });
 
-          console.log(`Creating person ${row.first_name.trim()} ${row.last_name.trim()} in OpenMRS:`);
-
           newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
           if (!newPerson || !newPerson.uuid) {
             rejected.push({
@@ -462,9 +460,6 @@ class TeamMemberService {
           },
           isDataProvider: "false",
         };
-
-        // Log the team member object being sent to OpenMRS
-        console.log(" > 📝 Team Member Object to be sent to OpenMRS:", teamMemberObject);
 
         // Send the request to OpenMRS server using OpenMRS API Client
         const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);

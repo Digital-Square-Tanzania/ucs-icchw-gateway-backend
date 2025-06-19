@@ -18,7 +18,7 @@ class OpenmrsHelper {
    */
   static async createOpenmrsPerson(payload) {
     try {
-      console.log("🔄 Creating a new person in OpenMRS...");
+      console.log(" > 🔄 Creating a new person in OpenMRS...");
       const personObject = {};
       personObject.names = [];
       personObject.names.push({
@@ -78,7 +78,7 @@ class OpenmrsHelper {
         }
       }
 
-      console.log(`New person created in OpenMRS with uuid: ${newPerson.uuid}`);
+      console.log(` > 👤 New person created in OpenMRS with uuid: ${newPerson.uuid}`);
       return newPerson;
     } catch (error) {
       console.error("❌ Error creating person in OpenMRS:", error.message);
