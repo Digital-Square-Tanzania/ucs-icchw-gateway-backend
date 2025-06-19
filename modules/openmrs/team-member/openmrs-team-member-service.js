@@ -346,12 +346,12 @@ class TeamMemberService {
 
           console.log(`Creating person ${row.first_name.trim()} ${row.last_name.trim()} in OpenMRS:`);
 
-          // newPerson = await openmrsApiClient.post("person", payload);
-          // if (!newPerson || !newPerson.uuid) {
-          //   console.log(" > ❌ Failed to create person in OpenMRS.");
-          // }
+          newPerson = await openmrsApiClient.post("person", payload);
+          if (!newPerson || !newPerson.uuid) {
+            console.log(" > ❌ Failed to create person in OpenMRS.");
+          }
           console.log("Person created in OpenMRS:");
-          continue;
+          // continue;
         }
 
         // If user exists, fetch the person UUID
