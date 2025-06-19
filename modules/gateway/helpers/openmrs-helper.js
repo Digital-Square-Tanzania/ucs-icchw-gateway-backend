@@ -7,7 +7,6 @@ import MemberRoleRepository from "../../openmrs/member-role/openmrs-member-role-
 import GenerateSwahiliPassword from "../../../utils/generate-swahili-password.js";
 import TeamRepository from "../../openmrs/team/openmrs-team-repository.js";
 import mysqlClient from "../../../utils/mysql-client.js";
-import TeamMemberRepository from "../../openmrs/team-member/openmrs-team-member-repository.js";
 import TeamMemberService from "../../openmrs/team-member/openmrs-team-member-service.js";
 
 class OpenmrsHelper {
@@ -31,7 +30,7 @@ class OpenmrsHelper {
       });
       // Get birthdate from NIN for iCCHW or fallback to provided birthdate for WAJA
       personObject.uuid = payload.message.body[0].NIN;
-      personObject.birthdate = ExtractDateFromNin.extract(payload.message.body[0].NIN) || payload.message.body[0].birthdate;
+      personObject.birthdate = payload.message.body[0].NIN ? ExtractDateFromNin.extract(payload.message.body[0].NIN) : payload.message.body[0].birthdate;
       personObject.gender = payload.message.body[0].sex.toLowerCase() === "male" ? "M" : "F";
 
       // Create the person in OpenMRS
