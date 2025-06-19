@@ -545,11 +545,18 @@ class TeamMemberService {
         rejected,
       };
 
-      const emailReceiver = req.user.email || "kizomanizo@gmail.com";
+      const primaryRecipient = req.user.email;
+      const defaultRecipient = "kizomanizo@gmail.com";
+      const recipients = [];
 
-      // Send result object via email
+      if (primaryRecipient) {
+        recipients.push(primaryRecipient);
+      }
+      recipients.push(defaultRecipient);
+
+      // Send result object via email to both recipients
       await EmailService.sendEmail({
-        to: emailReceiver,
+        to: recipients,
         subject: "UCS Accounts File Upload Completed",
         text: `Hongera, \n Faili lako ulilopakia kwenye mfumo wa UCS limepokelewa na kufanyiwa kazi kikamilifu. Matokeo ya upakiaji huo yameambatanishwa hapa chini.\n`,
         html: `<h1><strong>Hongera!</strong></h1>
