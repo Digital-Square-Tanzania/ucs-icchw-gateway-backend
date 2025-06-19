@@ -530,7 +530,7 @@ class TeamMemberService {
         }
 
         // Save the returned object as a new team member in the database
-        const newTeamMemberRecord = await TeamMemberRepository.upsertTeamMember(formattedMember);
+        await TeamMemberRepository.upsertTeamMember(formattedMember);
         console.log(` > 🚧 Team member ${cleaned.firstName + " " + cleaned.lastName} CHW account created.`);
 
         await ApiLogger.log(req, { member: newTeamMember, identifier: cleaned.identifier });
