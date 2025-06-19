@@ -323,7 +323,7 @@ class TeamMemberService {
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
 
         // Check if the user exists in OpenMRS
-        const userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
+        let userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
 
         // Create an empty person object
         let newPerson = {};
@@ -354,9 +354,16 @@ class TeamMemberService {
           if (!newPerson || !newPerson.uuid) {
             console.log(" > ❌ Failed to create person in OpenMRS.");
           }
-          console.log("Person created in OpenMRS:");
-          // continue;
+
+          userResult.push({
+            uuid: newPerson.uuid,
+            person_id: newPerson.id,
+            username: row.username.trim(),
+          });
         }
+
+        // Log user result to see if it is populated correctly
+        console.log(` > User Result for ${row.username.trim()}:`, userResult);
 
         // If user exists, fetch the person UUID
         let personUuid = null;
