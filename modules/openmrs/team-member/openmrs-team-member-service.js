@@ -374,6 +374,8 @@ class TeamMemberService {
           personUuid = newPerson.uuid || personResult.length > 0 ? personResult[0].uuid : null;
         }
 
+        console.log("Person UUID:", personUuid);
+
         let team = teamCache[locationUuid];
 
         if (!team) {
