@@ -312,10 +312,10 @@ class TeamMemberService {
         const userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
         console.log("User Result", userResult);
         console.log("Username Row", row.username.trim());
-        if (userResult.length > 0) {
+        if (userResult.length <= 0) {
           rejected.push({
             ...row,
-            rejectionReason: "Username exists!",
+            rejectionReason: "User is not yet registered in OpenMRS.",
             rowNumber: index + 2,
           });
           continue;
