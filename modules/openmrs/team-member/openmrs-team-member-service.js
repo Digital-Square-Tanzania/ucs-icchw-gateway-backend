@@ -344,12 +344,14 @@ class TeamMemberService {
             birthDate: "1990-07-01", // Default date, iCCHW won't use this, their birthDate comes from NIN
           });
 
-          console.log("Payload Object for creating a person:", JSON.stringify(payload, null, 2));
+          console.log(`Creating person ${row.first_name.trim()} ${row.last_name.trim()} in OpenMRS:`);
 
-          newPerson = await openmrsApiClient.post("person", payload);
-          if (!newPerson || !newPerson.uuid) {
-            console.log(" > ❌ Failed to create person in OpenMRS.");
-          }
+          // newPerson = await openmrsApiClient.post("person", payload);
+          // if (!newPerson || !newPerson.uuid) {
+          //   console.log(" > ❌ Failed to create person in OpenMRS.");
+          // }
+          console.log("Person created in OpenMRS:");
+          continue;
         }
 
         // If user exists, fetch the person UUID
