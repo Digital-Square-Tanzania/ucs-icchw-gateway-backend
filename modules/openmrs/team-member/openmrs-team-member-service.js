@@ -313,7 +313,7 @@ class TeamMemberService {
         if (userResult.length <= 0) {
           rejected.push({
             ...row,
-            rejectionReason: "Username already exists",
+            rejectionReason: "Username is not registered yet!",
             rowNumber: index + 2,
           });
           continue;
