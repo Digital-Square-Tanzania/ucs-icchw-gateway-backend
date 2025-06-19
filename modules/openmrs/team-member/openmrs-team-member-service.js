@@ -432,6 +432,8 @@ class TeamMemberService {
           continue;
         }
 
+        console.log("Team member exists length:", teamMemberExists.length);
+
         const isValid =
           cleaned.firstName && cleaned.lastName && cleaned.sex && cleaned.council && cleaned.ward && cleaned.username && cleaned.password && cleaned.identifier && teamMemberExists.length === 0;
 
