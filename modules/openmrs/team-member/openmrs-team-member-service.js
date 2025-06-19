@@ -341,7 +341,7 @@ class TeamMemberService {
             birthDate: "1990-07-01", // Default date, iCCHW won't use this, their birthDate comes from NIN
           });
 
-          console.log("Payload Object for creating a person", payload);
+          console.log("Payload Object for creating a person:", JSON.stringify(payload, null, 2));
           // FIXME: Delete the continue statement and change the warning to info
           continue;
         }
