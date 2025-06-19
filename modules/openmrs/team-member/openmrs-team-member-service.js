@@ -419,7 +419,7 @@ class TeamMemberService {
             rejectionReason: "Duplicate team member already exists",
             rowNumber: index + 2,
           });
-          console.warn(` > ⚠️ Duplicate CHW ID found: ${cleaned.identifier}, skipping...`);
+          console.warn(`🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
           continue;
         }
 
