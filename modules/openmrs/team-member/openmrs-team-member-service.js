@@ -327,6 +327,8 @@ class TeamMemberService {
 
         // Create an empty person object
         let newPerson = {};
+        let personUuid = null;
+        let personId = null;
         if (userResult.length <= 0) {
           rejected.push({
             ...row,
@@ -347,9 +349,6 @@ class TeamMemberService {
             email: null,
             NIN: null,
           });
-
-          let personUuid = null;
-          let personId = null;
 
           console.log(`Creating person ${row.first_name.trim()} ${row.last_name.trim()} in OpenMRS:`);
 
