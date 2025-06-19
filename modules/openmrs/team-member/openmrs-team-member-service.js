@@ -323,6 +323,9 @@ class TeamMemberService {
 
         // Check if the user exists in OpenMRS
         const userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
+
+        // Create an empty person object
+        let newPerson = {};
         if (userResult.length <= 0) {
           rejected.push({
             ...row,
@@ -342,15 +345,20 @@ class TeamMemberService {
           });
 
           console.log("Payload Object for creating a person:", JSON.stringify(payload, null, 2));
-          // FIXME: Delete the continue statement and change the warning to info
-          continue;
+
+          newPerson = await openmrsApiClient.post("person", payload);
+          if (!newPerson || !newPerson.uuid) {
+            console.log(" > ❌ Failed to create person in OpenMRS.");
+          }
         }
 
         // If user exists, fetch the person UUID
         let personUuid = null;
         if (userResult.length > 0 && userResult[0].person_id) {
           const personResult = await mysqlClient.query("SELECT uuid FROM person WHERE person_id = ?", [userResult[0].person_id]);
-          personUuid = personResult.length > 0 ? personResult[0].uuid : null;
+
+          // If person exists, use its UUID else use the new person UUID
+          personUuid = newPerson.uuid || personResult.length > 0 ? personResult[0].uuid : null;
         }
 
         let team = teamCache[locationUuid];
