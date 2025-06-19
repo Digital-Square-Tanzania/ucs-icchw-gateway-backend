@@ -310,6 +310,24 @@ class TeamMemberRepository {
       return true;
     }
   }
+
+  // Get team members by team UUID
+  static async getTeamMembersByTeamUuid(teamUuid) {
+    return prisma.openMRSTeamMember.findMany({
+      where: { teamUuid },
+      select: {
+        openMrsUuid: true,
+        username: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        roleName: true,
+        teamName: true,
+        locationName: true,
+        createdAt: true,
+      },
+    });
+  }
 }
 
 export default TeamMemberRepository;

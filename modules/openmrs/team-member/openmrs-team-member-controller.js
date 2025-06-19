@@ -102,6 +102,17 @@ class TeamMemberController {
       next(error);
     }
   }
+
+  // Get team member by team UUID
+  static async getTeamMembersByTeamUuid(req, res, next) {
+    try {
+      const { teamUuid } = req.params;
+      const teamMembers = await TeamMemberService.getTeamMembersByTeamUuid(teamUuid);
+      return BaseResponse.success(res, "Team members retrieved successfully", teamMembers);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default TeamMemberController;

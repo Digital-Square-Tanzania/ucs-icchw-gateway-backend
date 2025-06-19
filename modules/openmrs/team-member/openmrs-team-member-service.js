@@ -507,6 +507,19 @@ class TeamMemberService {
       throw new CustomError("Failed to process CSV file: " + error, 500);
     }
   }
+
+  // Get team members by team UUID
+  static async getTeamMembersByTeamUuid(teamUuid) {
+    try {
+      const teamMembers = await TeamMemberRepository.getTeamMembersByTeamUuid(teamUuid);
+      if (!teamMembers || teamMembers.length === 0) {
+        throw new CustomError("No team members found for this team.", 404);
+      }
+      return teamMembers;
+    } catch (error) {
+      throw new CustomError("Failed to fetch team members by team UUID: " + error.message, 500);
+    }
+  }
 }
 
 export default TeamMemberService;

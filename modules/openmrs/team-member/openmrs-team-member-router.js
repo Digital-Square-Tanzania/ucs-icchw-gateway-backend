@@ -1,6 +1,7 @@
 import { Router } from "express";
 import TeamMemberController from "./openmrs-team-member-controller.js";
 import AuthMiddleware from "../../../middlewares/authentication-middleware.js";
+import basicAuthMiddleware from "../../../middlewares/basic-auth-middleware.js";
 import multer from "multer";
 
 const router = Router();
@@ -29,5 +30,9 @@ router.get("/username/search", AuthMiddleware.authenticate, AuthMiddleware.autho
 
 // Upload CSV file
 router.post("/upload", AuthMiddleware.authenticate, upload.single("file"), TeamMemberController.uploadCsv);
+
+// INTERNAL ROUTES
+// Get team members by team UUID
+router.get("/team/:teamUuid", basicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), TeamMemberController.getTeamMembersByTeamUuid);
 
 export default router;
