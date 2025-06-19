@@ -313,21 +313,7 @@ class TeamMemberService {
 
       for (const [index, row] of rows.entries()) {
         if (!row || typeof row !== "object") {
-          // NOTE: Delete the continue statement and change the warning to info
           console.warn(` > ⚠️ Skipping invalid row at index ${index}:`, row);
-          // TODO: Create this person and user in OpenMRS
-          let payload = {};
-          payload.message = {};
-          payload.message.body = [];
-          payload.message.body.push({
-            firstName: row.first_name?.trim() || "",
-            middleName: row.middle_name?.trim() || "",
-            lastName: row.last_name?.trim() || "",
-            sex: row.sex?.trim().toLowerCase() || "",
-            birthDate: "1990-07-01", // Default date, iCCHW won't use this, their birthDate comes from NIN
-          });
-
-          console.log("Payload Object for creating a person", payload);
           continue;
         }
 
@@ -343,6 +329,20 @@ class TeamMemberService {
             rejectionReason: "User is not yet registered in OpenMRS.",
             rowNumber: index + 2,
           });
+          // TODO: Create this person and user in OpenMRS
+          let payload = {};
+          payload.message = {};
+          payload.message.body = [];
+          payload.message.body.push({
+            firstName: row.first_name?.trim() || "",
+            middleName: row.middle_name?.trim() || "",
+            lastName: row.last_name?.trim() || "",
+            sex: row.sex?.trim().toLowerCase() || "",
+            birthDate: "1990-07-01", // Default date, iCCHW won't use this, their birthDate comes from NIN
+          });
+
+          console.log("Payload Object for creating a person", payload);
+          // FIXME: Delete the continue statement and change the warning to info
           continue;
         }
 
