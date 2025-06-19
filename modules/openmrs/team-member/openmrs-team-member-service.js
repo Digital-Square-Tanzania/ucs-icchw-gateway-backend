@@ -310,8 +310,6 @@ class TeamMemberService {
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
         const userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
-        console.log("User Result", userResult);
-        console.log("Username Row", row.username.trim());
         if (userResult.length <= 0) {
           rejected.push({
             ...row,
@@ -380,6 +378,20 @@ class TeamMemberService {
           });
         }
 
+        // Check if the CHW exists in team members by NIN
+        const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
+
+        if (identifiedTeamMember) {
+          // throw new CustomError("Duplicate CHW ID found.", 409, 2);
+          rejected.push({
+            ...row,
+            rejectionReason: "Duplicate team member already exists",
+            rowNumber: index + 2,
+          });
+          console.warn(`🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
+          continue;
+        }
+
         const teamRoleUuid = process.env.UCS_PROD_PROVIDER_ROLE_UUID_PROD;
         const teamMemberObject = {
           identifier: cleaned.identifier,
@@ -408,20 +420,6 @@ class TeamMemberService {
           throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
         }
         console.log(" > 🚧 New Team Member Created in OpenMRS: \n > 🔄 Creating the new member locally!");
-
-        // Check if the CHW exists in team members by NIN
-        const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
-
-        if (identifiedTeamMember) {
-          // throw new CustomError("Duplicate CHW ID found.", 409, 2);
-          rejected.push({
-            ...row,
-            rejectionReason: "Duplicate team member already exists",
-            rowNumber: index + 2,
-          });
-          console.warn(`🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
-          continue;
-        }
 
         let formattedMember = {};
 
