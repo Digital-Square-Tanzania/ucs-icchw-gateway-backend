@@ -377,6 +377,7 @@ class TeamMemberService {
         }
 
         console.log("Person UUID:", personUuid);
+        console.log("Person ID:", personId);
 
         let team = teamCache[locationUuid];
 
