@@ -367,17 +367,6 @@ class TeamMemberService {
           rowNumber: index + 2,
         };
 
-        const isValid = cleaned.firstName && cleaned.lastName && cleaned.sex && cleaned.council && cleaned.ward && cleaned.username && cleaned.password && cleaned.identifier;
-
-        if (isValid) {
-          accepted.push(cleaned);
-        } else {
-          rejected.push({
-            ...cleaned,
-            rejectionReason: "Missing required fields",
-          });
-        }
-
         // Check if the CHW exists in team members by NIN
         const teamMemberExists = await mysqlClient.query("SELECT uuid, identifier FROM team_member WHERE identifier = ?", [row.user_identifier.trim()]);
         console.log("Existing Team Member Check:", teamMemberExists);
@@ -390,15 +379,16 @@ class TeamMemberService {
           continue;
         }
 
-        const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
-        if (identifiedTeamMember) {
+        const isValid =
+          cleaned.firstName && cleaned.lastName && cleaned.sex && cleaned.council && cleaned.ward && cleaned.username && cleaned.password && cleaned.identifier && teamMemberExists.length === 0;
+
+        if (isValid) {
+          accepted.push(cleaned);
+        } else {
           rejected.push({
-            ...row,
-            rejectionReason: "Duplicate team member already exists",
-            rowNumber: index + 2,
+            ...cleaned,
+            rejectionReason: "Missing required fields",
           });
-          console.warn(`🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
-          continue;
         }
 
         const teamRoleUuid = process.env.UCS_PROD_PROVIDER_ROLE_UUID_PROD;
@@ -456,10 +446,24 @@ class TeamMemberService {
           createdAt: new Date("2024-10-01T12:01:00Z"), // Placeholder date, adjust as needed
         };
 
+        // Check if the CHW exists in team members by identifier
+        const identifiedTeamMember = await TeamMemberRepository.getTeamMemberByIdentifier(cleaned.identifier);
+        if (identifiedTeamMember) {
+          rejected.push({
+            ...row,
+            rejectionReason: "Duplicate team member already exists",
+            rowNumber: index + 2,
+          });
+          console.warn(`🚨 Duplicate CHW ID found: ${cleaned.identifier}, process aborted...`);
+          continue;
+        }
+
         // Save the returned object as a new team member in the database
-        console.log(`✅ Team member ${cleaned.firstName + " " + cleaned.lastName} CHW account created.`);
+        const newTeamMemberRecord = await TeamMemberRepository.upsertTeamMember(formattedMember);
+        console.log(` > 🚧 Team member ${cleaned.firstName + " " + cleaned.lastName} CHW account created.`);
 
         await ApiLogger.log(req, { member: newTeamMember, identifier: cleaned.identifier });
+        console.log(" > 📝 Process logged successfully.");
       }
 
       const result = {
