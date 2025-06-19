@@ -357,7 +357,7 @@ class TeamMemberService {
 
           userResult.push({
             uuid: newPerson.uuid,
-            person_id: newPerson.id,
+            person_id: newPerson.person_id,
             username: row.username.trim(),
           });
         }
@@ -367,11 +367,13 @@ class TeamMemberService {
 
         // If user exists, fetch the person UUID
         let personUuid = null;
+        let personId = null;
         if (userResult.length > 0 && userResult[0].person_id) {
-          const personResult = await mysqlClient.query("SELECT uuid FROM person WHERE person_id = ?", [userResult[0].person_id]);
+          const personResult = await mysqlClient.query("SELECT person_id, uuid FROM person WHERE person_id = ?", [userResult[0].person_id]);
 
           // If person exists, use its UUID else use the new person UUID
           personUuid = newPerson.uuid || personResult.length > 0 ? personResult[0].uuid : null;
+          personId = newPerson.person_id || personResult.length > 0 ? personResult[0].person_id : null;
         }
 
         console.log("Person UUID:", personUuid);
@@ -467,7 +469,19 @@ class TeamMemberService {
         const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
 
         if (!newTeamMember.uuid) {
-          throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
+          // Delete the person if team member creation fails
+          await mysqlClient.query("USE openmrs");
+          console.log("Deleting person with ID:", personId);
+          await mysqlClient.query("CALL delete_person(?)", [personId]);
+          console.log(`✅ Successfully deleted person with ID: ${personId}`);
+          console.error("❌ Failed to create team member in OpenMRS.");
+          rejected.push({
+            ...row,
+            rejectionReason: "Failed to create team member in OpenMRS.",
+            rowNumber: index + 2,
+          });
+          // throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
+          continue;
         }
         console.log(" > 🚧 New Team Member Created in OpenMRS: \n > 🔄 Creating the new member locally!");
 
