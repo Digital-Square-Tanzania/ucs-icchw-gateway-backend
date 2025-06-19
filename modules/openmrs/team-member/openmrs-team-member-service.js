@@ -358,7 +358,7 @@ class TeamMemberService {
           }
 
           personUuid = newPerson.uuid;
-          personId = await mysqlClient.query("SELECT person_id FROM person WHERE uuid = ?", [newPerson.uuid]).then((res) => res[0].id);
+          personId = await mysqlClient.query("SELECT person_id FROM person WHERE uuid = ?", [newPerson.uuid]).then((res) => res[0].person_id);
 
           userResult.push({
             personUuid: newPerson.uuid,
