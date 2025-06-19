@@ -343,6 +343,9 @@ class TeamMemberService {
             lastName: row.last_name?.trim() || "",
             sex: row.sex?.trim().toLowerCase() || "",
             birthDate: "1990-07-01", // Default date, iCCHW won't use this, their birthDate comes from NIN
+            phoneNumber: null,
+            email: null,
+            NIN: null,
           });
 
           console.log(`Creating person ${row.first_name.trim()} ${row.last_name.trim()} in OpenMRS:`);
