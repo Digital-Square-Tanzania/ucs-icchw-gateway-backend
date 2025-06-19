@@ -29,7 +29,9 @@ class OpenmrsHelper {
         preferred: true,
         prefix: payload.message.body[0].sex.toLowerCase() === "male" ? "Mr" : "Ms",
       });
-      personObject.birthdate = ExtractDateFromNin.extract(payload.message.body[0].NIN);
+      // Get birthdate from NIN for iCCHW or fallback to provided birthdate for WAJA
+      personObject.uuid = payload.message.body[0].NIN;
+      personObject.birthdate = ExtractDateFromNin.extract(payload.message.body[0].NIN) || payload.message.body[0].birthdate;
       personObject.gender = payload.message.body[0].sex.toLowerCase() === "male" ? "M" : "F";
 
       // Create the person in OpenMRS

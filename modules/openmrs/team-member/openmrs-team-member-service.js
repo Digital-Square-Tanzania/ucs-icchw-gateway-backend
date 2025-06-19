@@ -313,11 +313,29 @@ class TeamMemberService {
 
       for (const [index, row] of rows.entries()) {
         if (!row || typeof row !== "object") {
+          // NOTE: Delete the continue statement and change the warning to info
           console.warn(` > ⚠️ Skipping invalid row at index ${index}:`, row);
+          // TODO: Create this person and user in OpenMRS
+          let payload = {};
+          payload.message = {};
+          payload.message.body = [];
+          payload.message.body.push({
+            firstName: row.first_name?.trim() || "",
+            middleName: row.middle_name?.trim() || "",
+            lastName: row.last_name?.trim() || "",
+            sex: row.sex?.trim().toLowerCase() || "",
+            birthDate: "1990-07-01", // Default date, iCCHW won't use this, their birthDate comes from NIN
+          });
+
+          console.log("Payload Object for creating a person", payload);
           continue;
         }
+
+        // Check if the location is valid and exists in OpenMRS
         let locationResult = await mysqlClient.query("SELECT uuid FROM location WHERE name = ?", [row.ward.trim()]);
         const locationUuid = locationResult.length > 0 ? locationResult[0].uuid : null;
+
+        // Check if the user exists in OpenMRS
         const userResult = await mysqlClient.query("SELECT uuid, person_id FROM users WHERE username = ?", [row.username.trim()]);
         if (userResult.length <= 0) {
           rejected.push({
@@ -328,6 +346,7 @@ class TeamMemberService {
           continue;
         }
 
+        // If user exists, fetch the person UUID
         let personUuid = null;
         if (userResult.length > 0 && userResult[0].person_id) {
           const personResult = await mysqlClient.query("SELECT uuid FROM person WHERE person_id = ?", [userResult[0].person_id]);
