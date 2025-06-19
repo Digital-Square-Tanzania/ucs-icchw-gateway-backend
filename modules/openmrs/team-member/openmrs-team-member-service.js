@@ -357,7 +357,6 @@ class TeamMemberService {
 
           userResult.push({
             uuid: newPerson.uuid,
-            person_id: newPerson.person_id,
             username: row.username.trim(),
           });
         }
@@ -369,11 +368,11 @@ class TeamMemberService {
         let personUuid = null;
         let personId = null;
         if (userResult.length > 0 && userResult[0].person_id) {
-          const personResult = await mysqlClient.query("SELECT person_id, uuid FROM person WHERE person_id = ?", [userResult[0].person_id]);
+          const personResult = await mysqlClient.query("SELECT person_id, uuid FROM person WHERE uuid = ?", [userResult[0].person_id]);
 
           // If person exists, use its UUID else use the new person UUID
           personUuid = newPerson.uuid || personResult.length > 0 ? personResult[0].uuid : null;
-          personId = newPerson.person_id || personResult.length > 0 ? personResult[0].person_id : null;
+          personId = personResult.length > 0 ? personResult[0].person_id : null;
         }
 
         console.log("Person UUID:", personUuid);
