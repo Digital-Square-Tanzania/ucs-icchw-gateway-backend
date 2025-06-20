@@ -24,13 +24,13 @@ class TeamRoleService {
       // }));
 
       const teamRoles2 = await openmrsApiClient.get("team/teamrole?v=custom:(uuid,name,display,identifier,creator:(uuid,display))");
-      const teamRoles = teamRoles2.map((role) => ({
-        uuid: role.uuid,
-        identifier: role.identifier,
-        display: role.display,
-        name: role.name,
-        creator: role.auditInfo?.creator,
-      }));
+      const teamRoles = {
+        uuid: teamRoles2.uuid,
+        identifier: teamRoles2.identifier,
+        display: teamRoles2.display,
+        name: teamRoles2.name,
+        creator: teamRoles2.auditInfo?.creator,
+      };
       // if (!teamRoles2.data || !teamRoles2.data.results) {
       //   throw new CustomError("No team roles found in OpenMRS.", 404);
       // }
