@@ -45,7 +45,7 @@ class TeamRoleRepository {
             display: role.display,
             name: role.name,
             members: role.members,
-            creator: role.creator,
+            creator: role.creatorName || role.creatorUuid,
           },
           create: {
             uuid: role.uuid,
@@ -53,7 +53,7 @@ class TeamRoleRepository {
             display: role.display,
             name: role.name,
             members: role.members,
-            creator: role.creator,
+            creator: role.creatorName || role.creatorUuid,
           },
         });
       })

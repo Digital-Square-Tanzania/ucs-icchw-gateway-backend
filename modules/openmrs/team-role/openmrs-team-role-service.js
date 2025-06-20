@@ -22,6 +22,9 @@ class TeamRoleService {
 
       console.log("✅ Team roles mapped successfully.");
 
+      // Save or update team roles in the repository
+      await TeamRoleRepository.upsertTeamRoles(teamRoles);
+
       return {
         message: "Team roles synchronized successfully.",
         count: teamRoles.length,
