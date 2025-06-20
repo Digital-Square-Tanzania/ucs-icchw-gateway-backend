@@ -176,9 +176,18 @@ class TeamMemberService {
       console.log("Team Member Object to be created in OpenMRS:", teamMemberObject);
 
       // Send the request to OpenMRS server using OpenMRS API Client
-      const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
-
-      console.log("New Team Member Created in OpenMRS:", newTeamMember.request);
+      let newTeamMember;
+      try {
+        newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
+        console.log("New Team Member Created in OpenMRS:", newTeamMember.data);
+      } catch (error) {
+        if (error.response) {
+          console.error("Axios error response:", error.response.data);
+        } else {
+          console.error("Error creating team member:", error.message);
+        }
+        throw error;
+      }
 
       if (!newTeamMember.uuid) {
         await mysqlClient.query("USE openmrs");
