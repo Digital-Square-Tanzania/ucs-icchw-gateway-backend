@@ -23,7 +23,7 @@ class TeamRoleService {
       //   creator: role.auditInfo?.creator,
       // }));
 
-      const teamRoles2 = await openmrsApiClient.get("team/teamrole?v=full");
+      const teamRoles2 = await openmrsApiClient.get("team/teamrole?v=custom:(uuid,name,display,identifier,creator:(uuid,display))");
       // if (!teamRoles2.data || !teamRoles2.data.results) {
       //   throw new CustomError("No team roles found in OpenMRS.", 404);
       // }
