@@ -1,6 +1,7 @@
 import axios from "axios";
 import TeamRoleRepository from "./openmrs-team-role-repository.js";
 import CustomError from "../../../utils/custom-error.js";
+import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 
 class TeamRoleService {
   static async syncTeamRolesFromOpenMRS() {
@@ -31,7 +32,7 @@ class TeamRoleService {
 
       // await TeamRoleRepository.upsertTeamRoles(teamRoles);
 
-      return { message: "Team roles synchronized successfully." };
+      return { message: "Team roles synchronized successfully." + teamRoles2 };
     } catch (error) {
       throw new CustomError("Failed to fetch team roles." + error.stack, 500);
     }
