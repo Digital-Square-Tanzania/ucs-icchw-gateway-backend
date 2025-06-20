@@ -6,24 +6,30 @@ import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 class TeamRoleService {
   static async syncTeamRolesFromOpenMRS() {
     try {
-      const response = await axios.get(`${process.env.OPENMRS_API_URL}/team/teamrole?v=custom:(uuid,name,display,identifier,creator:(uuid,display))`, {
+      const url = `${process.env.OPENMRS_API_URL}/team/teamrole?v=custom:(uuid,name,display,identifier,creator:(uuid,display))`;
+      console.log("🌍 Requesting team roles from OpenMRS URL:", url);
+
+      const response = await axios.get(url, {
         auth: {
           username: process.env.OPENMRS_API_USERNAME,
           password: process.env.OPENMRS_API_PASSWORD,
         },
       });
 
-      const teamRoles = (response.data.results || []).map((role) => ({
-        uuid: role.uuid,
-        name: role.name,
-        identifier: role.identifier,
-        display: role.display,
-        creatorUuid: role.creator?.uuid || null,
-        creatorName: role.creator?.display || null,
-      }));
+      console.log("📦 Raw OpenMRS response:", JSON.stringify(response.data, null, 2));
 
-      console.log("✅ Team roles fetched from OpenMRS:");
-      console.log(JSON.stringify(teamRoles, null, 2));
+      const teamRoles = Array.isArray(response.data.results)
+        ? response.data.results.map((role) => ({
+            uuid: role.uuid || null,
+            name: role.name || null,
+            identifier: role.identifier || null,
+            display: role.display || null,
+            creatorUuid: role.creator?.uuid || null,
+            creatorName: role.creator?.display || null,
+          }))
+        : [];
+
+      console.log("✅ Team roles mapped:", JSON.stringify(teamRoles, null, 2));
 
       return {
         message: "Team roles synchronized successfully.",
@@ -31,6 +37,7 @@ class TeamRoleService {
         teamRoles,
       };
     } catch (error) {
+      console.error("❌ Error syncing team roles:", error.response?.data || error.message);
       throw new CustomError("Failed to fetch team roles: " + error.message, 500);
     }
   }

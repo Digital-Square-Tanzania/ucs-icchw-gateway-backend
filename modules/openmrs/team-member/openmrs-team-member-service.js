@@ -173,18 +173,16 @@ class TeamMemberService {
         isDataProvider: "false",
       };
 
-      console.log("Team Member Object to be created in OpenMRS:", teamMemberObject);
-
       // Send the request to OpenMRS server using OpenMRS API Client
       const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
 
       if (!newTeamMember || !newTeamMember.uuid) {
         console.error("❌ OpenMRS failed to create team member. Full response:", newTeamMember);
 
-        // await mysqlClient.query("USE openmrs");
-        // console.log("Deleting person with ID:", newPerson.id);
-        // await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
-        // console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
+        await mysqlClient.query("USE openmrs");
+        console.log("Deleting person with ID:", newPerson.id);
+        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+        console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
 
         throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
       }
