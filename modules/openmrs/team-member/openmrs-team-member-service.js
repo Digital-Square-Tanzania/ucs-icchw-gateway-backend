@@ -178,6 +178,8 @@ class TeamMemberService {
       // Send the request to OpenMRS server using OpenMRS API Client
       const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
 
+      console.log("New Team Member Created in OpenMRS:", newTeamMember);
+
       if (!newTeamMember.uuid) {
         await mysqlClient.query("USE openmrs");
         console.log("Deleting person with ID:", newPerson.id);
