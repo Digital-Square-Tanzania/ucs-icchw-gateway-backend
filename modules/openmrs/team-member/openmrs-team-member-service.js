@@ -181,10 +181,10 @@ class TeamMemberService {
       if (!newTeamMember || !newTeamMember.uuid) {
         console.error("❌ OpenMRS failed to create team member. Full response:", newTeamMember);
 
-        await mysqlClient.query("USE openmrs");
-        console.log("Deleting person with ID:", newPerson.id);
-        await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
-        console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
+        // await mysqlClient.query("USE openmrs");
+        // console.log("Deleting person with ID:", newPerson.id);
+        // await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
+        // console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
 
         throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
       }
