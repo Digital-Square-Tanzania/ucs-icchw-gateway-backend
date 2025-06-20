@@ -26,7 +26,7 @@ class TeamRoleService {
 
       return { message: "Team roles synchronized successfully." };
     } catch (error) {
-      throw new CustomError("Failed to fetch team roles.", 500);
+      throw new CustomError("Failed to fetch team roles." + error.stack, 500);
     }
   }
 
