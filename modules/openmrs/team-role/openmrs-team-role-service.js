@@ -23,8 +23,16 @@ class TeamRoleService {
       //   creator: role.auditInfo?.creator,
       // }));
 
-      const teamRoles2 = await openmrsApiClient.get("team/teamrole?v=custom:(uuid,name,display,identifier,creator:(uuid,display))");
-      console.log("Team roles fetched from OpenMRS:", teamRoles2.results);
+      const teamRoles2 = await openmrsApiClient.get("team/teamrole?v=full");
+      const teamRoles = teamRoles2.results.map((role) => ({
+        uuid: role.uuid,
+        identifier: role.identifier,
+        display: role.display,
+        name: role.name,
+        members: role.members,
+        creator: role.auditInfo?.creator,
+      }));
+      console.log("Team roles fetched from OpenMRS:", teamRoles);
 
       // await TeamRoleRepository.upsertTeamRoles(teamRoles);
 
