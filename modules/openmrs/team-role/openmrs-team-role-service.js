@@ -24,7 +24,7 @@ class TeamRoleService {
       // }));
 
       const teamRoles2 = openmrsApiClient.get("team/teamrole?v=full");
-      if (!response.data || !response.data.results) {
+      if (!teamRoles2.data || !teamRoles2.data.results) {
         throw new CustomError("No team roles found in OpenMRS.", 404);
       }
 
