@@ -5,24 +5,31 @@ import CustomError from "../../../utils/custom-error.js";
 class TeamRoleService {
   static async syncTeamRolesFromOpenMRS() {
     try {
-      const url = process.env.OPENMRS_API_URL + "team/teamrole?v=full";
-      const response = await axios.get(url, {
-        auth: {
-          username: process.env.OPENMRS_API_USERNAME,
-          password: process.env.OPENMRS_API_PASSWORD,
-        },
-      });
+      // const url = process.env.OPENMRS_API_URL + "team/teamrole?v=full";
+      // const response = await axios.get(url, {
+      //   auth: {
+      //     username: process.env.OPENMRS_API_USERNAME,
+      //     password: process.env.OPENMRS_API_PASSWORD,
+      //   },
+      // });
 
-      const teamRoles = response.data.results.map((role) => ({
-        uuid: role.uuid,
-        identifier: role.identifier,
-        display: role.display,
-        name: role.name,
-        members: role.members,
-        creator: role.auditInfo?.creator,
-      }));
+      // const teamRoles = response.data.results.map((role) => ({
+      //   uuid: role.uuid,
+      //   identifier: role.identifier,
+      //   display: role.display,
+      //   name: role.name,
+      //   members: role.members,
+      //   creator: role.auditInfo?.creator,
+      // }));
 
-      await TeamRoleRepository.upsertTeamRoles(teamRoles);
+      const teamRoles2 = openmrsApiClient.get("team/teamrole?v=full");
+      if (!response.data || !response.data.results) {
+        throw new CustomError("No team roles found in OpenMRS.", 404);
+      }
+
+      console.log("Team roles fetched from OpenMRS:", teamRoles2);
+
+      // await TeamRoleRepository.upsertTeamRoles(teamRoles);
 
       return { message: "Team roles synchronized successfully." };
     } catch (error) {
