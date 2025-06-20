@@ -6,9 +6,7 @@ import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 class TeamRoleService {
   static async syncTeamRolesFromOpenMRS() {
     try {
-      const v = encodeURIComponent("custom:(uuid,name,display,identifier,creator:(uuid,display))");
-
-      const response = await axios.get(`${process.env.OPENMRS_API_URL}/team/teamrole?v=${v}`, {
+      const response = await axios.get(`${process.env.OPENMRS_API_URL}/team/teamrole?v=custom:(uuid,name,display,identifier,creator:(uuid,display))`, {
         auth: {
           username: process.env.OPENMRS_API_USERNAME,
           password: process.env.OPENMRS_API_PASSWORD,
