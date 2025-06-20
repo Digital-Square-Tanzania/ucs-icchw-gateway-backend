@@ -28,11 +28,11 @@ class TeamRoleService {
       //   throw new CustomError("No team roles found in OpenMRS.", 404);
       // }
 
-      console.log("Team roles fetched from OpenMRS:", teamRoles2.data.results);
+      console.log("Team roles fetched from OpenMRS:", JSON.stringify(teamRoles2, null, 2));
 
       // await TeamRoleRepository.upsertTeamRoles(teamRoles);
 
-      return { message: "Team roles synchronized successfully.", teamRoles: teamRoles2.data.results };
+      return { message: "Team roles synchronized successfully.", teamRoles: JSON.stringify(teamRoles2, null, 2) };
     } catch (error) {
       throw new CustomError("Failed to fetch team roles." + error.stack, 500);
     }
