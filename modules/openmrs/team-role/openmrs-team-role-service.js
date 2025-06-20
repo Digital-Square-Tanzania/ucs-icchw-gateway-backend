@@ -24,10 +24,7 @@ class TeamRoleService {
       // }));
 
       const teamRoles2 = await openmrsApiClient.get("team/teamrole");
-      const teamRoles = teamRoles2.results.map((role) => ({
-        uuid: role.uuid,
-        name: role.display,
-      }));
+      const teamRoles = JSON.stringify(teamRoles2);
       console.log("Team roles fetched from OpenMRS:", teamRoles);
 
       // await TeamRoleRepository.upsertTeamRoles(teamRoles);
