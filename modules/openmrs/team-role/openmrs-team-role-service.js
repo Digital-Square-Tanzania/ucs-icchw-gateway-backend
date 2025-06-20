@@ -25,7 +25,7 @@ class TeamRoleService {
         creatorName: role.creator?.display || null,
       }));
 
-      console.log("✅ Team roles fetched from OpenMRS:");
+      console.log("✅ Team roles fetched from OpenMRS:", ...response.data.results);
       console.log(JSON.stringify(teamRoles, null, 2));
 
       // Optional: Persist to DB if needed
