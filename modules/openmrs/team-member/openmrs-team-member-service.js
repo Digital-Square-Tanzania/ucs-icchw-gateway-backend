@@ -173,6 +173,8 @@ class TeamMemberService {
         isDataProvider: "false",
       };
 
+      console.log("Team Member Object to be created in OpenMRS:", teamMemberObject);
+
       // Send the request to OpenMRS server using OpenMRS API Client
       const newTeamMember = await openmrsApiClient.post("team/teammember", teamMemberObject);
 
