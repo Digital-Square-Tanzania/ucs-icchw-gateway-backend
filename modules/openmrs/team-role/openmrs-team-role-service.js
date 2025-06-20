@@ -7,19 +7,20 @@ class TeamRoleService {
   static async syncTeamRolesFromOpenMRS() {
     try {
       const teamRolesResponse = await openmrsApiClient.get("team/teamrole", {
-        v: "custom:(uuid,identifier,name,display)",
+        v: "custom:(uuid,name,display,identifier,creator:(uuid,display))",
       });
 
-      const teamRoles = teamRolesResponse.results.map((role) => ({
+      const teamRoles = (teamRolesResponse.results || []).map((role) => ({
         uuid: role.uuid,
         identifier: role.identifier,
         display: role.display,
         name: role.name,
+        creator: role.creator?.display || null,
       }));
 
       console.log("✅ Team roles fetched from OpenMRS:", JSON.stringify(teamRoles, null, 2));
 
-      // Optional: save to DB
+      // Optionally store in DB:
       // await TeamRoleRepository.upsertTeamRoles(teamRoles);
 
       return {
