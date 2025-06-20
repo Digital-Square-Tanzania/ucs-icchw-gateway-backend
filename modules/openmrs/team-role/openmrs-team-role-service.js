@@ -18,16 +18,19 @@ class TeamRoleService {
 
       console.log("📦 Raw OpenMRS response:", JSON.stringify(response.data, null, 2));
 
-      const teamRoles = Array.isArray(response.data.results)
-        ? response.data.results.map((role) => ({
-            uuid: role.uuid || null,
-            name: role.name || null,
-            identifier: role.identifier || null,
-            display: role.display || null,
-            creatorUuid: role.creator?.uuid || null,
-            creatorName: role.creator?.display || null,
-          }))
-        : [];
+      console.log("👀 First role object:", JSON.stringify(response.data.results[0], null, 2));
+
+      const teamRoles = response.data.results.map((role) => {
+        const r = role.teamRole; // or role.resource or whatever it is
+        return {
+          uuid: r?.uuid || null,
+          name: r?.name || null,
+          identifier: r?.identifier || null,
+          display: r?.display || null,
+          creatorUuid: r?.creator?.uuid || null,
+          creatorName: r?.creator?.display || null,
+        };
+      });
 
       console.log("✅ Team roles mapped:", JSON.stringify(teamRoles, null, 2));
 
