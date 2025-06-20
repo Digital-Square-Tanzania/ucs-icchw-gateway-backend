@@ -6,29 +6,39 @@ import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 class TeamRoleService {
   static async syncTeamRolesFromOpenMRS() {
     try {
-      const teamRolesResponse = await openmrsApiClient.get("team/teamrole", {
-        v: "custom:(uuid,name,display,identifier,creator:(uuid,display))",
+      const response = await axios.get(`${process.env.OPENMRS_API_URL}/team/teamrole`, {
+        params: {
+          v: "custom:(uuid,name,display,identifier,creator:(uuid,display))",
+        },
+        auth: {
+          username: process.env.OPENMRS_API_USERNAME,
+          password: process.env.OPENMRS_API_PASSWORD,
+        },
       });
 
-      const teamRoles = (teamRolesResponse.results || []).map((role) => ({
+      const teamRoles = (response.data.results || []).map((role) => ({
         uuid: role.uuid,
+        name: role.name,
         identifier: role.identifier,
         display: role.display,
-        name: role.name,
-        creator: role.creator?.display || null,
+        creatorUuid: role.creator?.uuid || null,
+        creatorName: role.creator?.display || null,
       }));
 
-      console.log("✅ Team roles fetched from OpenMRS:", JSON.stringify(teamRoles, null, 2));
+      console.log("✅ Team roles fetched from OpenMRS:");
+      console.log(JSON.stringify(teamRoles, null, 2));
 
-      // Optionally store in DB:
+      // Optional: Persist to DB if needed
       // await TeamRoleRepository.upsertTeamRoles(teamRoles);
 
       return {
         message: "Team roles synchronized successfully.",
+        count: teamRoles.length,
         teamRoles,
       };
     } catch (error) {
-      throw new CustomError("Failed to fetch team roles: " + error.stack, 500);
+      console.error("❌ Error fetching team roles:", error.message);
+      throw new CustomError("Failed to fetch team roles: " + error.message, 500);
     }
   }
 
