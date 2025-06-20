@@ -6,10 +6,9 @@ import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 class TeamRoleService {
   static async syncTeamRolesFromOpenMRS() {
     try {
-      const response = await axios.get(`${process.env.OPENMRS_API_URL}/team/teamrole`, {
-        params: {
-          v: "custom:(uuid,name,display,identifier,creator:(uuid,display))",
-        },
+      const v = encodeURIComponent("custom:(uuid,name,display,identifier,creator:(uuid,display))");
+
+      const response = await axios.get(`${process.env.OPENMRS_API_URL}/team/teamrole?v=${v}`, {
         auth: {
           username: process.env.OPENMRS_API_USERNAME,
           password: process.env.OPENMRS_API_PASSWORD,
@@ -25,11 +24,8 @@ class TeamRoleService {
         creatorName: role.creator?.display || null,
       }));
 
-      console.log("✅ Team roles fetched from OpenMRS:", response.data.results[0]);
+      console.log("✅ Team roles fetched from OpenMRS:");
       console.log(JSON.stringify(teamRoles, null, 2));
-
-      // Optional: Persist to DB if needed
-      // await TeamRoleRepository.upsertTeamRoles(teamRoles);
 
       return {
         message: "Team roles synchronized successfully.",
@@ -37,7 +33,6 @@ class TeamRoleService {
         teamRoles,
       };
     } catch (error) {
-      console.error("❌ Error fetching team roles:", error.message);
       throw new CustomError("Failed to fetch team roles: " + error.message, 500);
     }
   }
