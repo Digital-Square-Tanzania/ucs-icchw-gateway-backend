@@ -36,10 +36,12 @@ class TeamRoleService {
     }
   }
 
+  // Retrieves all team roles from the repository
   static async getAllTeamRoles() {
     return await TeamRoleRepository.getAllTeamRoles();
   }
 
+  // Creates a new team role in the repository
   static async getTeamRoleByUUID(uuid) {
     const teamRole = await TeamRoleRepository.getTeamRoleByUUID(uuid);
     if (!teamRole) {
