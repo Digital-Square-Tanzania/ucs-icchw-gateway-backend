@@ -9,16 +9,18 @@ class TeamRoleService {
       const url = `${process.env.OPENMRS_API_URL}/team/teamrole?v=full`;
       console.log("🌍 Requesting team roles from OpenMRS URL:", url);
 
-      const response = await axios.get(url, {
-        auth: {
-          username: process.env.OPENMRS_API_USERNAME,
-          password: process.env.OPENMRS_API_PASSWORD,
-        },
-      });
+      // const response = await axios.get(url, {
+      //   auth: {
+      //     username: process.env.OPENMRS_API_USERNAME,
+      //     password: process.env.OPENMRS_API_PASSWORD,
+      //   },
+      // });
+
+      const response = await openmrsApiClient.get(url);
 
       console.log("📦 OpenMRS full response:", JSON.stringify(response.data, null, 2));
 
-      const teamRoles = (response.data.results || []).map((role) => ({
+      const teamRoles = (response.results || []).map((role) => ({
         uuid: role.uuid || null,
         name: role.name || null,
         identifier: role.identifier || null,
