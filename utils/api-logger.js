@@ -21,7 +21,7 @@ class ApiLogger {
       next();
     } catch (error) {
       logger.error(`Failed to log request: ${error.message}`);
-      next(new CustomError("Failed to log request.", 500));
+      throw new CustomError("Failed to log request." + error.message, 500);
     }
   }
 
