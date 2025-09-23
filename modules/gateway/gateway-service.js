@@ -184,7 +184,7 @@ class GatewayService {
 
         const personUpdatePayload = {};
         const updatedFields = [];
-        const emailAttributeTypeUuid = process.env.OPENMRS_EMAIL_ATTRIBUTE_TYPE_UUID || "c60b17ba-1c41-454b-89a1-6c329c75417e";
+        const emailAttributeTypeUuid = process.env.EMAIL_ATTRIBUTE_TYPE_UUID || "c60b17ba-1c41-454b-89a1-6c329c75417e";
 
         // ✅ Gender
         if (chw.sex && (chw.sex.toUpperCase() === "MALE" || chw.sex.toUpperCase() === "FEMALE")) {
