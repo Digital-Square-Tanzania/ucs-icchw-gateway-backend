@@ -184,7 +184,7 @@ class TeamMemberService {
         await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
         console.log(`✅ Successfully deleted person with ID: ${newPerson.id}`);
 
-        throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
+        return new CustomError("❌ Failed to create team member in OpenMRS." + error.message, 500);
       }
       console.log("New Team Member Created in OpenMRS:");
       console.log("🔄 Creating a local team member account in UCS.");
