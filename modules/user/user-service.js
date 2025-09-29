@@ -174,7 +174,7 @@ class UserService {
 
       if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
       if (activation.isUsed) return { alert: true, message: "Akaunti hii tayari inatumika.", slug, login: false };
-      if (Date.now() < activation.expiryDate) return { alert: true, message: "Linki uliuoutumiwa awali ipo sawa, itumie.", slug, login: true, resend: false };
+      if (Date.now() < activation.expiryDate) return { alert: true, message: "Linki uliyotumiwa awali ipo sawa, itumie.", slug, login: true, resend: false };
       const openSlugs = await prisma.accountActivation.findMany({
         where: {
           userUuid: activation.userUuid,
@@ -205,7 +205,7 @@ class UserService {
                  <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${member.username})</strong>.</p><br>`,
       });
 
-      await ApiLogger.log(req, { statusCode: 200, body: { slug: newSlug, email: member.email } });
+      await ApiLogger.log(req, { statusCode: 200, body: { slug: newSlug, email: member.email, slugType: "Reactivation" } });
       console.log("🔄 Activation email resent successfully for slug: ", newSlug);
       return { alert: false, message: "Umetumiwa email mpya ya kuunda akaunti ya UCS.", slug: newSlug, login: false };
     } catch (error) {

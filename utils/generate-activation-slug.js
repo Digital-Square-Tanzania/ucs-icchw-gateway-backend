@@ -12,7 +12,7 @@ class GenerateActivationSlug {
         data: {
           userUuid,
           slug,
-          expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3), // 3 days from now
+          expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10), // 10 days from now, updated from 3
           slugType: type,
         },
       });
