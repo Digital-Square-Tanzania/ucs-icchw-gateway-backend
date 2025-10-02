@@ -14,11 +14,11 @@ class GenerateActivationSlug {
           slug,
           expiryDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 10), // 10 days from now, updated from 3
           slugType: type,
-          email: payload.email || null,
-          nin: payload.nin || null,
-          fullName: payload.firstName && payload.lastName ? `${payload.firstName} ${payload.lastName}` : null,
-          phoneNumber: payload.phoneNumber || null,
-          locationCode: payload.locationCode || null,
+          email: payload.message.body[0].email || null,
+          nin: payload.message.body[0].nin || null,
+          fullName: payload.message.body[0].firstName && payload.message.body[0].lastName ? `${payload.message.body[0].firstName} ${payload.message.body[0].lastName}` : null,
+          phoneNumber: payload.message.body[0].phoneNumber || null,
+          locationCode: payload.message.body[0].locationCode || null,
           facility: newTeamMember.locationName || null,
         },
       });

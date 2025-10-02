@@ -191,8 +191,16 @@ class UserService {
       if (openSlugs.length > 0 && !req.params.emailChange) return { alert: true, message: "Tumia linki mpya uliyotumiwa kwenye email.", slug, login: false, resend: false };
       console.log("🔄 Valid email resend request received, resending the email for slug: ", slug);
 
+      let payload = {};
+      payload.email = activation.email;
+      payload.nin = activation.nin;
+      payload.firstName = member.firstName;
+      payload.lastName = member.lastName;
+      payload.phoneNumber = activation.phoneNumber;
+      payload.locationCode = activation.locationCode;
+
       // Generate an activation slug and record
-      const newSlug = await GenerateActivationSlug.generate(activation.userUuid, "ACTIVATION", 64);
+      const newSlug = await GenerateActivationSlug.generate(activation.userUuid, payload, member, "ACTIVATION", 64);
       const activationUrl = `${backendUrl}/api/v1/user/chw/activate/${newSlug}`;
 
       // Send email to the CHW with their login credentials
