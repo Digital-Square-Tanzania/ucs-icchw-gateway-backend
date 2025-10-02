@@ -111,7 +111,7 @@ class GatewayService {
       const newTeamMember = await TeamMemberService.createTeamMember(newUser, payload, validatedContent, newPerson);
 
       // Generate an activation slug and record
-      const slug = await GenerateActivationSlug.generate(newUser.uuid, "ACTIVATION", 32);
+      const slug = await GenerateActivationSlug.generate(newUser.uuid, payload, newTeamMember, "ACTIVATION", 32);
       const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
       const activationUrl = `${backendUrl}/api/v1/user/chw/activate/${slug}`;
 
