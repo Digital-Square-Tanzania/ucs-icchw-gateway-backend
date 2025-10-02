@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import pLimit from "p-limit";
 import CustomError from "../../../utils/custom-error.js";
 import openmrsApiClient from "../../../utils/openmrs-api-client.js";
 import TeamRoleRepository from "../team-role/openmrs-team-role-repository.js";
@@ -31,6 +32,8 @@ class TeamMemberService {
 
       let fetchedRecords = 0;
       let totalFetched = 0;
+      const concurrency = 10;
+      const limit = pLimit(concurrency);
 
       while (true) {
         console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
@@ -115,17 +118,24 @@ class TeamMemberService {
           }
         }
 
-        for (const member of uniqueMembers) {
-          try {
-            await TeamMemberRepository.upsertTeamMember(member);
-          } catch (err) {
-            if (err.code === "P2002") {
-              console.warn(` > ⚠️ Skipping duplicate identifier: ${member.identifier}`);
-              continue;
+        // Process team members concurrently
+        const upsertTasks = uniqueMembers.map((member) =>
+          limit(async () => {
+            try {
+              await TeamMemberRepository.upsertTeamMember(member);
+            } catch (err) {
+              if (err.code === "P2002") {
+                console.warn(` > ⚠️ Skipping duplicate identifier: ${member.identifier}`);
+                return;
+              }
+              console.error(`❌ Error upserting member ${member.identifier}:`, err.message);
+              throw err;
             }
-            console.error(`❌ Error upserting member ${member.identifier}:`, err.message);
-          }
-        }
+          })
+        );
+
+        // Run concurrently with safe option to avoid crashing on single upsert failure
+        await Promise.allSettled(upsertTasks);
 
         totalFetched += fetchedCount;
         fetchedRecords += fetchedCount;
@@ -229,7 +239,7 @@ class TeamMemberService {
         personUuid: newTeamMemberDetails.person?.uuid,
         username: newUser.username,
         userUuid: newUser.uuid,
-        openMrsUuid: newPerson.uuid,
+        openMrsUuid: newTeamMember.uuid,
         teamUuid: newTeamMemberDetails.team?.uuid || null,
         teamName: newTeamMemberDetails.team?.teamName || null,
         teamIdentifier: newTeamMemberDetails.team?.teamIdentifier || null,
