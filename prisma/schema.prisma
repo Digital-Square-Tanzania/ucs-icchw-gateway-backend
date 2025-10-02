@@ -324,6 +324,7 @@ model AccountActivation {
   slug         String              @unique
   slugType     slugType
   isUsed       Boolean             @default(false)
+  isResent     Boolean             @default(false)
   usedAt       DateTime?
   expiryDate   DateTime
   createdAt    DateTime            @default(now())

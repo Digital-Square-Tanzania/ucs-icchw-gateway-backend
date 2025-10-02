@@ -23,6 +23,7 @@ import DHIS2Router from "./modules/dhis2/dhis2-router.js";
 import DashboardRouter from "./modules/dashboard/dashboard-router.js";
 import GatewayRouter from "./modules/gateway/gateway-router.js";
 import SecurityMiddleware from "./middlewares/security-middleware.js";
+import resendActivationCron from "./utils/resend-activation-cron.js";
 
 class AppServer {
   constructor() {
@@ -97,6 +98,9 @@ class AppServer {
   start() {
     this.app.listen(this.port, () => {
       console.log("***** INFO: UCS User Management Backend is Listening on:" + this.port + " *****");
+
+      // Start the resend activation cron job
+      resendActivationCron.start();
     });
   }
 }

@@ -61,4 +61,7 @@ router.get("/chw/forgot/:username", UserController.forgotPassword);
 // Reset password page route
 router.get("/chw/reset/:slug", UserController.renderActivationPage);
 
+// Manual trigger for resend activation cron (for testing/admin use)
+router.post("/admin/resend-activations", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.manualResendActivations);
+
 export default router;

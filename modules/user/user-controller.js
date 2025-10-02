@@ -1,6 +1,7 @@
 import UserService from "./user-service.js";
 import BaseResponse from "../../responders/base-responder.js";
 import CustomError from "../../utils/custom-error.js";
+import resendActivationCron from "../../utils/resend-activation-cron.js";
 
 class UserController {
   /**
@@ -123,6 +124,19 @@ class UserController {
     try {
       const result = await UserService.createChwAccount(req, res, next);
       return BaseResponse.success(res, "CHW account created successfully.", result, 201);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * Manually trigger resend activation emails (for admin use)
+   */
+  static async manualResendActivations(req, res, next) {
+    try {
+      console.log("🔄 Manual resend activation triggered by admin");
+      await resendActivationCron.manualResend();
+      return BaseResponse.success(res, "Manual resend activation process completed successfully");
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
