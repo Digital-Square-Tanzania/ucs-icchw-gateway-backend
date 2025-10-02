@@ -317,16 +317,22 @@ enum slugType {
 }
 
 model AccountActivation {
-  id         Int                 @id @default(autoincrement())
-  uuid       String              @unique @default(uuid())
-  userUuid   String
-  user       OpenMRSTeamMember[]
-  slug       String              @unique
-  slugType   slugType
-  isUsed     Boolean             @default(false)
-  usedAt     DateTime?
-  expiryDate DateTime
-  createdAt  DateTime            @default(now())
+  id           Int                 @id @default(autoincrement())
+  uuid         String              @unique @default(uuid())
+  userUuid     String
+  user         OpenMRSTeamMember[]
+  slug         String              @unique
+  slugType     slugType
+  isUsed       Boolean             @default(false)
+  usedAt       DateTime?
+  expiryDate   DateTime
+  createdAt    DateTime            @default(now())
+  email        String
+  nin          String
+  fullName     String?
+  phoneNumber  String?
+  locationCode String?
+  hospital     String?
 
   @@index([slug])
   @@map("account_activations")
