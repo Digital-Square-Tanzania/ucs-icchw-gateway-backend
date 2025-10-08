@@ -36,6 +36,8 @@ The **UCS User Management Backend** is a Node.js and Express-based API designed 
 - API Documentation with Swagger (OpenAPI)
 - CI/CD Integration with GitHub Actions
 - Integration-Ready for OpenMRS and DHIS2
+- **Dual Email Service Support** (Gmail & eGA Corporate Email)
+- **Automated Email Notifications** with Cron Jobs
 
 ---
 
@@ -105,6 +107,23 @@ BCRYPT_SALT_ROUNDS=10
 # Rate Limiting
 RATE_LIMIT_WINDOW_MS=3600000
 RATE_LIMIT_MAX_REQUESTS=100
+
+# Email Configuration
+EMAIL_PROVIDER=gmail  # or "ega" for corporate email
+EMAIL_FROM=no-reply@ucssystem.org
+
+# Gmail Configuration (when EMAIL_PROVIDER=gmail)
+EMAIL_USERNAME=your_gmail_username
+EMAIL_PASSWORD=your_app_specific_password
+
+# eGA Corporate Email Configuration (when EMAIL_PROVIDER=ega)
+# Contact eGA at info@ega.go.tz for the correct API endpoint
+EGA_API_URL=mail.ega.go.tz
+EGA_SENDER_ID=your_sender_id
+EGA_SYSTEM_ID=your_system_id
+EGA_API_KEY=your_api_key
+EGA_MOBILE_SERVICE_ID=your_mobile_service_id
+EGA_EMAIL_ADDRESS=your_email@afya.go.tz
 ```
 
 ## Running the App
@@ -189,6 +208,46 @@ ucs-user-management-backend/
   - Centralized error handling.
   - Custom error classes.
   - Logging with Winston (separate logs for info and errors).
+
+## 📧 Email Service
+
+The system supports dual email providers with automatic switching:
+
+### **Gmail Integration**
+
+- Standard Gmail SMTP for development and testing
+- Uses app-specific passwords for security
+- Configured via `EMAIL_PROVIDER=gmail`
+
+### **eGA Corporate Email Integration**
+
+- Ministry of Health UCS systems email service
+- Production-ready corporate email solution
+- Configured via `EMAIL_PROVIDER=ega`
+- Requires eGA API credentials and endpoint
+
+### **Email Service Features**
+
+- **Automatic Provider Switching**: Change providers via environment variable
+- **Runtime Provider Switching**: Switch between Gmail and eGA programmatically
+- **Fallback Support**: Easy fallback to Gmail if eGA is unavailable
+- **Cron Job Integration**: Automated email sending for user activations
+- **Error Handling**: Comprehensive error handling for both providers
+
+### **Usage Example**
+
+```javascript
+// Send email (uses configured provider)
+await EmailService.sendEmail({
+  to: "user@example.com",
+  subject: "Account Activation",
+  html: "<h1>Welcome to UCS!</h1>",
+});
+
+// Switch providers at runtime
+EmailService.switchProvider("ega"); // Switch to eGA
+EmailService.switchProvider("gmail"); // Switch to Gmail
+```
 
 ## 🧪 Testing
 
