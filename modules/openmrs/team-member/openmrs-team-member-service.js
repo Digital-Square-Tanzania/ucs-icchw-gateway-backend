@@ -197,7 +197,7 @@ class TeamMemberService {
         throw new CustomError("❌ Failed to create team member in OpenMRS.", 500);
       }
       console.log(" > ...New Team Member Created in OpenMRS:");
-      console.log("Creating a local team member account in UCS.");
+      console.log(" SUB: Creating a local team member account in UCS.");
 
       // Fetch the newly created team member details
       const newTeamMemberDetails = await openmrsApiClient.get(`team/teammember/${newTeamMember.uuid}`, {
@@ -256,16 +256,16 @@ class TeamMemberService {
 
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
-      console.log("...Team member created locally.");
+      console.log(" ...Team member created locally.");
       // console.log(`☑️ CHW account created successfuly. \n ${JSON.stringify(savedTeamMember)}`);
-      console.log(`☑️ CHW account created successfuly.`);
+      console.log(`...CHW account created successfuly.`);
 
       return savedTeamMember;
     } catch (error) {
       await mysqlClient.query("USE openmrs");
       console.log("Deleting person with ID:", personId);
       await mysqlClient.query("CALL delete_person(?)", [personId]);
-      console.log(`REVERT: Successfully deleted person with ID: ${personId}`);
+      console.log(` REVERT: Successfully deleted person with ID: ${personId}`);
 
       throw new CustomError("Failed to create team member: " + error.stack, 500);
     }

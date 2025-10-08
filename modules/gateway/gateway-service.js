@@ -85,7 +85,7 @@ class GatewayService {
 
   // Register new CHW from HRHIS
   static async registerChwFromHrhis(req, _res, _next) {
-    console.log("🔄 Registering CHW from HRHIS...");
+    console.log("TASK: Registering CHW from HRHIS...");
     let newPerson = null;
     try {
       // Get the payload from the request body
@@ -132,7 +132,7 @@ class GatewayService {
           try {
             await mysqlClient.query("USE openmrs");
             await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
-            console.log(`REVERT: Successfully deleted person with ID: ${newPerson.id} due to email failure`);
+            console.log(` REVERT: Successfully deleted person with ID: ${newPerson.id} due to email failure`);
           } catch (deleteError) {
             console.error(`❌ Failed to delete person with ID: ${newPerson.id}`, deleteError);
           }

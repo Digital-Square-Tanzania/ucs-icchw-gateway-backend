@@ -60,7 +60,7 @@ class PayloadContent {
         }
       }
 
-      console.log("Team found or created:", team.uuid);
+      console.log("...Team found or created:", team.uuid);
 
       return { teamMemberLocation, team };
     } catch (error) {
