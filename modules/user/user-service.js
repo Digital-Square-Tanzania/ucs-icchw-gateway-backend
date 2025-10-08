@@ -375,14 +375,33 @@ class UserService {
       const activationUrl = `${backendUrl}/api/v1/user/chw/activate/${slug}`;
 
       // Send email to the CHW with their login credentials
-      await EmailService.sendEmail({
-        to: newTeamMember.email,
-        subject: "Kufungua Akaunti ya UCS/WAJA",
-        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${newTeamMember.username}).`,
-        html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
-           <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
-           <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${newTeamMember.username})</strong>.</p><br>`,
-      });
+      try {
+        await EmailService.sendEmail({
+          to: newTeamMember.email,
+          subject: "Kufungua Akaunti ya UCS/WAJA",
+          text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${newTeamMember.username}).`,
+          html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
+             <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
+             <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${newTeamMember.username})</strong>.</p><br>`,
+        });
+        console.log("✅ Email sent successfully to CHW");
+      } catch (emailError) {
+        console.error("❌ Failed to send email to CHW:", emailError.message);
+        
+        // Delete the created person and user when email sending fails
+        if (newPerson && newPerson.uuid) {
+          try {
+            // Use OpenMRS API to delete the person
+            await openmrsApiClient.delete(`person/${newPerson.uuid}`);
+            console.log(`🗑️ Successfully deleted person with UUID: ${newPerson.uuid} due to email failure`);
+          } catch (deleteError) {
+            console.error(`❌ Failed to delete person with UUID: ${newPerson.uuid}`, deleteError);
+          }
+        }
+        
+        // Throw the email error to be caught by the outer catch block
+        throw new CustomError(`Failed to send activation email: ${emailError.message}`, 500);
+      }
       // <hr><small>Majaribio: tumia password hii kwenye UAT: <span style="color:tomato">${newTeamMember.password}</span></small>`,
 
       // Log the entire brouhaha
