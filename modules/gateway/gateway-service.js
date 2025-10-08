@@ -159,7 +159,7 @@ class GatewayService {
         }
       }
 
-      console.error("❌ Error while registering CHW from HRHIS:", error.stack);
+      console.error("❌ Error while registering CHW from HRHIS:", error.message);
 
       // Rethrow with CustomError for the controller to catch
       if (!(error instanceof ApiError)) {
