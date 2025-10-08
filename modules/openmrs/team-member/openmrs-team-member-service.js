@@ -257,7 +257,8 @@ class TeamMemberService {
       // Save the returned object as a new team member in the database
       const savedTeamMember = await TeamMemberRepository.upsertTeamMember(formattedMember);
       console.log("Team member created locally.");
-      console.log(`✅ CHW account created successfuly. \n ${JSON.stringify(savedTeamMember)}`);
+      // console.log(`✅ CHW account created successfuly. \n ${JSON.stringify(savedTeamMember)}`);
+      console.log(`✅ CHW account created successfuly.`);
 
       return savedTeamMember;
     } catch (error) {

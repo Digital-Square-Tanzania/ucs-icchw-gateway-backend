@@ -393,7 +393,7 @@ class UserService {
           try {
             // Use OpenMRS API to delete the person
             await openmrsApiClient.delete(`person/${newPerson.uuid}`);
-            console.log(`🗑️ Successfully deleted person with UUID: ${newPerson.uuid} due to email failure`);
+            console.log(`🗑️  Successfully deleted person with UUID: ${newPerson.uuid} due to email failure`);
           } catch (deleteError) {
             console.error(`❌ Failed to delete person with UUID: ${newPerson.uuid}`, deleteError);
           }
