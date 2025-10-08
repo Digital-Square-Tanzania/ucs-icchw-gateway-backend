@@ -46,7 +46,7 @@ class EmailService {
       }
 
       // If it's an HTTP API endpoint
-      if (egaApiUrl && egaApiUrl.startsWith('http')) {
+      if (egaApiUrl && egaApiUrl.startsWith("http")) {
         const payload = {
           senderID: process.env.EGA_SENDER_ID,
           systemID: process.env.EGA_SYSTEM_ID,
@@ -69,14 +69,14 @@ class EmailService {
 
         console.log(" > ✉️ eGA HTTP API Email sent successfully:", response.data);
         return response.data;
-      } 
+      }
       // If it's an SMTP server
       else {
         // Create SMTP transporter for eGA
         const egaTransporter = nodemailer.createTransporter({
           host: egaSmtpHost || egaApiUrl, // Use SMTP host or fallback to API URL
           port: process.env.EGA_SMTP_PORT || 587,
-          secure: process.env.EGA_SMTP_SECURE === 'true' || false,
+          secure: process.env.EGA_SMTP_SECURE === "true" || false,
           auth: {
             user: process.env.EGA_EMAIL_ADDRESS,
             pass: process.env.EGA_API_KEY, // Use API key as SMTP password
@@ -96,7 +96,7 @@ class EmailService {
         return info;
       }
     } catch (error) {
-      console.error("❌ Error sending email via eGA:", error.message);
+      // console.error("❌ Error sending email via eGA:", error.message);
       throw new CustomError("Failed to send email via eGA: " + error.message, 500);
     }
   }
@@ -125,7 +125,7 @@ class EmailService {
       console.log(" > ✉️ Gmail Email sent:", info.response);
       return info;
     } catch (error) {
-      console.error("❌ Error sending email via Gmail:", error.message);
+      // console.error("❌ Error sending email via Gmail:", error.message);
       throw new CustomError("Failed to send email via Gmail: " + error.message, 500);
     }
   }
