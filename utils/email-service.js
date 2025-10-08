@@ -37,36 +37,64 @@ class EmailService {
     try {
       const { to, subject, text, html } = emailData;
 
-      // eGA API endpoint - YOU NEED TO GET THE ACTUAL URL FROM eGA
-      // Contact eGA at info@ega.go.tz or +255 22 21 2996 for the correct API endpoint
+      // Check if EGA_API_URL is an HTTP endpoint or SMTP server
       const egaApiUrl = process.env.EGA_API_URL;
+      const egaSmtpHost = process.env.EGA_SMTP_HOST;
 
-      if (!egaApiUrl) {
-        throw new CustomError("EGA_API_URL environment variable is required but not set. Please contact eGA for the correct API endpoint.", 500);
+      if (!egaApiUrl && !egaSmtpHost) {
+        throw new CustomError("Either EGA_API_URL (HTTP API) or EGA_SMTP_HOST (SMTP) must be configured. Please contact eGA for the correct endpoint.", 500);
       }
 
-      const payload = {
-        senderID: process.env.EGA_SENDER_ID,
-        systemID: process.env.EGA_SYSTEM_ID,
-        apiKey: process.env.EGA_API_KEY,
-        mobileServiceID: process.env.EGA_MOBILE_SERVICE_ID,
-        emailAddress: process.env.EGA_EMAIL_ADDRESS,
-        recipientEmail: to,
-        subject: subject,
-        message: html || text,
-        messageType: html ? "html" : "text",
-      };
+      // If it's an HTTP API endpoint
+      if (egaApiUrl && egaApiUrl.startsWith('http')) {
+        const payload = {
+          senderID: process.env.EGA_SENDER_ID,
+          systemID: process.env.EGA_SYSTEM_ID,
+          apiKey: process.env.EGA_API_KEY,
+          mobileServiceID: process.env.EGA_MOBILE_SERVICE_ID,
+          emailAddress: process.env.EGA_EMAIL_ADDRESS,
+          recipientEmail: to,
+          subject: subject,
+          message: html || text,
+          messageType: html ? "html" : "text",
+        };
 
-      const response = await axios.post(egaApiUrl, payload, {
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.EGA_API_KEY}`,
-        },
-        timeout: 30000, // 30 seconds timeout
-      });
+        const response = await axios.post(egaApiUrl, payload, {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.EGA_API_KEY}`,
+          },
+          timeout: 30000, // 30 seconds timeout
+        });
 
-      console.log(" > ✉️ eGA Email sent successfully:", response.data);
-      return response.data;
+        console.log(" > ✉️ eGA HTTP API Email sent successfully:", response.data);
+        return response.data;
+      } 
+      // If it's an SMTP server
+      else {
+        // Create SMTP transporter for eGA
+        const egaTransporter = nodemailer.createTransporter({
+          host: egaSmtpHost || egaApiUrl, // Use SMTP host or fallback to API URL
+          port: process.env.EGA_SMTP_PORT || 587,
+          secure: process.env.EGA_SMTP_SECURE === 'true' || false,
+          auth: {
+            user: process.env.EGA_EMAIL_ADDRESS,
+            pass: process.env.EGA_API_KEY, // Use API key as SMTP password
+          },
+        });
+
+        const mailOptions = {
+          from: process.env.EGA_EMAIL_ADDRESS,
+          to,
+          subject,
+          text: text || "",
+          html: html || "",
+        };
+
+        const info = await egaTransporter.sendMail(mailOptions);
+        console.log(" > ✉️ eGA SMTP Email sent successfully:", info.response);
+        return info;
+      }
     } catch (error) {
       console.error("❌ Error sending email via eGA:", error.message);
       throw new CustomError("Failed to send email via eGA: " + error.message, 500);
