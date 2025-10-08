@@ -387,7 +387,7 @@ class UserService {
         console.log("✅ Email sent successfully to CHW");
       } catch (emailError) {
         console.error("❌ Failed to send email to CHW:", emailError.message);
-        
+
         // Delete the created person and user when email sending fails
         if (newPerson && newPerson.uuid) {
           try {
@@ -398,7 +398,7 @@ class UserService {
             console.error(`❌ Failed to delete person with UUID: ${newPerson.uuid}`, deleteError);
           }
         }
-        
+
         // Throw the email error to be caught by the outer catch block
         throw new CustomError(`Failed to send activation email: ${emailError.message}`, 500);
       }

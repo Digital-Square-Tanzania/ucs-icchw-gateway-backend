@@ -120,7 +120,6 @@ class EmailService {
         return await this.sendEmailViaGmail(emailData);
       }
     } catch (error) {
-      console.error("❌ Error sending email:", error.message);
       throw new CustomError("Failed to send email: " + error.message, 500);
     }
   }

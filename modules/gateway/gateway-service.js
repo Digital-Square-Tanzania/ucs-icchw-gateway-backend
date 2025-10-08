@@ -127,8 +127,6 @@ class GatewayService {
         });
         console.log("✅ Email sent successfully to CHW");
       } catch (emailError) {
-        console.error("❌ Failed to send email to CHW:", emailError.message);
-        
         // Delete the created person and user when email sending fails
         if (newPerson && newPerson.id) {
           try {
@@ -139,7 +137,7 @@ class GatewayService {
             console.error(`❌ Failed to delete person with ID: ${newPerson.id}`, deleteError);
           }
         }
-        
+
         // Throw the email error to be caught by the outer catch block
         throw new ApiError(`Failed to send activation email: ${emailError.message}`, 500, 5);
       }
