@@ -26,7 +26,7 @@ class BasicAuthMiddleware {
     if (username === this.validUsername && password === this.validPassword) {
       // Optionally attaching user context to request
       req.user = { username, role: "EXTERNAL_SYSTEM" };
-      console.log(` > ✅ Basic Auth Authenticated successfully for ${username} external system`);
+      console.log(`TASK: Basic Auth Authenticated successfully for ${username} external system`);
       return next();
     } else {
       return next(new CustomError("Invalid credentials", 401));

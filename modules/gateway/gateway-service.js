@@ -132,7 +132,7 @@ class GatewayService {
           try {
             await mysqlClient.query("USE openmrs");
             await mysqlClient.query("CALL delete_person(?)", [newPerson.id]);
-            console.log(`🗑️  Successfully deleted person with ID: ${newPerson.id} due to email failure`);
+            console.log(`REVERT: Successfully deleted person with ID: ${newPerson.id} due to email failure`);
           } catch (deleteError) {
             console.error(`❌ Failed to delete person with ID: ${newPerson.id}`, deleteError);
           }

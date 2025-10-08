@@ -34,7 +34,7 @@ class ResendActivationCron {
       }
     );
 
-    console.log("✅ Resend activation cron job scheduled for 23:55 daily (Africa/Dar_es_Salaam timezone)");
+    console.log("🟢 Resend activation cron job scheduled for 23:55 daily (Africa/Dar_es_Salaam timezone)");
   }
 
   /**

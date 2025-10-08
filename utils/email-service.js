@@ -140,7 +140,7 @@ class EmailService {
    */
   async sendEmail(emailData) {
     try {
-      console.log(`📧 Sending email via ${this.emailProvider.toUpperCase()}...`);
+      console.log(`TASK: Sending email via ${this.emailProvider.toUpperCase()}...`);
 
       if (this.emailProvider === "ega") {
         return await this.sendEmailViaEGA(emailData);

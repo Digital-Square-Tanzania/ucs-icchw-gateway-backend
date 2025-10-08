@@ -18,7 +18,7 @@ class OpenmrsHelper {
    */
   static async createOpenmrsPerson(payload) {
     try {
-      console.log(" > 🔄 Creating a new person in OpenMRS...");
+      console.log(" > Creating a new person in OpenMRS...");
       const personObject = {};
       personObject.names = [];
       personObject.names.push({
@@ -78,7 +78,7 @@ class OpenmrsHelper {
         }
       }
 
-      console.log(` > 👤 New person created in OpenMRS with uuid: ${newPerson.uuid}`);
+      console.log(` > ...New person created in OpenMRS with uuid: ${newPerson.uuid}`);
       return newPerson;
     } catch (error) {
       console.error("❌ Error creating person in OpenMRS:", error.message);
@@ -95,7 +95,7 @@ class OpenmrsHelper {
    */
   static async createOpenmrsUser(payload, newPerson) {
     try {
-      console.log(" > 🔄 Creating new user in OpenMRS...");
+      console.log(" > Creating new user in OpenMRS...");
       const roleUuid = await MemberRoleRepository.getRoleUuidByRoleName(process.env.DEFAULT_ICCHW_ROLE_NAME);
       const userObject = {};
       const phone = payload.message.body[0].phoneNumber;
@@ -120,7 +120,7 @@ class OpenmrsHelper {
         throw new ApiError("User could not be created: Probable duplicate", 400, 5);
       }
 
-      console.log(`New user created in OpenMRS with UUID: ${newUser.uuid}`);
+      console.log(` > ...New user created in OpenMRS with UUID: ${newUser.uuid}`);
       return newUser;
     } catch (error) {
       throw new ApiError(`An error occurred while creating the user: ${error.message}`, 500, 10);
