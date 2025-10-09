@@ -17,7 +17,7 @@ class ResendActivationCron {
     console.log("🕐 Starting resend activation cron job...");
 
     // Run daily at 23:55 (just before midnight)
-    this.cronJob = Cron(
+    this.cronJob = new Cron(
       "55 23 * * *",
       {
         timezone: "Africa/Dar_es_Salaam",
