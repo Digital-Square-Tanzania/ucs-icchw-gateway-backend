@@ -46,6 +46,8 @@ class EmailService {
       const egaSmtpSecure = process.env.EGA_SMTP_SECURE === "true" || false;
       const egaEmail = process.env.EGA_EMAIL_ADDRESS;
       const egaPassword = process.env.EGA_EMAIL_PASSWORD;
+      // NEW: Retrieve display name for better formatting
+      const egaDisplayName = process.env.EGA_EMAIL_DISPLAY_NAME || "UCS System";
 
       if (!egaSmtpHost || !egaEmail || !egaPassword) {
         throw new CustomError("EGA SMTP configuration is incomplete. Please check EGA_SMTP_HOST, EGA_EMAIL_ADDRESS, and EGA_EMAIL_PASSWORD environment variables.", 500);
@@ -67,8 +69,12 @@ class EmailService {
         },
       });
 
+      // IMPORTANT: The 'from' address must be the authenticated user (egaEmail).
+      // We use string formatting to include a display name (egaDisplayName).
+      const fromAddress = `${egaDisplayName} <${egaEmail}>`;
+
       const mailOptions = {
-        from: egaEmail,
+        from: fromAddress,
         to,
         subject,
         text: text || "",
