@@ -1,6 +1,5 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
-import axios from "axios";
 import CustomError from "../utils/custom-error.js";
 
 dotenv.config();
@@ -40,38 +39,67 @@ class EmailService {
     try {
       const { to, subject, text, html } = emailData;
 
-      // eGA SMTP configuration
-      const egaSmtpHost = process.env.EGA_SMTP_HOST;
-      const egaSmtpPort = process.env.EGA_SMTP_PORT || 587;
-      const egaSmtpSecure = process.env.EGA_SMTP_SECURE === "true" || false;
-      const egaEmail = process.env.EGA_EMAIL_ADDRESS;
-      const egaPassword = process.env.EGA_EMAIL_PASSWORD;
-      // NEW: Retrieve display name for better formatting
+      // --- Default eGA SMTP configuration ---
+      let host = process.env.EGA_SMTP_HOST;
+      let port = process.env.EGA_SMTP_PORT || 587;
+      let secure = process.env.EGA_SMTP_SECURE === "true" || false;
+      let authUser = process.env.EGA_EMAIL_ADDRESS;
+      let authPass = process.env.EGA_EMAIL_PASSWORD;
       const egaDisplayName = process.env.EGA_EMAIL_DISPLAY_NAME || "UCS System";
 
-      if (!egaSmtpHost || !egaEmail || !egaPassword) {
-        throw new CustomError("EGA SMTP configuration is incomplete. Please check EGA_SMTP_HOST, EGA_EMAIL_ADDRESS, and EGA_EMAIL_PASSWORD environment variables.", 500);
+      // New Properties to match Spring config (e.g., spring.mail.smtp.auth=false)
+      const authRequired = process.env.EGA_SMTP_AUTH_REQUIRED !== "false"; // Default: true
+      const requireTLS = process.env.EGA_SMTP_REQUIRE_TLS === "true"; // Default: false (Matches starttls.enable=true)
+
+      // The email address that will appear in the 'From' header
+      let senderEmailForFromHeader = authUser;
+
+      // --- RELAY OVERRIDE LOGIC for using Google SMTP ---
+      if (process.env.EGA_USE_GMAIL_RELAY === "true") {
+        host = process.env.EMAIL_HOST || "smtp.gmail.com";
+        port = parseInt(process.env.EMAIL_PORT) || 465;
+        secure = process.env.EMAIL_SECURE === "true" || true;
+
+        authUser = process.env.EMAIL_USERNAME;
+        authPass = process.env.EMAIL_PASSWORD;
+        senderEmailForFromHeader = authUser;
+        console.warn("⚠️ EGA Provider using GMAIL RELAY for SMTP. Sender address is set to authenticated Gmail user.");
+      }
+      // --------------------------------------------------
+
+      // Configuration validation
+      if (!host || (authRequired && (!authUser || !authPass))) {
+        throw new CustomError("SMTP configuration is incomplete. Please check host, email, and password environment variables, and the EGA_SMTP_AUTH_REQUIRED setting.", 500);
       }
 
-      // FIX: Added 'tls' configuration to disable certificate verification
-      // because the server is using a self-signed or untrusted certificate.
-      const egaTransporter = nodemailer.createTransport({
-        host: egaSmtpHost,
-        port: parseInt(egaSmtpPort),
-        secure: egaSmtpSecure,
-        auth: {
-          user: egaEmail,
-          pass: egaPassword,
-        },
-        // Configuration to bypass the self-signed certificate error
+      // Conditionally build authentication block (matches spring.mail.properties.mail.smtp.auth)
+      const authConfig =
+        authRequired && authUser && authPass
+          ? {
+              user: authUser,
+              pass: authPass,
+            }
+          : undefined;
+
+      // --- Transporter Configuration ---
+      const transporterOptions = {
+        host: host,
+        port: parseInt(port),
+        // secure: false is required for port 25 or 587 when using STARTTLS (ssl.enable=false)
+        secure: secure,
+        auth: authConfig,
+        // requireTLS: true matches spring.mail.properties.mail.smtp.starttls.enable=true
+        requireTLS: requireTLS,
+        // tls: { rejectUnauthorized: false } matches ssl.trust=* and ssl.checkserveridentity=false
         tls: {
           rejectUnauthorized: false,
         },
-      });
+      };
 
-      // IMPORTANT: The 'from' address must be the authenticated user (egaEmail).
-      // We use string formatting to include a display name (egaDisplayName).
-      const fromAddress = `${egaDisplayName} <${egaEmail}>`;
+      const transporter = nodemailer.createTransport(transporterOptions);
+
+      // The 'from' address uses the configured display name and the determined sender email
+      const fromAddress = `${egaDisplayName} <${senderEmailForFromHeader}>`;
 
       const mailOptions = {
         from: fromAddress,
@@ -81,7 +109,7 @@ class EmailService {
         html: html || "",
       };
 
-      const info = await egaTransporter.sendMail(mailOptions);
+      const info = await transporter.sendMail(mailOptions);
       console.log(" > ✉️ eGA Email sent successfully:", info.response);
       return info;
     } catch (error) {
