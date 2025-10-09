@@ -49,7 +49,7 @@ class EmailService {
       }
 
       // Create SMTP transporter for eGA
-      const egaTransporter = nodemailer.createTransporter({
+      const egaTransporter = nodemailer.createTransport({
         host: egaSmtpHost,
         port: parseInt(egaSmtpPort),
         secure: egaSmtpSecure,
