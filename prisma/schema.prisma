@@ -334,6 +334,7 @@ model AccountActivation {
   phoneNumber  String?
   locationCode String?
   hospital     String?
+  facility     String?
 
   @@index([slug])
   @@map("account_activations")
