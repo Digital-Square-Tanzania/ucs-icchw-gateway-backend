@@ -117,13 +117,12 @@ EMAIL_USERNAME=your_gmail_username
 EMAIL_PASSWORD=your_app_specific_password
 
 # eGA Corporate Email Configuration (when EMAIL_PROVIDER=ega)
-# Contact eGA at info@ega.go.tz for the correct API endpoint
-EGA_API_URL=mail.ega.go.tz
-EGA_SENDER_ID=your_sender_id
-EGA_SYSTEM_ID=your_system_id
-EGA_API_KEY=your_api_key
-EGA_MOBILE_SERVICE_ID=your_mobile_service_id
+# Ministry of Health UCS systems email service by eGA Tanzania
+EGA_SMTP_HOST=smtp.afya.go.tz
+EGA_SMTP_PORT=587
+EGA_SMTP_SECURE=false
 EGA_EMAIL_ADDRESS=your_email@afya.go.tz
+EGA_EMAIL_PASSWORD=your_email_password
 ```
 
 ## Running the App
@@ -221,10 +220,10 @@ The system supports dual email providers with automatic switching:
 
 ### **eGA Corporate Email Integration**
 
-- Ministry of Health UCS systems email service
+- Ministry of Health UCS systems email service via SMTP
 - Production-ready corporate email solution
 - Configured via `EMAIL_PROVIDER=ega`
-- Requires eGA API credentials and endpoint
+- Uses SMTP server: smtp.afya.go.tz with SSL port 587
 
 ### **Email Service Features**
 
