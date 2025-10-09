@@ -72,7 +72,7 @@ class EmailService {
       return info;
     } catch (error) {
       // console.error("❌ Error sending email via eGA:", error.message);
-      throw new CustomError("Failed to send email via eGA: " + error.message, 500);
+      throw new CustomError("Failed to send email via eGA: " + error.stack, 500);
     }
   }
 
