@@ -134,7 +134,7 @@ model OpenMRSLocationAttributeType {
 }
 
 view OpenMRSLocationHierarchyView {
-  // index    Int     @id @map("index")
+  index    Int     @map("index")
   uuid     String  @map("uuid")
   country  String? @map("country")
   zone     String? @map("zone")
