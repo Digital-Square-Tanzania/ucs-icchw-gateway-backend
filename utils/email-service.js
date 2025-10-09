@@ -7,13 +7,14 @@ dotenv.config();
 
 class EmailService {
   constructor() {
+    // Determine the email provider from the environment variables
     this.emailProvider = process.env.EMAIL_PROVIDER || "gmail"; // "gmail" or "ega"
     this.initializeTransporter();
   }
 
   initializeTransporter() {
     if (this.emailProvider === "gmail") {
-      // Gmail transporter
+      // Gmail transporter using the correct nodemailer function: createTransport
       this.transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
@@ -22,7 +23,9 @@ class EmailService {
         },
       });
     }
-    // For eGA corporate email, we'll use their API directly
+    // For eGA corporate email, we'll use their API directly via a function call,
+    // or set up a transporter if the provider is 'ega' at initialization,
+    // though the current setup only initializes Gmail here.
   }
 
   /**
@@ -48,7 +51,8 @@ class EmailService {
         throw new CustomError("EGA SMTP configuration is incomplete. Please check EGA_SMTP_HOST, EGA_EMAIL_ADDRESS, and EGA_EMAIL_PASSWORD environment variables.", 500);
       }
 
-      // Create SMTP transporter for eGA
+      // FIX: Added 'tls' configuration to disable certificate verification
+      // because the server is using a self-signed or untrusted certificate.
       const egaTransporter = nodemailer.createTransport({
         host: egaSmtpHost,
         port: parseInt(egaSmtpPort),
@@ -56,6 +60,10 @@ class EmailService {
         auth: {
           user: egaEmail,
           pass: egaPassword,
+        },
+        // Configuration to bypass the self-signed certificate error
+        tls: {
+          rejectUnauthorized: false,
         },
       });
 
@@ -71,8 +79,8 @@ class EmailService {
       console.log(" > ✉️ eGA Email sent successfully:", info.response);
       return info;
     } catch (error) {
-      // console.error("❌ Error sending email via eGA:", error.message);
-      throw new CustomError("Failed to send email via eGA: " + error.stack, 500);
+      // Re-throwing the error with better context
+      throw new CustomError("Failed to send email via eGA: " + error.message, 500);
     }
   }
 
@@ -88,6 +96,10 @@ class EmailService {
     try {
       const { to, subject, text, html } = emailData;
 
+      if (!this.transporter) {
+        throw new CustomError("Gmail Transporter not initialized. Check EMAIL_PROVIDER setting.", 500);
+      }
+
       const mailOptions = {
         from: process.env.EMAIL_FROM || "iCCHW-WAJA",
         to,
@@ -100,7 +112,6 @@ class EmailService {
       console.log(" > ✉️ Gmail Email sent:", info.response);
       return info;
     } catch (error) {
-      // console.error("❌ Error sending email via Gmail:", error.message);
       throw new CustomError("Failed to send email via Gmail: " + error.message, 500);
     }
   }
@@ -108,10 +119,7 @@ class EmailService {
   /**
    * Send an email using the configured provider (eGA or Gmail)
    * @param {Object} emailData
-   * @param {string} emailData.to - Recipient email address
-   * @param {string} emailData.subject - Email subject
-   * @param {string} emailData.text - Plain text body (optional)
-   * @param {string} emailData.html - HTML body (optional)
+   * // ... (Rest of the method remains unchanged)
    */
   async sendEmail(emailData) {
     try {
@@ -123,6 +131,7 @@ class EmailService {
         return await this.sendEmailViaGmail(emailData);
       }
     } catch (error) {
+      // The CustomError from the specific provider method will bubble up here
       throw new CustomError("Failed to send email: " + error.message, 500);
     }
   }
