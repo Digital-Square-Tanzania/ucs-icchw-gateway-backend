@@ -271,7 +271,7 @@ class UserService {
       }
 
       // Generate new reset token for the member
-      const resetToken = await GenerateActivationSlug.generate(member.userUuid, "RESET", 32);
+      const resetToken = await GenerateActivationSlug.generate(member.userUuid, {}, {}, "RESET", 32);
       const resetUrl = `${backendUrl}/api/v1/user/chw/reset/${resetToken}`;
 
       // Send email to the member with the reset link
