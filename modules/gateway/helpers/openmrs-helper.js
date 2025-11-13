@@ -123,7 +123,11 @@ class OpenmrsHelper {
       console.log(` > ...New user created in OpenMRS with UUID: ${newUser.uuid}`);
       return newUser;
     } catch (error) {
-      throw new ApiError(`An error occurred while creating the user: ${error.message}`, 500, 10);
+      await mysqlClient.query("USE openmrs");
+      console.log(" > 🔄 Deleting person with ID:", newPerson.id);
+      await TeamMemberService.deletePerson(newPerson.id);
+      console.log(` > 🗑️ Successfully deleted person with ID: ${newPerson.id}`);
+      throw new ApiError("User could not be created: Probable duplicate", 400, 5);
     }
   }
 
