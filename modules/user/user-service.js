@@ -364,6 +364,7 @@ class UserService {
       const newUser = await OpenMRSUserHelper.create(payload, newPerson.uuid);
 
       if (!newUser || !newUser.uuid) {
+        await openmrsApiClient.delete(`person/${newPerson.uuid}`);
         throw new CustomError("Failed to create OpenMRS user. Probable duplicate username", 500);
       }
 
