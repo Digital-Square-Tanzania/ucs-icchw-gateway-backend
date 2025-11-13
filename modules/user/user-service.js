@@ -373,6 +373,7 @@ class UserService {
         locationCode: payload.locationCode,
         hfrCode: payload.hfrCode,
         nin: payload.NIN,
+        userUuid: newUser.uuid,
       });
 
       let validatedContent = {};
