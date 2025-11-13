@@ -321,6 +321,7 @@ class UserService {
    */
   static async createChwAccount(req, _res, _next) {
     console.log("🔄 Registering CHW from the frontend...");
+    let newPerson = null;
     try {
       // Get the payload from the request body
       const payload = req.body;
@@ -361,6 +362,11 @@ class UserService {
 
       // Create a new OpenMRS user
       const newUser = await OpenMRSUserHelper.create(payload, newPerson.uuid);
+
+      if (!newUser || !newUser.uuid) {
+        throw new CustomError("Failed to create OpenMRS user. Probable duplicate username", 500);
+      }
+
       let newPayload = {};
       newPayload.message = {};
       newPayload.message.body = [];

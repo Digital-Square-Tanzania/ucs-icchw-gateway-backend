@@ -20,11 +20,14 @@ class OpenMRSUserHelper {
       userObject.systemId = userObject.username;
 
       // Create the user in OpenMRS
-      const newUser = await OpenMRSApiClient.post("user", userObject);
-
-      if (!newUser) {
+      let newUser = {};
+      try {
+        const openmrsNewUser = await OpenMRSApiClient.post("user", userObject);
+        newUser = openmrsNewUser;
+      } catch (error) {
         throw new ApiError(`User could not be created: +${error.message}`, 400, 3);
       }
+
       return newUser;
     } catch (error) {
       console.error("Error creating user in OpenMRS:", error);
