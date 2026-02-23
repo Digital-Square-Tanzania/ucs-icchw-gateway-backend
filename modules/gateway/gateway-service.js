@@ -223,11 +223,11 @@ class GatewayService {
         if (!teamMember || !teamMember.openMrsUuid) {
           await ApiLogger.log(req, {
             action: "UPDATE_DEMOGRAPHICS_CREATE_FALLBACK",
-            reason: "CHW with NIN not found in UCS; creating as new CHW",
+            reason: "CHW with NIN not found in UCS; attempting create-from-update fallback",
             nin: chw.NIN,
             chw: { NIN: chw.NIN, firstName: chw.firstName, lastName: chw.lastName, email: chw.email },
           });
-          console.log(`CHW with NIN ${chw.NIN} not found in UCS; creating as new CHW (update-demographics fallback).`);
+          console.log(`CHW with NIN ${chw.NIN} not found in UCS; attempting create-from-update fallback.`);
 
           const deploymentPayload = GatewayService.buildDeploymentPayloadFromDemographicUpdate(payload, chw);
           const createReq = { ...req, body: deploymentPayload };
@@ -368,6 +368,7 @@ class GatewayService {
       console.log("✅ CHW demographic updates processed.");
       return results;
     } catch (error) {
+      console.error("❌ Error in updateChwDemographics:", error.message);
       if (!(error instanceof ApiError)) {
         throw new ApiError(error.message, 500, 5);
       }
