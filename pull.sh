@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define the target branch (you can make this an argument too, if needed)
-target_branch="origin/test"
+target_branch="origin/dev"
 service_name="ucs-gateway-backend"
 
 echo "Starting the pull and update process..."
