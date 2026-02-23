@@ -16,11 +16,10 @@ class ApiLogger {
       const response = { status: res.statusCode, body: res.body };
 
       await prisma.apiLog.create({ data: { request, response } });
-      await prisma.api;
 
       next();
     } catch (error) {
-      logger.error(`Failed to log request: ${error.message}`);
+      console.error(`Failed to log request: ${error.message}`);
       throw new CustomError("Failed to log request." + error.message, 500);
     }
   }
@@ -36,7 +35,7 @@ class ApiLogger {
 
       await prisma.apiLog.create({ data: { request, response } });
     } catch (err) {
-      logger.error(`❌ Failed to log request internally: ${err.message}`);
+      console.error(`❌ Failed to log request internally: ${err.message}`);
     }
   }
 }
