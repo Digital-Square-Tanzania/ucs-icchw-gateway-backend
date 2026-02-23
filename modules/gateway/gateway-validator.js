@@ -94,7 +94,9 @@ class GatewayValidator {
   }
 
   /**
-   * Validate CHW demographic update payload
+   * Validate CHW demographic update payload.
+   * Optional phoneNumber, hfrCode, locationCode, locationType allow creating a new CHW
+   * when NIN is not found (create-from-update fallback).
    */
   static validateChwDemographicUpdate(payload) {
     const chwSchema = Joi.object({
@@ -106,6 +108,14 @@ class GatewayValidator {
       lastName: Joi.string().min(2),
       sex: Joi.string().valid("MALE", "FEMALE", "Male", "Female"),
       email: Joi.string().email(),
+      phoneNumber: Joi.string()
+        .pattern(/^\+255[67]\d{8}$/)
+        .optional(),
+      hfrCode: Joi.string()
+        .pattern(/^\d{6}-\d$/)
+        .optional(),
+      locationCode: Joi.string().optional(),
+      locationType: Joi.string().optional(),
     });
 
     const schema = Joi.object({

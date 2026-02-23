@@ -169,6 +169,42 @@ class GatewayService {
     }
   }
 
+  /**
+   * Build a CHW_DEPLOYMENT payload from a demographic-update CHW object so we can run the normal create flow.
+   * Uses optional chw fields when present; otherwise env DEFAULT_PHONE, DEFAULT_HFR_CODE, DEFAULT_LOCATION_CODE, DEFAULT_LOCATION_TYPE.
+   */
+  static buildDeploymentPayloadFromDemographicUpdate(updatePayload, chw) {
+    const hfrCode = chw.hfrCode || process.env.DEFAULT_HFR_CODE;
+    const locationCode = chw.locationCode || process.env.DEFAULT_LOCATION_CODE;
+    const phoneNumber = chw.phoneNumber || process.env.DEFAULT_PHONE || "+255700000000";
+    const locationType = chw.locationType || process.env.DEFAULT_LOCATION_TYPE || "health facility";
+
+    if (!hfrCode || !locationCode) {
+      throw new ApiError(
+        "Cannot create CHW from demographic update: DEFAULT_HFR_CODE and DEFAULT_LOCATION_CODE (or hfrCode/locationCode in payload) are required when CHW is not found in UCS.",
+        400,
+        6
+      );
+    }
+
+    const header = { ...updatePayload.message.header, messageType: "CHW_DEPLOYMENT" };
+    const body = [
+      {
+        firstName: chw.firstName || "Unknown",
+        middleName: chw.middleName ?? "",
+        lastName: chw.lastName || "Unknown",
+        NIN: chw.NIN,
+        sex: chw.sex || "MALE",
+        email: chw.email || "",
+        phoneNumber,
+        hfrCode,
+        locationCode,
+        locationType,
+      },
+    ];
+    return { message: { header, body } };
+  }
+
   // Update CHW demographics from HRHIS
   static async updateChwDemographics(req, res, next) {
     try {
@@ -185,7 +221,24 @@ class GatewayService {
         const teamMember = await TeamMemberRepository.getTeamMemberByNin(chw.NIN);
 
         if (!teamMember || !teamMember.openMrsUuid) {
-          throw new ApiError(`CHW with NIN ${chw.NIN} not found in UCS.`, 404, 6);
+          await ApiLogger.log(req, {
+            action: "UPDATE_DEMOGRAPHICS_CREATE_FALLBACK",
+            reason: "CHW with NIN not found in UCS; creating as new CHW",
+            nin: chw.NIN,
+            chw: { NIN: chw.NIN, firstName: chw.firstName, lastName: chw.lastName, email: chw.email },
+          });
+          console.log(`CHW with NIN ${chw.NIN} not found in UCS; creating as new CHW (update-demographics fallback).`);
+
+          const deploymentPayload = GatewayService.buildDeploymentPayloadFromDemographicUpdate(payload, chw);
+          const createReq = { ...req, body: deploymentPayload };
+          await GatewayService.registerChwFromHrhis(createReq, res, next);
+
+          results.push({
+            message: "CHW created (was not in UCS).",
+            nin: chw.NIN,
+            created: true,
+          });
+          continue;
         }
 
         const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, { v: "custom:(uuid,person:(uuid))" });
@@ -315,6 +368,7 @@ class GatewayService {
       console.log("✅ CHW demographic updates processed.");
       return results;
     } catch (error) {
+      await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
       if (!(error instanceof ApiError)) {
         throw new ApiError(error.message, 500, 5);
       }
