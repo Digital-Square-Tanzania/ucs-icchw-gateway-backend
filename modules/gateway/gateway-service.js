@@ -558,7 +558,7 @@ class GatewayService {
     responseHeader.sender = header.receiver;
     responseHeader.receiver = header.sender;
     responseHeader.messageType = header.messageType.endsWith("_REQUEST") ? header.messageType.replace("_REQUEST", "_RESPONSE") : header.messageType + "_RESPONSE";
-    responseHeader.messageId = this.generateMessageId;
+    responseHeader.messageId = await this.generateMessageId();
     responseHeader.createdAt = new Date().toISOString();
     const responseObject = {};
     responseObject.header = responseHeader;
