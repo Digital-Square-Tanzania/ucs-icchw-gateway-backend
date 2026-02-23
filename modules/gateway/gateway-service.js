@@ -366,6 +366,7 @@ class GatewayService {
       }
 
       console.log("✅ CHW demographic updates processed.");
+      await ApiLogger.log(req, { statusCode: 200, body: results });
       return results;
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
