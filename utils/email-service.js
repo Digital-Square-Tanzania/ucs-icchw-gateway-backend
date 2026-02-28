@@ -39,61 +39,57 @@ class EmailService {
     try {
       const { to, subject, text, html } = emailData;
 
-      // --- Default eGA SMTP configuration ---
-      let host = process.env.EGA_SMTP_HOST;
-      let port = process.env.EGA_SMTP_PORT || 587;
-      let secure = process.env.EGA_SMTP_SECURE === "true" || false;
-      let authUser = process.env.EGA_EMAIL_ADDRESS;
-      let authPass = process.env.EGA_EMAIL_PASSWORD;
-      const egaDisplayName = process.env.EGA_EMAIL_DISPLAY_NAME || "UCS System";
+      // eGA SMTP configuration — aligned with ucs-peers-gateway-backend (trim, strip quotes, correct types)
+      const trimAndStripQuotes = (s) => (s || "").replace(/^["']|["']$/g, "").trim();
+      let host = trimAndStripQuotes(process.env.EGA_SMTP_HOST);
+      let port = Number(process.env.EGA_SMTP_PORT || 587);
+      let secure = process.env.EGA_SMTP_SECURE === "true";
+      let authUser = trimAndStripQuotes(process.env.EGA_EMAIL_ADDRESS);
+      let authPass = trimAndStripQuotes(process.env.EGA_EMAIL_PASSWORD);
+      const egaDisplayName = trimAndStripQuotes(process.env.EGA_EMAIL_DISPLAY_NAME) || "UCS System";
 
-      // New Properties to match Spring config (e.g., spring.mail.smtp.auth=false)
-      const authRequired = process.env.EGA_SMTP_AUTH_REQUIRED !== "false"; // Default: true
-      const requireTLS = process.env.EGA_SMTP_REQUIRE_TLS === "true"; // Default: false (Matches starttls.enable=true)
+      const authRequired = process.env.EGA_SMTP_AUTH_REQUIRED !== "false";
+      let requireTLS = process.env.EGA_SMTP_REQUIRE_TLS === "true";
 
-      // The email address that will appear in the 'From' header
       let senderEmailForFromHeader = authUser;
 
-      // --- RELAY OVERRIDE LOGIC for using Google SMTP ---
       if (process.env.EGA_USE_GMAIL_RELAY === "true") {
-        host = process.env.EMAIL_HOST || "smtp.gmail.com";
-        port = parseInt(process.env.EMAIL_PORT) || 465;
-        secure = process.env.EMAIL_SECURE === "true" || true;
-
-        authUser = process.env.EMAIL_USERNAME;
-        authPass = process.env.EMAIL_PASSWORD;
+        host = (process.env.EMAIL_HOST || "smtp.gmail.com").trim();
+        port = Number(process.env.EMAIL_PORT || 465);
+        secure = process.env.EMAIL_SECURE !== "false";
+        requireTLS = false;
+        authUser = trimAndStripQuotes(process.env.EMAIL_USERNAME);
+        authPass = trimAndStripQuotes(process.env.EMAIL_PASSWORD);
         senderEmailForFromHeader = authUser;
         console.warn("⚠️ EGA Provider using GMAIL RELAY for SMTP. Sender address is set to authenticated Gmail user.");
       }
-      // --------------------------------------------------
 
-      // Configuration validation
-      if (!host || (authRequired && (!authUser || !authPass))) {
-        throw new CustomError("SMTP configuration is incomplete. Please check host, email, and password environment variables, and the EGA_SMTP_AUTH_REQUIRED setting.", 500);
+      // Port 587: if secure is true, server expects STARTTLS so use secure=false to avoid "Greeting never received"
+      // Port 25: use .env as-is (plain SMTP, no TLS) — do not override
+      if (port === 587 && secure) {
+        secure = false;
+        if (!requireTLS) requireTLS = true;
+        console.warn("[email-service] Port 587: using secure=false, requireTLS=true (STARTTLS).");
       }
 
-      // Conditionally build authentication block (matches spring.mail.properties.mail.smtp.auth)
+      console.log("[email-service] eGA SMTP config:", { host, port, secure, requireTLS });
+
+      if (!host || (authRequired && (!authUser || !authPass))) {
+        throw new CustomError("SMTP configuration is incomplete. Check EGA_SMTP_HOST, EGA_EMAIL_ADDRESS, EGA_EMAIL_PASSWORD, and EGA_SMTP_AUTH_REQUIRED.", 500);
+      }
+
       const authConfig =
         authRequired && authUser && authPass
-          ? {
-              user: authUser,
-              pass: authPass,
-            }
+          ? { user: authUser, pass: authPass }
           : undefined;
 
-      // --- Transporter Configuration ---
       const transporterOptions = {
-        host: host,
-        port: parseInt(port),
-        // secure: false is required for port 25 or 587 when using STARTTLS (ssl.enable=false)
-        secure: secure,
+        host,
+        port,
+        secure,
         auth: authConfig,
-        // requireTLS: true matches spring.mail.properties.mail.smtp.starttls.enable=true
-        requireTLS: requireTLS,
-        // tls: { rejectUnauthorized: false } matches ssl.trust=* and ssl.checkserveridentity=false
-        tls: {
-          rejectUnauthorized: false,
-        },
+        requireTLS,
+        tls: { rejectUnauthorized: false },
       };
 
       const transporter = nodemailer.createTransport(transporterOptions);
@@ -113,8 +109,25 @@ class EmailService {
       console.log(" > ✉️ eGA Email sent successfully:", info.response);
       return info;
     } catch (error) {
-      // Re-throwing the error with better context
-      throw new CustomError("Failed to send email via eGA: " + error.message, 500);
+      const errorMessage = error?.message || "Unknown error";
+      const code = error?.code;
+      const response = error?.response;
+      const responseCode = error?.responseCode;
+      const command = error?.command;
+      console.error("[email-service] eGA send error details:", {
+        message: errorMessage,
+        code,
+        response,
+        responseCode,
+        command,
+      });
+      if (code === "EAUTH") {
+        throw new CustomError("eGA authentication failed. Check EGA_EMAIL_ADDRESS and EGA_EMAIL_PASSWORD in .env.", 500);
+      }
+      if (code === "ECONNECTION") {
+        throw new CustomError(`eGA connection failed to ${process.env.EGA_SMTP_HOST}:${process.env.EGA_SMTP_PORT}. Check network and EGA_SMTP_HOST/EGA_SMTP_PORT.`, 500);
+      }
+      throw new CustomError("Failed to send email via eGA: " + errorMessage, 500);
     }
   }
 
@@ -151,22 +164,51 @@ class EmailService {
   }
 
   /**
-   * Send an email using the configured provider (eGA or Gmail)
-   * @param {Object} emailData
-   * // ... (Rest of the method remains unchanged)
+   * Send an email using the configured provider (eGA or Gmail).
+   * When provider is eGA and eGA fails (e.g. "Greeting never received"), automatically
+   * tries Gmail if EMAIL_USERNAME and EMAIL_PASSWORD are set (same as ucs-peers-gateway-backend).
    */
   async sendEmail(emailData) {
     try {
       console.log(` SUB: Sending email via ${this.emailProvider.toUpperCase()}...`);
 
       if (this.emailProvider === "ega") {
-        return await this.sendEmailViaEGA(emailData);
-      } else {
-        return await this.sendEmailViaGmail(emailData);
+        try {
+          return await this.sendEmailViaEGA(emailData);
+        } catch (egaError) {
+          const gmailUser = process.env.EMAIL_USERNAME;
+          const gmailPass = process.env.EMAIL_PASSWORD;
+          if (gmailUser && gmailPass) {
+            console.warn("[email-service] eGA email failed, attempting Gmail fallback:", egaError?.message || egaError);
+            try {
+              const gmailTransporter = nodemailer.createTransport({
+                service: "gmail",
+                auth: { user: gmailUser, pass: gmailPass },
+              });
+              const mailOptions = {
+                from: process.env.EMAIL_FROM || "iCCHW-WAJA",
+                to: emailData.to,
+                subject: emailData.subject,
+                text: emailData.text || "",
+                html: emailData.html || "",
+              };
+              const info = await gmailTransporter.sendMail(mailOptions);
+              console.log(" > ✉️ Email sent via Gmail fallback to", emailData.to);
+              return info;
+            } catch (gmailError) {
+              console.error("[email-service] Both eGA and Gmail fallback failed");
+              throw new CustomError(
+                `Failed to send email via eGA: ${egaError?.message || egaError}. Gmail fallback also failed: ${gmailError?.message || gmailError}`,
+                500
+              );
+            }
+          }
+          throw egaError;
+        }
       }
+      return await this.sendEmailViaGmail(emailData);
     } catch (error) {
-      // The CustomError from the specific provider method will bubble up here
-      throw new CustomError("Failed to send email: " + error.message, 500);
+      throw new CustomError("Failed to send email: " + (error?.message || error), 500);
     }
   }
 
