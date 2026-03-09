@@ -62,12 +62,7 @@ router.get("/chw/forgot/:username", UserController.forgotPassword);
 router.get("/chw/reset/:slug", UserController.renderActivationPage);
 
 // Admin: CHW activation email control dashboard (Pug)
-router.get(
-  "/admin/activation-email-control",
-  // AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
-  UserController.renderActivationEmailControlPage,
-);
+router.get("/admin/activation-email-control", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.renderActivationEmailControlPage);
 
 // Admin JSON APIs for activation email metrics & control
 router.get("/admin/activation-email-stats", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationEmailStats);
