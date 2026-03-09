@@ -1,0 +1,275 @@
+doctype html
+html
+  head
+    title WAJA/UCS - CHW Activation Email Control
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    link(rel="stylesheet", href=`${ssrUrlPrefix}/css/styles.css`)
+  body
+    .container
+      .bg-top
+        h1(style="margin-top: 4%; font-size: 1.8rem; color: #004d7a;") Usimamizi wa Email za Uanzishaji (CHW)
+        p(style="font-size: 0.9rem; color: #555; max-width: 720px; margin: 0 auto;")
+          | Angalia takwimu za uanzishaji wa akaunti, chagua ukubwa wa kundi (batch),
+          | tume upya email za uanzishaji, na sanidi kurudia kwa makundi kupitia mtiririko wa kila siku.
+
+      .card(style="margin-top: 1.5rem; padding: 1.5rem;")
+        h2(style="font-size: 1.2rem; margin-bottom: 0.75rem; color: #333;") Takwimu za Uanzishaji
+        .stats-grid(style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;")
+          .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
+            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zimeisha Muda &amp; Hazijatumwa Tena
+            p#stat-unsentExpired(style="font-size:1.6rem; font-weight:600; color:#b91c1c;") #{stats?.unsentExpired ?? 0}
+            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+              | isUsed = false, isResent = false, tayari zime-expire.
+
+          .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
+            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Akaunti Zilizowashwa
+            p#stat-activated(style="font-size:1.6rem; font-weight:600; color:#15803d;") #{stats?.activated ?? 0}
+            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+              | isUsed = true.
+
+          .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
+            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zime-expire &amp; Zimerudishwa
+            p#stat-expiredResent(style="font-size:1.6rem; font-weight:600; color:#b45309;") #{stats?.expiredResent ?? 0}
+            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+              | isResent = true na expiryDate &lt; leo.
+
+          .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
+            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Ziko Hai &amp; Hazijatumika
+            p#stat-openNotUsed(style="font-size:1.6rem; font-weight:600; color:#0369a1;") #{stats?.openNotUsed ?? 0}
+            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+              | isUsed = false, expiryDate ≥ leo.
+
+          .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
+            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Jumla ya Slugi za Uanzishaji
+            p#stat-total(style="font-size:1.6rem; font-weight:600; color:#111827;") #{stats?.total ?? 0}
+            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+              | slugType = ACTIVATION (jumla).
+
+          .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
+            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zilizowahi Kurudishwa
+            p#stat-resentCount(style="font-size:1.6rem; font-weight:600; color:#7c2d12;") #{stats?.resentCount ?? 0}
+            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+              | isResent = true (aina zote).
+
+        button#btn-refresh-stats(type="button" style="margin-top:0.75rem; font-size:0.75rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer;")
+          | 🔄 Pakua takwimu upya
+
+      .card(style="margin-top: 1.5rem; padding: 1.5rem; background:#eff6ff; border:1px solid #bfdbfe; border-radius:0.75rem;")
+        h2(style="font-size:1.1rem; margin-bottom:0.75rem; color:#1d4ed8;") Tuma Upya Email za Uanzishaji
+
+        .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
+          .batch-controls(style="flex:1 1 260px;")
+            h3(style="font-size:0.95rem; font-weight:600; color:#1e3a8a; margin-bottom:0.3rem;") Kundi la Slugi Zilizokwisha Muda (Expired)
+            p(style="font-size:0.75rem; color:#1e3a8a; margin-bottom:0.4rem;")
+              | Tuma upya email za uanzishaji kwa slugi za ACTIVAION ambazo zimeisha muda, hazijatumika na hazijawahi kurudishwa.
+
+            label(for="expiredLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#1e40af; margin-bottom:0.15rem;")
+              span Ukubwa wa kundi (emails kwa batch)
+              span#expiredLimitValue #{100}
+
+            input#expiredLimit(type="range" min="10" max="500" step="10" value="100" style="width:100%;")
+            .batch-scale(style="display:flex; justify-content:space-between; font-size:0.65rem; color:#1e3a8a; margin-top:0.1rem;")
+              span 10
+              span 250
+              span 500
+
+            button#btn-resend-expired(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#1d4ed8; color:white; border:none; cursor:pointer;")
+              | Tuma Upya Zilizokwisha Muda
+
+            p#status-expired(style="font-size:0.75rem; margin-top:0.3rem; color:#1e3a8a;")
+
+          .batch-controls(style="flex:1 1 260px;")
+            h3(style="font-size:0.95rem; font-weight:600; color:#0f766e; margin-bottom:0.3rem;") Kundi la Slugi Zilizopo Hai (Open)
+            p(style="font-size:0.75rem; color:#0f766e; margin-bottom:0.4rem;")
+              | Tuma upya email kwa slugi za ACTIVAION ambazo bado zina muda (hazija-expire) na hazijatumika.
+
+            label(for="openLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#0f766e; margin-bottom:0.15rem;")
+              span Ukubwa wa kundi (emails kwa batch)
+              span#openLimitValue #{100}
+
+            input#openLimit(type="range" min="10" max="500" step="10" value="100" style="width:100%;")
+            .batch-scale(style="display:flex; justify-content:space-between; font-size:0.65rem; color:#0f766e; margin-top:0.1rem;")
+              span 10
+              span 250
+              span 500
+
+            button#btn-resend-open(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#0f766e; color:white; border:none; cursor:pointer;")
+              | Tuma Upya Zilizopo Hai
+
+            p#status-open(style="font-size:0.75rem; margin-top:0.3rem; color:#0f766e;")
+
+      .card(style="margin-top:1.5rem; padding:1.5rem; border-radius:0.75rem; border:1px solid #e5e7eb;")
+        h2(style="font-size:1.05rem; margin-bottom:0.5rem; color:#111827;") Ratiba ya Kundi la Kila Siku (Scheduler)
+        p(style="font-size:0.75rem; color:#4b5563; margin-bottom:0.75rem;")
+          | Hii ratiba hutumika kwenye kazi ya kila siku (cron) saa 23:55. Unaweza kuweka ukubwa wa kundi,
+          | idadi ya marudio (iterations), na muda wa kusubiri kati ya marudio.
+
+        form#scheduleForm(onSubmit="return false;" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.75rem; align-items:flex-end;")
+          .field
+            label(for="scheduleEnabled" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Wezesha Scheduler
+            select#scheduleEnabled(name="enabled" style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+              option(value="true" selected=schedule?.enabled !== false) Ndiyo
+              option(value="false" selected=schedule?.enabled === false) Hapana
+
+          .field
+            label(for="scheduleBatchSize" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Ukubwa wa Kundi (batchSize)
+            input#scheduleBatchSize(type="number" min="1" max="1000" step="1" name="batchSize" value=schedule?.batchSize || 500 style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+
+          .field
+            label(for="scheduleMaxIterations" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Idadi ya Marudio (maxIterations)
+            input#scheduleMaxIterations(type="number" min="1" max="20" step="1" name="maxIterations" value=schedule?.maxIterations || 1 style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+
+          .field
+            label(for="scheduleDelayMs" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Muda kati ya Marudio (ms)
+            input#scheduleDelayMs(type="number" min="0" step="1000" name="delayMsBetweenIterations" value=schedule?.delayMsBetweenIterations || 0 style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+
+          button#btn-save-schedule(type="button" style="margin-top:0.9rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#111827; color:white; border:none; cursor:pointer;")
+            | Hifadhi Ratiba
+
+        p#status-schedule(style="font-size:0.75rem; margin-top:0.4rem; color:#4b5563;")
+
+    script.
+      (function () {
+        const prefix = "#{ssrUrlPrefix}".replace(/\/+$/, "");
+
+        function $(id) {
+          return document.getElementById(id);
+        }
+
+        function updateSliderDisplay(id, valueSpanId) {
+          const input = $(id);
+          const span = $(valueSpanId);
+          if (!input || !span) return;
+          const update = () => (span.textContent = String(input.value));
+          input.addEventListener("input", update);
+          update();
+        }
+
+        async function fetchJson(url, options) {
+          const res = await fetch(url, {
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            ...options,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data?.message || `Request failed with status ${res.status}`);
+          }
+          return data;
+        }
+
+        async function refreshStats() {
+          try {
+            const data = await fetchJson(prefix + "/api/v1/user/admin/activation-email-stats");
+            const stats = data?.data?.stats || data?.data || data;
+            if (!stats) return;
+            const map = {
+              "stat-unsentExpired": stats.unsentExpired,
+              "stat-activated": stats.activated,
+              "stat-expiredResent": stats.expiredResent,
+              "stat-openNotUsed": stats.openNotUsed,
+              "stat-total": stats.total,
+              "stat-resentCount": stats.resentCount,
+            };
+            Object.keys(map).forEach((id) => {
+              const el = $(id);
+              if (el) el.textContent = String(map[id] ?? 0);
+            });
+          } catch (e) {
+            console.error("Failed to refresh stats:", e);
+          }
+        }
+
+        async function postBatch(url, limit, statusId) {
+          const statusEl = $(statusId);
+          if (statusEl) {
+            statusEl.textContent = "Inatuma... tafadhali subiri.";
+          }
+          try {
+            const data = await fetchJson(prefix + url, {
+              method: "POST",
+              body: JSON.stringify({ limit }),
+            });
+            const summary = data?.data || data;
+            if (statusEl) {
+              statusEl.textContent =
+                "Imekamilika. Jumla: " +
+                (summary.total ?? 0) +
+                ", Zimefanikiwa: " +
+                (summary.success ?? 0) +
+                ", Zimekosa: " +
+                (summary.failed ?? 0);
+            }
+            await refreshStats();
+          } catch (e) {
+            console.error("Batch resend failed:", e);
+            if (statusEl) {
+              statusEl.textContent = "Imeshindikana: " + e.message;
+            }
+          }
+        }
+
+        async function saveSchedule() {
+          const statusEl = $("status-schedule");
+          if (statusEl) statusEl.textContent = "Inahifadhi ratiba...";
+          try {
+            const enabledSel = $("scheduleEnabled");
+            const enabled = enabledSel ? enabledSel.value === "true" : true;
+            const batchSize = Number($("scheduleBatchSize")?.value || 500);
+            const maxIterations = Number($("scheduleMaxIterations")?.value || 1);
+            const delayMsBetweenIterations = Number($("scheduleDelayMs")?.value || 0);
+
+            const payload = { enabled, batchSize, maxIterations, delayMsBetweenIterations };
+            const data = await fetchJson(prefix + "/api/v1/user/admin/activation-schedule", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+            const schedule = data?.data || data;
+            if (statusEl) {
+              statusEl.textContent =
+                "Ratiba imehifadhiwa. batchSize=" +
+                schedule.batchSize +
+                ", maxIterations=" +
+                schedule.maxIterations +
+                ", delayMs=" +
+                schedule.delayMsBetweenIterations;
+            }
+          } catch (e) {
+            console.error("Failed to save schedule:", e);
+            if (statusEl) statusEl.textContent = "Imeshindikana: " + e.message;
+          }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          updateSliderDisplay("expiredLimit", "expiredLimitValue");
+          updateSliderDisplay("openLimit", "openLimitValue");
+
+          const btnRefresh = $("btn-refresh-stats");
+          if (btnRefresh) {
+            btnRefresh.addEventListener("click", refreshStats);
+          }
+
+          const btnExpired = $("btn-resend-expired");
+          if (btnExpired) {
+            btnExpired.addEventListener("click", function () {
+              const limit = Number($("expiredLimit")?.value || 100);
+              postBatch("/api/v1/user/admin/activation-resend/expired", limit, "status-expired");
+            });
+          }
+
+          const btnOpen = $("btn-resend-open");
+          if (btnOpen) {
+            btnOpen.addEventListener("click", function () {
+              const limit = Number($("openLimit")?.value || 100);
+              postBatch("/api/v1/user/admin/activation-resend/open", limit, "status-open");
+            });
+          }
+
+          const btnSaveSchedule = $("btn-save-schedule");
+          if (btnSaveSchedule) {
+            btnSaveSchedule.addEventListener("click", saveSchedule);
+          }
+        });
+      })();
+

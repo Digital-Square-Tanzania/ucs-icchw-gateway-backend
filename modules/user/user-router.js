@@ -61,7 +61,56 @@ router.get("/chw/forgot/:username", UserController.forgotPassword);
 // Reset password page route
 router.get("/chw/reset/:slug", UserController.renderActivationPage);
 
+// Admin: CHW activation email control dashboard (Pug)
+router.get(
+  "/admin/activation-email-control",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  UserController.renderActivationEmailControlPage
+);
+
+// Admin JSON APIs for activation email metrics & control
+router.get(
+  "/admin/activation-email-stats",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  UserController.getActivationEmailStats
+);
+
+router.get(
+  "/admin/activation-schedule",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  UserController.getActivationSchedule
+);
+
+router.post(
+  "/admin/activation-schedule",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  UserController.updateActivationSchedule
+);
+
+router.post(
+  "/admin/activation-resend/expired",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  UserController.resendExpiredActivationsBatch
+);
+
+router.post(
+  "/admin/activation-resend/open",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  UserController.resendOpenActivationsBatch
+);
+
 // Manual trigger for resend activation cron (for testing/admin use)
-router.post("/admin/resend-activations", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.manualResendActivations);
+router.post(
+  "/admin/resend-activations",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  UserController.manualResendActivations
+);
 
 export default router;

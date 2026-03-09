@@ -14,6 +14,7 @@ import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repo
 import TeamRepository from "../openmrs/team/openmrs-team-repository.js";
 import TeamService from "../openmrs/team/openmrs-team-service.js";
 import PayloadContent from "../gateway/helpers/payload-content.js";
+import resendActivationCron from "../../utils/resend-activation-cron.js";
 
 const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
 
@@ -436,6 +437,158 @@ class UserService {
       // Rethrow with CustomError for the controller to catch
       throw new CustomError(error.message, error.statusCode || 400);
     }
+  }
+
+  /**
+   * Get activation email metrics for CHW accounts.
+   * Mirrors (and extends) stats from ucs-peers email settings.
+   */
+  static async getActivationEmailStats() {
+    const now = new Date();
+
+    const [unsentExpired, activated, expiredResent, openNotUsed, total, resentCount] = await Promise.all([
+      prisma.accountActivation.count({
+        where: {
+          slugType: "ACTIVATION",
+          isUsed: false,
+          isResent: false,
+          expiryDate: { lt: now },
+        },
+      }),
+      prisma.accountActivation.count({
+        where: {
+          slugType: "ACTIVATION",
+          isUsed: true,
+        },
+      }),
+      prisma.accountActivation.count({
+        where: {
+          slugType: "ACTIVATION",
+          isResent: true,
+          expiryDate: { lt: now },
+        },
+      }),
+      prisma.accountActivation.count({
+        where: {
+          slugType: "ACTIVATION",
+          isUsed: false,
+          expiryDate: { gte: now },
+        },
+      }),
+      prisma.accountActivation.count({
+        where: {
+          slugType: "ACTIVATION",
+        },
+      }),
+      prisma.accountActivation.count({
+        where: {
+          slugType: "ACTIVATION",
+          isResent: true,
+        },
+      }),
+    ]);
+
+    return {
+      unsentExpired,
+      activated,
+      expiredResent,
+      openNotUsed,
+      total,
+      resentCount,
+    };
+  }
+
+  /**
+   * Resend activation emails for expired, never-resent activations (single batch).
+   * Returns a summary object { total, success, failed }.
+   */
+  static async resendExpiredActivationsBatch(limit = 100) {
+    const now = new Date();
+    const batchSize = Number(limit) > 0 ? Number(limit) : 100;
+
+    const toResend = await prisma.accountActivation.findMany({
+      where: {
+        slugType: "ACTIVATION",
+        isUsed: false,
+        isResent: false,
+        expiryDate: { lt: now },
+        email: {
+          not: null,
+          not: "",
+        },
+      },
+      take: batchSize,
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    console.log(`🔄 Manual expired-activation resend batch: found ${toResend.length} records to process (limit=${batchSize})`);
+
+    let success = 0;
+    let failed = 0;
+
+    for (const activation of toResend) {
+      try {
+        await resendActivationCron.resendActivationEmail(activation);
+        success++;
+      } catch (err) {
+        failed++;
+        console.error("❌ Error resending expired activation in batch:", err?.message || err);
+      }
+    }
+
+    return {
+      total: toResend.length,
+      success,
+      failed,
+    };
+  }
+
+  /**
+   * Resend activation emails for open (non-expired), not-used activations.
+   * Useful when email delivery failed initially but slugs are still valid.
+   */
+  static async resendOpenActivationsBatch(limit = 100) {
+    const now = new Date();
+    const batchSize = Number(limit) > 0 ? Number(limit) : 100;
+
+    const toResend = await prisma.accountActivation.findMany({
+      where: {
+        slugType: "ACTIVATION",
+        isUsed: false,
+        expiryDate: { gte: now },
+        email: {
+          not: null,
+          not: "",
+        },
+      },
+      take: batchSize,
+      orderBy: {
+        createdAt: "asc",
+      },
+    });
+
+    console.log(`🔄 Manual open-activation resend batch: found ${toResend.length} records to process (limit=${batchSize})`);
+
+    let success = 0;
+    let failed = 0;
+
+    for (const activation of toResend) {
+      try {
+        await resendActivationCron.resendActivationEmail(activation);
+        success++;
+      } catch (err) {
+        failed++;
+        console.error("❌ Error resending open activation in batch:", err?.message || err);
+      }
+    }
+
+    return {
+      total: toResend.length,
+      success,
+      failed,
+    };
   }
 }
 
