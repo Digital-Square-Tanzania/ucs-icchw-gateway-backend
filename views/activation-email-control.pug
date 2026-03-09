@@ -1,0 +1,666 @@
+doctype html
+html
+  head
+    - const isSw = lang === 'sw';
+    title #{isSw ? 'WAJA/UCS - Usimamizi wa Email za Uanzishaji' : 'WAJA/UCS - CHW Activation Email Control'}
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    link(rel="stylesheet", href=`${ssrUrlPrefix}/css/styles.css`)
+    style.
+      html, body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
+      body {
+        min-height: 100vh;
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top left, #dbeafe, #eff6ff 45%, #f9fafb 100%);
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        color: #111827;
+      }
+      .page-shell {
+        width: 100%;
+        max-width: 1400px;
+        padding: 2.5rem 2.5rem 3rem;
+      }
+      .page-header {
+        margin-bottom: 1.75rem;
+      }
+      .page-header h1 {
+        font-size: 1.7rem;
+        margin: 0 0 0.3rem;
+        color: #004d7a;
+      }
+      .page-header p {
+        font-size: 0.9rem;
+        color: #4b5563;
+        max-width: 760px;
+      }
+      .activation-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 5fr) minmax(0, 4fr);
+        gap: 1.75rem;
+        align-items: flex-start;
+      }
+      @media (max-width: 1100px) {
+        .activation-grid {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+      .panel {
+        background: #ffffff;
+        border-radius: 1rem;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.15);
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        padding: 1.5rem 1.4rem;
+      }
+      .panel-header {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+      }
+      .panel-subtitle {
+        font-size: 0.78rem;
+        color: #6b7280;
+        margin-bottom: 0.9rem;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 0.85rem;
+      }
+      .stat-card {
+        background: #ffffff;
+        border-radius: 0.8rem;
+        border: 1px solid #e5e7eb;
+        padding: 0.75rem;
+      }
+      .section-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 0.4rem;
+        color: #1f2937;
+      }
+      .matrix-wrapper {
+        margin-top: 0.75rem;
+      }
+      .matrix-grid {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 51px;
+        grid-template-rows: repeat(7, 51px);
+        gap: 3px;
+        padding: 0.25rem;
+        border-radius: 0.75rem;
+        background: #f9fafb;
+        border: 1px dashed #e5e7eb;
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      .matrix-cell {
+        width: 51px;
+        height: 51px;
+        border-radius: 5px;
+        background: #e5e7eb;
+      }
+      .matrix-cell.level-1 {
+        background: #bfdbfe;
+      }
+      .matrix-cell.level-2 {
+        background: #60a5fa;
+      }
+      .matrix-cell.level-3 {
+        background: #2563eb;
+      }
+      .matrix-cell.level-4 {
+        background: #1d4ed8;
+      }
+      .bottom-note {
+        font-size: 0.7rem;
+        color: #6b7280;
+        margin-top: 0.45rem;
+      }
+      .footer-switch {
+        margin-top: 1.5rem;
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-align: right;
+      }
+      .footer-switch a {
+        color: #1d4ed8;
+        text-decoration: none;
+        margin-left: 0.4rem;
+      }
+      .footer-switch a.active {
+        font-weight: 600;
+        text-decoration: underline;
+      }
+      .toast-container {
+        position: fixed;
+        right: 1rem;
+        top: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        z-index: 50;
+      }
+      .toast {
+        min-width: 220px;
+        max-width: 340px;
+        padding: 0.6rem 0.8rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        background: #ffffff;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.25);
+        font-size: 0.8rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        animation: fade-in 0.15s ease-out;
+      }
+      .toast-success {
+        border-color: rgba(34, 197, 94, 0.6);
+      }
+      .toast-error {
+        border-color: rgba(248, 113, 113, 0.85);
+      }
+      .toast-warning {
+        border-color: rgba(251, 191, 36, 0.85);
+      }
+      .toast-icon {
+        margin-top: 0.05rem;
+        font-size: 0.85rem;
+      }
+      .toast-close {
+        margin-left: auto;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 0.85rem;
+        color: #6b7280;
+      }
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+  body
+    .page-shell
+      .page-header
+        if isSw
+          h1 Usimamizi wa Email za Uanzishaji (CHW)
+          p
+            | Angalia takwimu za uanzishaji wa akaunti, chagua ukubwa wa kundi (batch),
+            |  tume upya email za uanzishaji, na sanidi kurudia kwa makundi kupitia mtiririko wa kila siku.
+        else
+          h1 CHW Activation Email Management
+          p
+            | View activation metrics, choose batch sizes for resending, and configure the daily scheduler
+            |  for CHW activation emails.
+
+      .activation-grid
+        .panel
+          if isSw
+            .panel-header Takwimu za Uanzishaji
+            p.panel-subtitle
+              | Muhtasari wa hali ya sasa ya slugi za uanzishaji kwa akaunti za CHW.
+          else
+            .panel-header Activation Metrics
+            p.panel-subtitle
+              | Overview of the current state of activation slugs for CHW accounts.
+          button#btn-refresh-stats(
+            type="button"
+            style="margin-top:0.3rem; margin-bottom:0.25rem; font-size:0.75rem; padding:0.35rem 0.9rem; border-radius:999px; border:none; background:#1d4ed8; color:#ffffff; cursor:pointer; float:right;"
+          )
+            | #{isSw ? '🔄 Pakua takwimu upya' : '🔄 Refresh metrics'}
+          .matrix-wrapper
+            .section-title(style="font-size:0.8rem; color:#6b7280; margin-bottom:0.2rem;")
+              | #{isSw ? 'Siku za hivi karibuni za uanzishaji' : 'Recent activation activity'}
+            #activationMatrix.matrix-grid
+            p.bottom-note
+              | #{isSw ? 'Kila kisanduku kinaonyesha idadi ya slugi za uanzishaji zilizoundwa siku hiyo.' : 'Each square shows how many activation slugs were created that day.'}
+        .stats-grid
+          .stat-card
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zimeisha Muda &amp; Hazijatumwa Tena
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Expired &amp; Never Resent
+            p#stat-unsentExpired(style="font-size:1.6rem; font-weight:600; color:#b91c1c;") #{(stats && stats.unsentExpired) || 0}
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = false, isResent = false, tayari zime-expire.
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = false, isResent = false, and already expired.
+
+          .stat-card
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Akaunti Zilizowashwa
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Activated Accounts
+            p#stat-activated(style="font-size:1.6rem; font-weight:600; color:#15803d;") #{(stats && stats.activated) || 0}
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = true.
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = true.
+
+          .stat-card
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zime-expire &amp; Zimerudishwa
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Expired &amp; Resent
+            p#stat-expiredResent(style="font-size:1.6rem; font-weight:600; color:#b45309;") #{(stats && stats.expiredResent) || 0}
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isResent = true na expiryDate &lt; leo.
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isResent = true and expiryDate &lt; today.
+
+          .stat-card
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Ziko Hai &amp; Hazijatumika
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Open &amp; Not Used
+            p#stat-openNotUsed(style="font-size:1.6rem; font-weight:600; color:#0369a1;") #{(stats && stats.openNotUsed) || 0}
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = false, expiryDate ≥ leo.
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = false, expiryDate ≥ today.
+
+          .stat-card
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Jumla ya Slugi za Uanzishaji
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Total Activation Slugs
+            p#stat-total(style="font-size:1.6rem; font-weight:600; color:#111827;") #{(stats && stats.total) || 0}
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | slugType = ACTIVATION (jumla).
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | slugType = ACTIVATION (all).
+
+          .stat-card
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zilizowahi Kurudishwa
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Ever Resent
+            p#stat-resentCount(style="font-size:1.6rem; font-weight:600; color:#7c2d12;") #{(stats && stats.resentCount) || 0}
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isResent = true (aina zote).
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isResent = true (all types).
+
+        .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
+          .batch-controls(style="flex:1 1 260px;")
+            h3(style="font-size:0.95rem; font-weight:600; color:#1e3a8a; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizokwisha Muda (Ekspaya)' : 'Expired Slugs'}
+            p(style="font-size:0.75rem; color:#1e3a8a; margin-bottom:0.4rem;")
+              if isSw
+                | Tuma upya email za uanzishaji kwa slugi za ACTIVAION ambazo zimeisha muda, hazijatumika na hazijawahi kurudishwa.
+              else
+                | Resend activation emails for ACTIVATION slugs that have expired, are unused and have never been resent.
+
+            label(for="expiredLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#1e40af; margin-bottom:0.15rem;")
+              span #{isSw ? 'Ukubwa wa kundi (emails kwa batch)' : 'Batch size (emails per batch)'}
+              span#expiredLimitValue #{100}
+
+            input#expiredLimit(type="range" min="10" max="500" step="10" value="100" style="width:100%;")
+            .batch-scale(style="display:flex; justify-content:space-between; font-size:0.65rem; color:#1e3a8a; margin-top:0.1rem;")
+              span 10
+              span 250
+              span 500
+
+            button#btn-resend-expired(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#1d4ed8; color:white; border:none; cursor:pointer;")
+              | #{isSw ? 'Tuma Upya Zilizokwisha Muda' : 'Resend Expired Batch'}
+
+            p#status-expired(style="font-size:0.75rem; margin-top:0.3rem; color:#1e3a8a;")
+
+          .batch-controls(style="flex:1 1 260px;")
+            h3(style="font-size:0.95rem; font-weight:600; color:#0f766e; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizopo Hai' : 'Open Slugs'}
+            p(style="font-size:0.75rem; color:#0f766e; margin-bottom:0.4rem;")
+              if isSw
+                | Tuma upya email kwa slugi za ACTIVAION ambazo bado zina muda (hazija-expire) na hazijatumika.
+              else
+                | Resend emails for ACTIVATION slugs that are still valid (not expired) and unused.
+
+            label(for="openLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#0f766e; margin-bottom:0.15rem;")
+              span #{isSw ? 'Ukubwa wa kundi (emails kwa batch)' : 'Batch size (emails per batch)'}
+              span#openLimitValue #{100}
+
+            input#openLimit(type="range" min="10" max="500" step="10" value="100" style="width:100%;")
+            .batch-scale(style="display:flex; justify-content:space-between; font-size:0.65rem; color:#0f766e; margin-top:0.1rem;")
+              span 10
+              span 250
+              span 500
+
+            button#btn-resend-open(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#0f766e; color:white; border:none; cursor:pointer;")
+              | #{isSw ? 'Tuma Upya Zilizopo Hai' : 'Resend Open Batch'}
+
+            p#status-open(style="font-size:0.75rem; margin-top:0.3rem; color:#0f766e;")
+
+        .panel
+          if isSw
+            h2.section-title Ratiba ya Kundi la Kila Siku (Scheduler)
+            p.panel-subtitle
+              | Hii ratiba hutumika kwenye kazi ya kila siku (cron) saa 23:55. Unaweza kuweka ukubwa wa kundi,
+              |  idadi ya marudio (iterations), na muda wa kusubiri kati ya marudio.
+          else
+            h2.section-title Daily Batch Scheduler
+            p.panel-subtitle
+              | This scheduler runs with the nightly job (cron) at 23:55. Configure batch size, number of iterations,
+              |  and delay between iterations.
+
+          form#scheduleForm(onSubmit="return false;" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.75rem; align-items:flex-end;")
+          .field
+            label(for="scheduleEnabled" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Wezesha Scheduler' : 'Enable scheduler'}
+            - const enabledVal = (schedule && typeof schedule.enabled === "boolean") ? schedule.enabled : true;
+            select#scheduleEnabled(name="enabled" style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+              option(value="true" selected=enabledVal) #{isSw ? 'Ndiyo' : 'Yes'}
+              option(value="false" selected=!enabledVal) #{isSw ? 'Hapana' : 'No'}
+
+          .field
+            label(for="scheduleBatchSize" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Ukubwa wa Kundi (batchSize)' : 'Batch size (batchSize)'}
+            - const batchSizeVal = (schedule && schedule.batchSize) ? schedule.batchSize : 500;
+            input#scheduleBatchSize(type="number" min="1" max="1000" step="1" name="batchSize" value=batchSizeVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+
+          .field
+            label(for="scheduleMaxIterations" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Idadi ya Marudio (maxIterations)' : 'Number of iterations (maxIterations)'}
+            - const maxIterVal = (schedule && schedule.maxIterations) ? schedule.maxIterations : 1;
+            input#scheduleMaxIterations(type="number" min="1" max="20" step="1" name="maxIterations" value=maxIterVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+
+          .field
+            label(for="scheduleDelayMs" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Muda kati ya Marudio (ms)' : 'Delay between iterations (ms)'}
+            - const delayVal = (schedule && typeof schedule.delayMsBetweenIterations === "number") ? schedule.delayMsBetweenIterations : 0;
+            input#scheduleDelayMs(type="number" min="0" step="1000" name="delayMsBetweenIterations" value=delayVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+
+          button#btn-save-schedule(type="button" style="margin-top:0.9rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#111827; color:white; border:none; cursor:pointer;")
+            | #{isSw ? 'Hifadhi Ratiba' : 'Save Schedule'}
+
+          p#status-schedule.bottom-note
+
+      .footer-switch
+        - const baseHref = `${ssrUrlPrefix}/api/v1/user/admin/activation-email-control`;
+        span Language:
+        a(href=`${baseHref}?lang=en`, class=(!isSw ? 'active' : '')) English
+        span |
+        a(href=`${baseHref}?lang=sw`, class=(isSw ? 'active' : '')) Kiswahili
+
+    .toast-container#toastContainer
+
+    script.
+      (function () {
+        const prefix = "#{ssrUrlPrefix}".replace(/\/+$/, "");
+
+        function $(id) {
+          return document.getElementById(id);
+        }
+
+        function pushToast(message, type) {
+          const container = $("toastContainer");
+          if (!container) return;
+          const toast = document.createElement("div");
+          let cls = "toast ";
+          if (type === "success") cls += "toast-success";
+          else if (type === "warning") cls += "toast-warning";
+          else cls += "toast-error";
+          toast.className = cls;
+
+          const icon =
+            type === "success" ? "✅" :
+            type === "warning" ? "⚠️" :
+            "❌";
+
+          toast.innerHTML =
+            '<span class="toast-icon">' +
+            icon +
+            "</span><div>" +
+            message +
+            '</div><button class="toast-close" aria-label="Close">&times;</button>';
+
+          const closeBtn = toast.querySelector(".toast-close");
+          if (closeBtn) {
+            closeBtn.addEventListener("click", function () {
+              if (container.contains(toast)) container.removeChild(toast);
+            });
+          }
+
+          container.appendChild(toast);
+          setTimeout(function () {
+            if (container.contains(toast)) container.removeChild(toast);
+          }, 6000);
+        }
+
+        function updateSliderDisplay(id, valueSpanId) {
+          const input = $(id);
+          const span = $(valueSpanId);
+          if (!input || !span) return;
+          const update = () => (span.textContent = String(input.value));
+          input.addEventListener("input", update);
+          update();
+        }
+
+        async function fetchJson(url, options) {
+          const res = await fetch(url, {
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            ...options,
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            throw new Error(data?.message || `Request failed with status ${res.status}`);
+          }
+          return data;
+        }
+
+        async function refreshStats() {
+          try {
+            const data = await fetchJson(prefix + "/api/v1/user/admin/activation-email-stats");
+            const stats = data?.data?.stats || data?.data || data;
+            if (!stats) return;
+            const map = {
+              "stat-unsentExpired": stats.unsentExpired,
+              "stat-activated": stats.activated,
+              "stat-expiredResent": stats.expiredResent,
+              "stat-openNotUsed": stats.openNotUsed,
+              "stat-total": stats.total,
+              "stat-resentCount": stats.resentCount,
+            };
+            Object.keys(map).forEach((id) => {
+              const el = $(id);
+              if (el) el.textContent = String(map[id] ?? 0);
+            });
+            pushToast("#{isSw ? 'Takwimu zimepakiwa upya.' : 'Metrics refreshed.'}", "success");
+            await refreshMatrix(false);
+          } catch (e) {
+            console.error("Failed to refresh stats:", e);
+            pushToast(e.message || "Failed to refresh metrics.", "error");
+          }
+        }
+
+        function buildDayArray(days, matrix) {
+          const today = new Date();
+          const start = new Date();
+          start.setDate(today.getDate() - (days - 1));
+          const byDate = {};
+          (matrix || []).forEach(function (row) {
+            byDate[row.date] = row.count || 0;
+          });
+          const arr = [];
+          for (let d = 0; d < days; d++) {
+            const cur = new Date(start.getTime());
+            cur.setDate(start.getDate() + d);
+            const key = cur.toISOString().slice(0, 10);
+            arr.push({ date: key, count: byDate[key] || 0, jsDate: cur });
+          }
+          return arr;
+        }
+
+        function renderMatrix(days, matrix) {
+          const container = $("activationMatrix");
+          if (!container) return;
+          container.innerHTML = "";
+          const daysData = buildDayArray(days, matrix);
+          const max = daysData.reduce((m, d) => (d.count > m ? d.count : m), 0);
+
+          function level(count) {
+            if (count <= 0) return 0;
+            if (max <= 1) return 2;
+            if (count >= max) return 4;
+            const ratio = count / max;
+            if (ratio > 0.75) return 4;
+            if (ratio > 0.5) return 3;
+            if (ratio > 0.25) return 2;
+            return 1;
+          }
+
+          daysData.forEach(function (item, idx) {
+            const cell = document.createElement("div");
+            const lvl = level(item.count);
+            cell.className = "matrix-cell" + (lvl ? " level-" + lvl : "");
+            const dateLabel = item.jsDate.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+            cell.title = dateLabel + " – " + item.count + (item.count === 1 ? " activation" : " activations");
+            container.appendChild(cell);
+          });
+        }
+
+        async function refreshMatrix(showToastOnError) {
+          try {
+            const data = await fetchJson(prefix + "/api/v1/user/admin/activation-matrix?days=90");
+            const payload = data?.data || data;
+            renderMatrix(payload.days || 90, payload.matrix || []);
+          } catch (e) {
+            console.error("Failed to load activation matrix:", e);
+            if (showToastOnError) {
+              pushToast(e.message || "Failed to load activation matrix.", "error");
+            }
+          }
+        }
+
+        async function postBatch(url, limit, statusId) {
+          const statusEl = $(statusId);
+          if (statusEl) {
+            statusEl.textContent = "Inatuma... tafadhali subiri.";
+          }
+          try {
+            const data = await fetchJson(prefix + url, {
+              method: "POST",
+              body: JSON.stringify({ limit }),
+            });
+            const summary = data?.data || data;
+            if (statusEl) {
+              statusEl.textContent =
+                "Imekamilika. Jumla: " +
+                (summary.total ?? 0) +
+                ", Zimefanikiwa: " +
+                (summary.success ?? 0) +
+                ", Zimekosa: " +
+                (summary.failed ?? 0);
+            }
+            await refreshStats();
+            const hadFailures = (summary.failed ?? 0) > 0;
+            if (hadFailures) {
+              pushToast(
+                "Batch completed with some failures. Total " +
+                  (summary.total ?? 0) +
+                  ", Success " +
+                  (summary.success ?? 0) +
+                  ", Failed " +
+                  (summary.failed ?? 0),
+                "warning"
+              );
+            } else {
+              pushToast(
+                "Batch completed successfully. Total " +
+                  (summary.total ?? 0) +
+                  ", Success " +
+                  (summary.success ?? 0),
+                "success"
+              );
+            }
+          } catch (e) {
+            console.error("Batch resend failed:", e);
+            if (statusEl) {
+              statusEl.textContent = "Imeshindikana: " + e.message;
+            }
+            pushToast(e.message || "Batch resend failed.", "error");
+          }
+        }
+
+        async function saveSchedule() {
+          const statusEl = $("status-schedule");
+          if (statusEl) statusEl.textContent = "Inahifadhi ratiba...";
+          try {
+            const enabledSel = $("scheduleEnabled");
+            const enabled = enabledSel ? enabledSel.value === "true" : true;
+            const batchSize = Number($("scheduleBatchSize")?.value || 500);
+            const maxIterations = Number($("scheduleMaxIterations")?.value || 1);
+            const delayMsBetweenIterations = Number($("scheduleDelayMs")?.value || 0);
+
+            const payload = { enabled, batchSize, maxIterations, delayMsBetweenIterations };
+            const data = await fetchJson(prefix + "/api/v1/user/admin/activation-schedule", {
+              method: "POST",
+              body: JSON.stringify(payload),
+            });
+            const schedule = data?.data || data;
+            if (statusEl) {
+              statusEl.textContent =
+                "Ratiba imehifadhiwa. batchSize=" +
+                schedule.batchSize +
+                ", maxIterations=" +
+                schedule.maxIterations +
+                ", delayMs=" +
+                schedule.delayMsBetweenIterations;
+            }
+            pushToast("#{isSw ? 'Ratiba imehifadhiwa kikamilifu.' : 'Schedule saved successfully.'}", "success");
+          } catch (e) {
+            console.error("Failed to save schedule:", e);
+            if (statusEl) statusEl.textContent = "Imeshindikana: " + e.message;
+            pushToast(e.message || "Failed to save schedule.", "error");
+          }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          updateSliderDisplay("expiredLimit", "expiredLimitValue");
+          updateSliderDisplay("openLimit", "openLimitValue");
+
+          const btnRefresh = $("btn-refresh-stats");
+          if (btnRefresh) {
+            btnRefresh.addEventListener("click", refreshStats);
+          }
+
+          const btnExpired = $("btn-resend-expired");
+          if (btnExpired) {
+            btnExpired.addEventListener("click", function () {
+              const limit = Number($("expiredLimit")?.value || 100);
+              postBatch("/api/v1/user/admin/activation-resend/expired", limit, "status-expired");
+            });
+          }
+
+          const btnOpen = $("btn-resend-open");
+          if (btnOpen) {
+            btnOpen.addEventListener("click", function () {
+              const limit = Number($("openLimit")?.value || 100);
+              postBatch("/api/v1/user/admin/activation-resend/open", limit, "status-open");
+            });
+          }
+
+          const btnSaveSchedule = $("btn-save-schedule");
+          if (btnSaveSchedule) {
+            btnSaveSchedule.addEventListener("click", saveSchedule);
+          }
+
+          // Initial load
+          refreshMatrix(true);
+        });
+      })();
+

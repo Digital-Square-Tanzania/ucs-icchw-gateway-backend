@@ -26,7 +26,8 @@ class ApiLogger {
 
   static async log(req, resOrPayload) {
     try {
-      const { method, url, body, query, params, headers } = req;
+      const safeReq = req || {};
+      const { method, url, body, query, params, headers } = safeReq;
       const status = resOrPayload?.statusCode || 200;
       const responseBody = resOrPayload?.body || resOrPayload;
 

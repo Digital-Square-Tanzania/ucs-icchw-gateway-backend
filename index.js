@@ -6,6 +6,7 @@ import "express-async-errors";
 import path from "path";
 import { fileURLToPath } from "url";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 
 // Allow local dev & production frontend domains
 const allowedOrigins = [
@@ -43,6 +44,7 @@ class AppServer {
     this.app.disable("x-powered-by");
     this.app.use(express.json());
     this.app.use(express.urlencoded({ extended: false }));
+    this.app.use(cookieParser());
     this.app.use(cors());
     // this.app.use(SecurityMiddleware.applyHelmet());
     // Expose env variable to pug

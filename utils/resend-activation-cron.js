@@ -8,6 +8,16 @@ import ApiLogger from "./api-logger.js";
 class ResendActivationCron {
   constructor() {
     this.cronJob = null;
+    this.scheduleConfig = {
+      enabled: (process.env.ACTIVATION_RESEND_ENABLED || "true").toLowerCase() !== "false",
+      batchSize: Number(process.env.ACTIVATION_RESEND_BATCH_SIZE || 500),
+      maxIterations: Number(process.env.ACTIVATION_RESEND_MAX_ITERATIONS || 1),
+      delayMsBetweenIterations: Number(process.env.ACTIVATION_RESEND_DELAY_MS || 0),
+    };
+    // Load persisted configuration from DB (if available) on startup
+    this.loadScheduleConfigFromDb().catch((err) => {
+      console.warn("⚠️ Failed to load activation resend schedule config from DB:", err?.message || err);
+    });
   }
 
   /**
@@ -26,7 +36,7 @@ class ResendActivationCron {
       async () => {
         try {
           console.log("🔄 Starting daily resend activation cron job...");
-          await this.resendExpiredActivations();
+          await this.runScheduledBatches();
           console.log("✅ Daily resend activation cron job completed.");
         } catch (error) {
           console.error("❌ Error in resend activation cron job:", error);
@@ -48,13 +58,129 @@ class ResendActivationCron {
   }
 
   /**
-   * Resend activation emails for expired records
+   * Update schedule configuration (in-memory, survives until process restart)
    */
-  async resendExpiredActivations() {
+  setScheduleConfig(partialConfig) {
+    this.scheduleConfig = {
+      ...this.scheduleConfig,
+      ...partialConfig,
+    };
+  }
+
+  /**
+   * Get current schedule configuration
+   */
+  getScheduleConfig() {
+    return this.scheduleConfig;
+  }
+
+  /**
+   * Load schedule configuration from the database (activation_resend_config).
+   */
+  async loadScheduleConfigFromDb() {
+    try {
+      const existing = await prisma.activationResendConfig.findFirst({
+        where: { id: 1 },
+      });
+      if (existing) {
+        this.scheduleConfig = {
+          enabled: existing.enabled,
+          batchSize: existing.batchSize,
+          maxIterations: existing.maxIterations,
+          delayMsBetweenIterations: existing.delayMsBetweenIterations,
+        };
+        console.log("🔁 Loaded activation resend schedule config from DB:", this.scheduleConfig);
+      } else {
+        // Ensure a default row exists
+        const created = await prisma.activationResendConfig.create({
+          data: {
+            id: 1,
+            enabled: this.scheduleConfig.enabled,
+            batchSize: this.scheduleConfig.batchSize,
+            maxIterations: this.scheduleConfig.maxIterations,
+            delayMsBetweenIterations: this.scheduleConfig.delayMsBetweenIterations,
+          },
+        });
+        console.log("🔁 Created default activation resend schedule config in DB:", created);
+      }
+    } catch (err) {
+      console.error("❌ Error loading activation resend schedule config from DB:", err?.message || err);
+      throw err;
+    }
+  }
+
+  /**
+   * Persist current schedule configuration to the database.
+   */
+  async saveScheduleConfigToDb() {
+    try {
+      const cfg = this.scheduleConfig;
+      await prisma.activationResendConfig.upsert({
+        where: { id: 1 },
+        create: {
+          id: 1,
+          enabled: cfg.enabled,
+          batchSize: cfg.batchSize,
+          maxIterations: cfg.maxIterations,
+          delayMsBetweenIterations: cfg.delayMsBetweenIterations,
+        },
+        update: {
+          enabled: cfg.enabled,
+          batchSize: cfg.batchSize,
+          maxIterations: cfg.maxIterations,
+          delayMsBetweenIterations: cfg.delayMsBetweenIterations,
+        },
+      });
+      console.log("💾 Saved activation resend schedule config to DB:", cfg);
+    } catch (err) {
+      console.error("❌ Error saving activation resend schedule config to DB:", err?.message || err);
+      throw err;
+    }
+  }
+
+  /**
+   * Run scheduled batches based on current configuration
+   */
+  async runScheduledBatches() {
+    const { enabled, batchSize, maxIterations, delayMsBetweenIterations } = this.scheduleConfig;
+    if (!enabled) {
+      console.log("⏭️ Activation resend schedule is disabled. Skipping daily run.");
+      return;
+    }
+
+    const effectiveBatchSize = Number(batchSize) > 0 ? Number(batchSize) : 500;
+    const maxIters = Number(maxIterations) > 0 ? Number(maxIterations) : 1;
+
+    console.log(
+      `🔁 Running scheduled activation resend batches: batchSize=${effectiveBatchSize}, maxIterations=${maxIters}, delayMs=${delayMsBetweenIterations}`
+    );
+
+    for (let i = 0; i < maxIters; i++) {
+      const processed = await this.resendExpiredActivations(effectiveBatchSize);
+      if (!processed || processed < effectiveBatchSize) {
+        console.log(
+          `ℹ️ Stopping scheduled batches after iteration ${i + 1}: processed=${processed}, batchSize=${effectiveBatchSize}`
+        );
+        break;
+      }
+      if (delayMsBetweenIterations > 0 && i < maxIters - 1) {
+        await new Promise((resolve) => setTimeout(resolve, delayMsBetweenIterations));
+      }
+    }
+  }
+
+  /**
+   * Resend activation emails for expired records (single batch)
+   * @param {number} batchSize - Maximum number of records to process in this batch
+   * @returns {Promise<number>} Number of activation records processed in this batch
+   */
+  async resendExpiredActivations(batchSize = 500) {
     try {
       console.log("🔄 Looking for expired activation records to resend...");
 
-      // Find the first 500 AccountActivation records that meet the criteria
+      const effectiveBatchSize = Number(batchSize) > 0 ? Number(batchSize) : 500;
+
+      // Find the first N AccountActivation records that meet the criteria
       const expiredActivations = await prisma.accountActivation.findMany({
         where: {
           slugType: "ACTIVATION",
@@ -68,7 +194,7 @@ class ResendActivationCron {
             not: "",
           },
         },
-        take: 500,
+        take: effectiveBatchSize,
         orderBy: {
           createdAt: "asc", // Process oldest first
         },
@@ -105,6 +231,7 @@ class ResendActivationCron {
       }
 
       console.log(`📊 Resend activation summary: ${successCount} successful, ${errorCount} failed`);
+      return expiredActivations.length;
     } catch (error) {
       console.error("❌ Error in resendExpiredActivations:", error);
       throw new CustomError("Failed to resend expired activations: " + error.message, 500);

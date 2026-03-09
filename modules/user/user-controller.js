@@ -130,6 +130,122 @@ class UserController {
   }
 
   /**
+   * Render simple admin login page for email control & future tools.
+   */
+  static async renderAdminLoginPage(req, res, next) {
+    try {
+      return res.render("admin-login");
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * Render CHW activation email control dashboard (Pug).
+   */
+  static async renderActivationEmailControlPage(req, res, next) {
+    try {
+      const stats = await UserService.getActivationEmailStats();
+      const schedule = resendActivationCron.getScheduleConfig();
+      const lang = (req.query.lang || req.cookies?.lang || "en").toLowerCase() === "sw" ? "sw" : "en";
+      // Persist chosen language for subsequent requests
+      res.cookie("lang", lang, { httpOnly: false, sameSite: "lax" });
+      return res.render("activation-email-control", {
+        stats,
+        schedule,
+        lang,
+      });
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * JSON: Activation email stats + schedule (for AJAX).
+   */
+  static async getActivationEmailStats(req, res, next) {
+    try {
+      const stats = await UserService.getActivationEmailStats();
+      const schedule = resendActivationCron.getScheduleConfig();
+      return BaseResponse.success(res, "Activation email stats loaded", { stats, schedule }, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * JSON: Activation matrix for GitHub-style heatmap.
+   */
+  static async getActivationMatrix(req, res, next) {
+    try {
+      const days = Number(req.query?.days) || 90;
+      const matrix = await UserService.getActivationMatrix(days);
+      return BaseResponse.success(res, "Activation matrix loaded", { days, matrix }, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * JSON: Run a single batch of expired activation resends (manual trigger).
+   */
+  static async resendExpiredActivationsBatch(req, res, next) {
+    try {
+      const limit = Number(req.body?.limit) > 0 ? Number(req.body.limit) : 100;
+      const summary = await UserService.resendExpiredActivationsBatch(limit);
+      return BaseResponse.success(res, "Expired activation resend batch completed", summary, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * JSON: Run a single batch of open (non-expired), not-used activation resends.
+   */
+  static async resendOpenActivationsBatch(req, res, next) {
+    try {
+      const limit = Number(req.body?.limit) > 0 ? Number(req.body.limit) : 100;
+      const summary = await UserService.resendOpenActivationsBatch(limit);
+      return BaseResponse.success(res, "Open activation resend batch completed", summary, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * JSON: Get current activation resend schedule config.
+   */
+  static async getActivationSchedule(req, res, next) {
+    try {
+      const schedule = resendActivationCron.getScheduleConfig();
+      return BaseResponse.success(res, "Activation resend schedule loaded", schedule, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * JSON: Update activation resend schedule config (in-memory).
+   */
+  static async updateActivationSchedule(req, res, next) {
+    try {
+      const body = req.body || {};
+      const partial = {};
+      if (typeof body.enabled === "boolean") partial.enabled = body.enabled;
+      if (body.batchSize !== undefined) partial.batchSize = Number(body.batchSize);
+      if (body.maxIterations !== undefined) partial.maxIterations = Number(body.maxIterations);
+      if (body.delayMsBetweenIterations !== undefined) partial.delayMsBetweenIterations = Number(body.delayMsBetweenIterations);
+
+      resendActivationCron.setScheduleConfig(partial);
+      const updated = resendActivationCron.getScheduleConfig();
+      await resendActivationCron.saveScheduleConfigToDb();
+      return BaseResponse.success(res, "Activation resend schedule updated", updated, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
    * Manually trigger resend activation emails (for admin use)
    */
   static async manualResendActivations(req, res, next) {
