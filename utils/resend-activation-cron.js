@@ -41,7 +41,7 @@ class ResendActivationCron {
         } catch (error) {
           console.error("❌ Error in resend activation cron job:", error);
         }
-      }
+      },
     );
 
     console.log("🟢 Resend activation cron job scheduled for 23:55 daily (Africa/Dar_es_Salaam timezone)");
@@ -151,16 +151,12 @@ class ResendActivationCron {
     const effectiveBatchSize = Number(batchSize) > 0 ? Number(batchSize) : 500;
     const maxIters = Number(maxIterations) > 0 ? Number(maxIterations) : 1;
 
-    console.log(
-      `🔁 Running scheduled activation resend batches: batchSize=${effectiveBatchSize}, maxIterations=${maxIters}, delayMs=${delayMsBetweenIterations}`
-    );
+    console.log(`🔁 Running scheduled activation resend batches: batchSize=${effectiveBatchSize}, maxIterations=${maxIters}, delayMs=${delayMsBetweenIterations}`);
 
     for (let i = 0; i < maxIters; i++) {
       const processed = await this.resendExpiredActivations(effectiveBatchSize);
       if (!processed || processed < effectiveBatchSize) {
-        console.log(
-          `ℹ️ Stopping scheduled batches after iteration ${i + 1}: processed=${processed}, batchSize=${effectiveBatchSize}`
-        );
+        console.log(`ℹ️ Stopping scheduled batches after iteration ${i + 1}: processed=${processed}, batchSize=${effectiveBatchSize}`);
         break;
       }
       if (delayMsBetweenIterations > 0 && i < maxIters - 1) {
@@ -265,7 +261,7 @@ class ResendActivationCron {
         },
         teamMember,
         "ACTIVATION",
-        32
+        32,
       );
 
       const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
@@ -274,15 +270,15 @@ class ResendActivationCron {
       // Send the resend email
       await EmailService.sendEmail({
         to: activation.email,
-        subject: "Kufungua Akaunti ya UCS/WAJA - Kumbuka",
+        subject: "Kufungua Akaunti ya UCS/WAJA - Rejea",
         text: `Hujambo, akaunti yako ya UCS bado haijafunguliwa. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${teamMember.username}).`,
         html: `
-          <h1><strong>Kumbuka!</strong></h1>
+          <h1><strong>Rejea!</strong></h1>
           <p>Akaunti yako ya UCS bado haijafunguliwa. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
           <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
           <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${teamMember.username})</strong>.</p>
           <br>
-          <p><small>Hii ni kumbuka kutoka kwa mfumo wa UCS.</small></p>
+          <p><small>Hii ni rejea kutoka kwa mfumo wa UCS.</small></p>
         `,
       });
 
