@@ -105,6 +105,54 @@ html
         font-weight: 600;
         text-decoration: underline;
       }
+      .toast-container {
+        position: fixed;
+        right: 1rem;
+        top: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        z-index: 50;
+      }
+      .toast {
+        min-width: 220px;
+        max-width: 340px;
+        padding: 0.6rem 0.8rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        background: #ffffff;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.25);
+        font-size: 0.8rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        animation: fade-in 0.15s ease-out;
+      }
+      .toast-success {
+        border-color: rgba(34, 197, 94, 0.6);
+      }
+      .toast-error {
+        border-color: rgba(248, 113, 113, 0.85);
+      }
+      .toast-warning {
+        border-color: rgba(251, 191, 36, 0.85);
+      }
+      .toast-icon {
+        margin-top: 0.05rem;
+        font-size: 0.85rem;
+      }
+      .toast-close {
+        margin-left: auto;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 0.85rem;
+        color: #6b7280;
+      }
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(-4px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
   body
     .page-shell
       .page-header
@@ -209,13 +257,7 @@ html
                 | isResent = true (all types).
 
         button#btn-refresh-stats(type="button" style="margin-top:0.75rem; font-size:0.75rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer;")
-          | 🔄 Pakua takwimu upya
-
-        .panel(style="margin-top:1.2rem; background:#eff6ff; border:1px solid #bfdbfe;")
-          if isSw
-            h2.section-title(style="color:#1d4ed8;") Tuma Upya Email za Uanzishaji
-          else
-            h2.section-title(style="color:#1d4ed8;") Resend Activation Emails
+          | #{isSw ? '🔄 Pakua takwimu upya' : '🔄 Refresh metrics'}
 
         .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
           .batch-controls(style="flex:1 1 260px;")
@@ -311,12 +353,49 @@ html
         span |
         a(href=`${baseHref}?lang=sw`, class=(isSw ? 'active' : '')) Kiswahili
 
+    .toast-container#toastContainer
+
     script.
       (function () {
         const prefix = "#{ssrUrlPrefix}".replace(/\/+$/, "");
 
         function $(id) {
           return document.getElementById(id);
+        }
+
+        function pushToast(message, type) {
+          const container = $("toastContainer");
+          if (!container) return;
+          const toast = document.createElement("div");
+          let cls = "toast ";
+          if (type === "success") cls += "toast-success";
+          else if (type === "warning") cls += "toast-warning";
+          else cls += "toast-error";
+          toast.className = cls;
+
+          const icon =
+            type === "success" ? "✅" :
+            type === "warning" ? "⚠️" :
+            "❌";
+
+          toast.innerHTML =
+            '<span class="toast-icon">' +
+            icon +
+            "</span><div>" +
+            message +
+            '</div><button class="toast-close" aria-label="Close">&times;</button>';
+
+          const closeBtn = toast.querySelector(".toast-close");
+          if (closeBtn) {
+            closeBtn.addEventListener("click", function () {
+              if (container.contains(toast)) container.removeChild(toast);
+            });
+          }
+
+          container.appendChild(toast);
+          setTimeout(function () {
+            if (container.contains(toast)) container.removeChild(toast);
+          }, 6000);
         }
 
         function updateSliderDisplay(id, valueSpanId) {
@@ -358,8 +437,10 @@ html
               const el = $(id);
               if (el) el.textContent = String(map[id] ?? 0);
             });
+            pushToast("#{isSw ? 'Takwimu zimepakiwa upya.' : 'Metrics refreshed.'}", "success");
           } catch (e) {
             console.error("Failed to refresh stats:", e);
+            pushToast(e.message || "Failed to refresh metrics.", "error");
           }
         }
 
@@ -384,11 +465,32 @@ html
                 (summary.failed ?? 0);
             }
             await refreshStats();
+            const hadFailures = (summary.failed ?? 0) > 0;
+            if (hadFailures) {
+              pushToast(
+                "Batch completed with some failures. Total " +
+                  (summary.total ?? 0) +
+                  ", Success " +
+                  (summary.success ?? 0) +
+                  ", Failed " +
+                  (summary.failed ?? 0),
+                "warning"
+              );
+            } else {
+              pushToast(
+                "Batch completed successfully. Total " +
+                  (summary.total ?? 0) +
+                  ", Success " +
+                  (summary.success ?? 0),
+                "success"
+              );
+            }
           } catch (e) {
             console.error("Batch resend failed:", e);
             if (statusEl) {
               statusEl.textContent = "Imeshindikana: " + e.message;
             }
+            pushToast(e.message || "Batch resend failed.", "error");
           }
         }
 
@@ -417,9 +519,11 @@ html
                 ", delayMs=" +
                 schedule.delayMsBetweenIterations;
             }
+            pushToast("#{isSw ? 'Ratiba imehifadhiwa kikamilifu.' : 'Schedule saved successfully.'}", "success");
           } catch (e) {
             console.error("Failed to save schedule:", e);
             if (statusEl) statusEl.textContent = "Imeshindikana: " + e.message;
+            pushToast(e.message || "Failed to save schedule.", "error");
           }
         }
 
