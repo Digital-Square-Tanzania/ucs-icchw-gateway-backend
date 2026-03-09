@@ -7,6 +7,19 @@ class AuthController {
       const { email, password } = req.body;
       const { accessToken, refreshToken } = await AuthService.login(req, email, password);
 
+      // Set HTTP-only cookie for browser-based admin access
+      const cookieOptions = {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: 60 * 60 * 1000, // 1 hour
+      };
+      try {
+        res.cookie("accessToken", accessToken, cookieOptions);
+      } catch {
+        // If cookie setting fails, continue; token is still returned in body
+      }
+
       return BaseResponse.success(res, "Authentication successful", { accessToken, refreshToken });
     } catch (error) {
       return BaseResponse.error(res, error.message, 401);

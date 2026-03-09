@@ -130,6 +130,17 @@ class UserController {
   }
 
   /**
+   * Render simple admin login page for email control & future tools.
+   */
+  static async renderAdminLoginPage(req, res, next) {
+    try {
+      return res.render("admin-login");
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
    * Render CHW activation email control dashboard (Pug).
    */
   static async renderActivationEmailControlPage(req, res, next) {

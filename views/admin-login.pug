@@ -1,0 +1,84 @@
+doctype html
+html
+  head
+    title WAJA/UCS - Admin Login
+    meta(charset="UTF-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    link(rel="stylesheet", href=`${ssrUrlPrefix}/css/styles.css`)
+  body
+    .container
+      .bg-top
+        h1(style="margin-top:4%; font-size:1.8rem; color:#004d7a;") WAJA/UCS - Usimamizi wa Barua Pepe za Uanzishaji
+        p(style="font-size:0.9rem; color:#555; max-width:640px; margin:0 auto;")
+          | Tafadhali ingia kama msimamizi ili kudhibiti kutuma upya email za uanzishaji za CHW.
+
+      .card(style="margin-top:1.5rem; max-width:420px; margin-left:auto; margin-right:auto; padding:1.5rem;")
+        h2(style="font-size:1.2rem; margin-bottom:0.75rem; color:#111827;") Ingia kama Msimamizi
+
+        form#loginForm(onSubmit="return false;")
+          label(for="email" style="display:block; font-size:0.8rem; color:#374151; margin-bottom:0.25rem;") Barua Pepe (Admin)
+          input#email(type="email" name="email" required placeholder="admin@example.org" style="width:100%; padding:0.5rem 0.6rem; border-radius:0.4rem; border:1px solid #d1d5db; font-size:0.85rem; margin-bottom:0.6rem;")
+
+          label(for="password" style="display:block; font-size:0.8rem; color:#374151; margin-bottom:0.25rem;") Nenosiri
+          input#password(type="password" name="password" required placeholder="*******" style="width:100%; padding:0.5rem 0.6rem; border-radius:0.4rem; border:1px solid #d1d5db; font-size:0.85rem; margin-bottom:0.6rem;")
+
+          button#btnLogin(type="submit" style="width:100%; margin-top:0.4rem; padding:0.55rem 0.6rem; font-size:0.9rem; border-radius:0.5rem; background:#1d4ed8; color:white; border:none; cursor:pointer;")
+            | Ingia
+
+          p#loginStatus(style="font-size:0.8rem; margin-top:0.6rem; color:#4b5563;")
+
+        hr(style="margin:1.4rem 0; border-color:#e5e7eb;")
+
+        p(style="font-size:0.8rem; color:#374151; margin-bottom:0.3rem;")
+          | Baada ya kuingia, nenda moja kwa moja kwenye ukurasa wa kudhibiti email za uanzishaji:
+        a(href=`${ssrUrlPrefix}/api/v1/user/admin/activation-email-control` style="font-size:0.8rem; color:#1d4ed8; text-decoration:underline;")
+          | Fungua ukurasa wa Usimamizi wa Email za Uanzishaji
+
+    script.
+      (function () {
+        const prefix = "#{ssrUrlPrefix}".replace(/\/+$/, "");
+        function $(id) { return document.getElementById(id); }
+
+        async function doLogin() {
+          const email = $("email")?.value || "";
+          const password = $("password")?.value || "";
+          const statusEl = $("loginStatus");
+          if (!email || !password) {
+            if (statusEl) statusEl.textContent = "Tafadhali jaza barua pepe na nenosiri.";
+            return;
+          }
+          if (statusEl) statusEl.textContent = "Inakutambua, tafadhali subiri...";
+          $("btnLogin").disabled = true;
+
+          try {
+            const res = await fetch(prefix + "/api/v1/auth/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, password }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || data?.status !== "success") {
+              throw new Error(data?.message || "Imeshindikana kuingia. Hakikisha taarifa zako ziko sahihi.");
+            }
+            if (statusEl) statusEl.textContent = "Umefanikiwa kuingia. Unapelekwa kwenye ukurasa wa usimamizi...";
+            // Redirect to activation email control page
+            window.location.href = prefix + "/api/v1/user/admin/activation-email-control";
+          } catch (e) {
+            console.error("Login failed:", e);
+            if (statusEl) statusEl.textContent = e.message || "Imeshindikana kuingia.";
+          } finally {
+            $("btnLogin").disabled = false;
+          }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+          const form = document.getElementById("loginForm");
+          if (form) {
+            form.addEventListener("submit", function (ev) {
+              ev.preventDefault();
+              doLogin();
+            });
+          }
+        });
+      })();
+

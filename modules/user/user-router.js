@@ -46,6 +46,9 @@ router.put("/:id", AuthMiddleware.authenticate, updateUserRateLimiter, UserContr
 // Delete Route: Only UCS_DEVELOPER can delete users
 router.delete("/:id", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), deleteUserRateLimiter, UserController.deleteUser);
 
+// Public admin login page (Pug) for email control and future admin tools
+router.get("/admin/login", UserController.renderAdminLoginPage);
+
 // Activate new CHW account route
 router.get("/chw/activate/:slug", UserController.renderActivationPage);
 
