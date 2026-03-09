@@ -1,11 +1,17 @@
 doctype html
 html
   head
-    title WAJA/UCS - CHW Activation Email Control
+    - const isSw = lang === 'sw';
+    title #{isSw ? 'WAJA/UCS - Usimamizi wa Email za Uanzishaji' : 'WAJA/UCS - CHW Activation Email Control'}
     meta(charset="UTF-8")
     meta(name="viewport" content="width=device-width, initial-scale=1.0")
     link(rel="stylesheet", href=`${ssrUrlPrefix}/css/styles.css`)
     style.
+      html, body {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: auto;
+      }
       body {
         min-height: 100vh;
         margin: 0;
@@ -83,72 +89,144 @@ html
         color: #6b7280;
         margin-top: 0.45rem;
       }
+      .footer-switch {
+        margin-top: 1.5rem;
+        font-size: 0.75rem;
+        color: #6b7280;
+        text-align: right;
+      }
+      .footer-switch a {
+        color: #1d4ed8;
+        text-decoration: none;
+        margin-left: 0.4rem;
+      }
+      .footer-switch a.active {
+        font-weight: 600;
+        text-decoration: underline;
+      }
   body
     .page-shell
       .page-header
-        h1 Usimamizi wa Email za Uanzishaji (CHW)
-        p
-          | Angalia takwimu za uanzishaji wa akaunti, chagua ukubwa wa kundi (batch),
-          |  tume upya email za uanzishaji, na sanidi kurudia kwa makundi kupitia mtiririko wa kila siku.
+        if isSw
+          h1 Usimamizi wa Email za Uanzishaji (CHW)
+          p
+            | Angalia takwimu za uanzishaji wa akaunti, chagua ukubwa wa kundi (batch),
+            |  tume upya email za uanzishaji, na sanidi kurudia kwa makundi kupitia mtiririko wa kila siku.
+        else
+          h1 CHW Activation Email Management
+          p
+            | View activation metrics, choose batch sizes for resending, and configure the daily scheduler
+            |  for CHW activation emails.
 
       .activation-grid
         .panel
-          .panel-header Takwimu za Uanzishaji
-          p.panel-subtitle
-            | Muhtasari wa hali ya sasa ya slugi za uanzishaji kwa akaunti za CHW.
-
-        h2(style="font-size: 1.2rem; margin-bottom: 0.75rem; color: #333;") Takwimu za Uanzishaji
+          if isSw
+            .panel-header Takwimu za Uanzishaji
+            p.panel-subtitle
+              | Muhtasari wa hali ya sasa ya slugi za uanzishaji kwa akaunti za CHW.
+          else
+            .panel-header Activation Metrics
+            p.panel-subtitle
+              | Overview of the current state of activation slugs for CHW accounts.
         .stats-grid
           .stat-card
-            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zimeisha Muda &amp; Hazijatumwa Tena
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zimeisha Muda &amp; Hazijatumwa Tena
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Expired &amp; Never Resent
             p#stat-unsentExpired(style="font-size:1.6rem; font-weight:600; color:#b91c1c;") #{(stats && stats.unsentExpired) || 0}
-            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
-              | isUsed = false, isResent = false, tayari zime-expire.
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = false, isResent = false, tayari zime-expire.
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = false, isResent = false, and already expired.
 
           .stat-card
-            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Akaunti Zilizowashwa
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Akaunti Zilizowashwa
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Activated Accounts
             p#stat-activated(style="font-size:1.6rem; font-weight:600; color:#15803d;") #{(stats && stats.activated) || 0}
-            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
-              | isUsed = true.
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = true.
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = true.
 
           .stat-card
-            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zime-expire &amp; Zimerudishwa
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zime-expire &amp; Zimerudishwa
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Expired &amp; Resent
             p#stat-expiredResent(style="font-size:1.6rem; font-weight:600; color:#b45309;") #{(stats && stats.expiredResent) || 0}
-            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
-              | isResent = true na expiryDate &lt; leo.
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isResent = true na expiryDate &lt; leo.
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isResent = true and expiryDate &lt; today.
 
           .stat-card
-            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Ziko Hai &amp; Hazijatumika
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Ziko Hai &amp; Hazijatumika
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Open &amp; Not Used
             p#stat-openNotUsed(style="font-size:1.6rem; font-weight:600; color:#0369a1;") #{(stats && stats.openNotUsed) || 0}
-            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
-              | isUsed = false, expiryDate ≥ leo.
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = false, expiryDate ≥ leo.
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isUsed = false, expiryDate ≥ today.
 
           .stat-card
-            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Jumla ya Slugi za Uanzishaji
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Jumla ya Slugi za Uanzishaji
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Total Activation Slugs
             p#stat-total(style="font-size:1.6rem; font-weight:600; color:#111827;") #{(stats && stats.total) || 0}
-            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
-              | slugType = ACTIVATION (jumla).
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | slugType = ACTIVATION (jumla).
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | slugType = ACTIVATION (all).
 
           .stat-card
-            p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zilizowahi Kurudishwa
+            if isSw
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zilizowahi Kurudishwa
+            else
+              p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Ever Resent
             p#stat-resentCount(style="font-size:1.6rem; font-weight:600; color:#7c2d12;") #{(stats && stats.resentCount) || 0}
-            p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
-              | isResent = true (aina zote).
+            if isSw
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isResent = true (aina zote).
+            else
+              p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
+                | isResent = true (all types).
 
         button#btn-refresh-stats(type="button" style="margin-top:0.75rem; font-size:0.75rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer;")
           | 🔄 Pakua takwimu upya
 
         .panel(style="margin-top:1.2rem; background:#eff6ff; border:1px solid #bfdbfe;")
-          h2.section-title(style="color:#1d4ed8;") Tuma Upya Email za Uanzishaji
+          if isSw
+            h2.section-title(style="color:#1d4ed8;") Tuma Upya Email za Uanzishaji
+          else
+            h2.section-title(style="color:#1d4ed8;") Resend Activation Emails
 
         .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
           .batch-controls(style="flex:1 1 260px;")
             h3(style="font-size:0.95rem; font-weight:600; color:#1e3a8a; margin-bottom:0.3rem;") Kundi la Slugi Zilizokwisha Muda (Expired)
             p(style="font-size:0.75rem; color:#1e3a8a; margin-bottom:0.4rem;")
-              | Tuma upya email za uanzishaji kwa slugi za ACTIVAION ambazo zimeisha muda, hazijatumika na hazijawahi kurudishwa.
+              if isSw
+                | Tuma upya email za uanzishaji kwa slugi za ACTIVAION ambazo zimeisha muda, hazijatumika na hazijawahi kurudishwa.
+              else
+                | Resend activation emails for ACTIVATION slugs that have expired, are unused and have never been resent.
 
             label(for="expiredLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#1e40af; margin-bottom:0.15rem;")
-              span Ukubwa wa kundi (emails kwa batch)
+              span #{isSw ? 'Ukubwa wa kundi (emails kwa batch)' : 'Batch size (emails per batch)'}
               span#expiredLimitValue #{100}
 
             input#expiredLimit(type="range" min="10" max="500" step="10" value="100" style="width:100%;")
@@ -158,17 +236,20 @@ html
               span 500
 
             button#btn-resend-expired(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#1d4ed8; color:white; border:none; cursor:pointer;")
-              | Tuma Upya Zilizokwisha Muda
+              | #{isSw ? 'Tuma Upya Zilizokwisha Muda' : 'Resend Expired Batch'}
 
             p#status-expired(style="font-size:0.75rem; margin-top:0.3rem; color:#1e3a8a;")
 
           .batch-controls(style="flex:1 1 260px;")
             h3(style="font-size:0.95rem; font-weight:600; color:#0f766e; margin-bottom:0.3rem;") Kundi la Slugi Zilizopo Hai (Open)
             p(style="font-size:0.75rem; color:#0f766e; margin-bottom:0.4rem;")
-              | Tuma upya email kwa slugi za ACTIVAION ambazo bado zina muda (hazija-expire) na hazijatumika.
+              if isSw
+                | Tuma upya email kwa slugi za ACTIVAION ambazo bado zina muda (hazija-expire) na hazijatumika.
+              else
+                | Resend emails for ACTIVATION slugs that are still valid (not expired) and unused.
 
             label(for="openLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#0f766e; margin-bottom:0.15rem;")
-              span Ukubwa wa kundi (emails kwa batch)
+              span #{isSw ? 'Ukubwa wa kundi (emails kwa batch)' : 'Batch size (emails per batch)'}
               span#openLimitValue #{100}
 
             input#openLimit(type="range" min="10" max="500" step="10" value="100" style="width:100%;")
@@ -178,36 +259,42 @@ html
               span 500
 
             button#btn-resend-open(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#0f766e; color:white; border:none; cursor:pointer;")
-              | Tuma Upya Zilizopo Hai
+              | #{isSw ? 'Tuma Upya Zilizopo Hai' : 'Resend Open Batch'}
 
             p#status-open(style="font-size:0.75rem; margin-top:0.3rem; color:#0f766e;")
 
         .panel
-          h2.section-title Ratiba ya Kundi la Kila Siku (Scheduler)
-          p.panel-subtitle
-            | Hii ratiba hutumika kwenye kazi ya kila siku (cron) saa 23:55. Unaweza kuweka ukubwa wa kundi,
-            |  idadi ya marudio (iterations), na muda wa kusubiri kati ya marudio.
+          if isSw
+            h2.section-title Ratiba ya Kundi la Kila Siku (Scheduler)
+            p.panel-subtitle
+              | Hii ratiba hutumika kwenye kazi ya kila siku (cron) saa 23:55. Unaweza kuweka ukubwa wa kundi,
+              |  idadi ya marudio (iterations), na muda wa kusubiri kati ya marudio.
+          else
+            h2.section-title Daily Batch Scheduler
+            p.panel-subtitle
+              | This scheduler runs with the nightly job (cron) at 23:55. Configure batch size, number of iterations,
+              |  and delay between iterations.
 
           form#scheduleForm(onSubmit="return false;" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.75rem; align-items:flex-end;")
           .field
-            label(for="scheduleEnabled" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Wezesha Scheduler
+            label(for="scheduleEnabled" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Wezesha Scheduler' : 'Enable scheduler'}
             - const enabledVal = (schedule && typeof schedule.enabled === "boolean") ? schedule.enabled : true;
             select#scheduleEnabled(name="enabled" style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
               option(value="true" selected=enabledVal) Ndiyo
               option(value="false" selected=!enabledVal) Hapana
 
           .field
-            label(for="scheduleBatchSize" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Ukubwa wa Kundi (batchSize)
+            label(for="scheduleBatchSize" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Ukubwa wa Kundi (batchSize)' : 'Batch size (batchSize)'}
             - const batchSizeVal = (schedule && schedule.batchSize) ? schedule.batchSize : 500;
             input#scheduleBatchSize(type="number" min="1" max="1000" step="1" name="batchSize" value=batchSizeVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
           .field
-            label(for="scheduleMaxIterations" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Idadi ya Marudio (maxIterations)
+            label(for="scheduleMaxIterations" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Idadi ya Marudio (maxIterations)' : 'Number of iterations (maxIterations)'}
             - const maxIterVal = (schedule && schedule.maxIterations) ? schedule.maxIterations : 1;
             input#scheduleMaxIterations(type="number" min="1" max="20" step="1" name="maxIterations" value=maxIterVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
           .field
-            label(for="scheduleDelayMs" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Muda kati ya Marudio (ms)
+            label(for="scheduleDelayMs" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Muda kati ya Marudio (ms)' : 'Delay between iterations (ms)'}
             - const delayVal = (schedule && typeof schedule.delayMsBetweenIterations === "number") ? schedule.delayMsBetweenIterations : 0;
             input#scheduleDelayMs(type="number" min="0" step="1000" name="delayMsBetweenIterations" value=delayVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
@@ -215,6 +302,13 @@ html
             | Hifadhi Ratiba
 
           p#status-schedule.bottom-note
+
+      .footer-switch
+        - const baseHref = `${ssrUrlPrefix}/api/v1/user/admin/activation-email-control`;
+        span Language:
+        a(href=`${baseHref}?lang=en`, class=(!isSw ? 'active' : '')) English
+        span |
+        a(href=`${baseHref}?lang=sw`, class=(isSw ? 'active' : '')) Kiswahili
 
     script.
       (function () {

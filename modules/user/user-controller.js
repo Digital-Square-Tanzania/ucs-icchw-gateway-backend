@@ -147,9 +147,13 @@ class UserController {
     try {
       const stats = await UserService.getActivationEmailStats();
       const schedule = resendActivationCron.getScheduleConfig();
+      const lang = (req.query.lang || req.cookies?.lang || "en").toLowerCase() === "sw" ? "sw" : "en";
+      // Persist chosen language for subsequent requests
+      res.cookie("lang", lang, { httpOnly: false, sameSite: "lax" });
       return res.render("activation-email-control", {
         stats,
         schedule,
+        lang,
       });
     } catch (error) {
       next(new CustomError(error.message, 500));
