@@ -296,7 +296,10 @@ html
               p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                 | isResent = true (all types).
 
-        button#btn-refresh-stats(type="button" style="margin-top:0.75rem; font-size:0.75rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid #ffeffe; background:#f9fafb; cursor:pointer; color: #333333")
+        button#btn-refresh-stats(
+          type="button"
+          style="margin-top:0.4rem; margin-bottom:0.3rem; font-size:0.75rem; padding:0.35rem 0.9rem; border-radius:999px; border:none; background:#1d4ed8; color:#ffffff; cursor:pointer; float:right;"
+        )
           | #{isSw ? '🔄 Pakua takwimu upya' : '🔄 Refresh metrics'}
 
         .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
