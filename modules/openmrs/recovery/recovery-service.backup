@@ -299,7 +299,7 @@ class RecoveryService {
 
       return ucsValidRecords;
     } catch (error) {
-      console.error("Error in checkAvailableTeamsInOpenmrs:", error.stack);
+      console.error("Error in checkAvailableTeamsInOpenmrs:", error.message);
       throw new CustomError("Error checking available teams in OpenMRS: " + error.message, 500);
     }
   }

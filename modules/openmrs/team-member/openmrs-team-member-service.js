@@ -131,7 +131,7 @@ class TeamMemberService {
               console.error(`❌ Error upserting member ${member.identifier}:`, err.message);
               throw err;
             }
-          })
+          }),
         );
 
         // Run concurrently with safe option to avoid crashing on single upsert failure
@@ -267,7 +267,7 @@ class TeamMemberService {
       await mysqlClient.query("CALL delete_person(?)", [personId]);
       console.log(` REVERT: Successfully deleted person with ID: ${personId}`);
 
-      throw new CustomError("Failed to create team member: " + error.stack, 500);
+      throw new CustomError("Failed to create team member: " + error.message, 500);
     }
   }
 
@@ -587,7 +587,7 @@ class TeamMemberService {
             .map(
               (row) => `
           <p><strong>Row ${row.rowNumber}:</strong> ${row.firstName} ${row.lastName} (${row.username}) - ${row.ward}</p>
-          `
+          `,
             )
             .join("")}
           <h3>Safu Zilizokataliwa</h3>
@@ -596,7 +596,7 @@ class TeamMemberService {
             .map(
               (row) => `
           <p><strong>Row ${row.rowNumber}:</strong> ${row.firstName} ${row.lastName} (${row.username}) - ${row.ward} - Rejection Reason: ${row.rejectionReason}</p>
-          `
+          `,
             )
             .join("")}
           <hr>
@@ -609,7 +609,7 @@ class TeamMemberService {
       console.log("✅ CSV file processed successfully.");
       return result;
     } catch (error) {
-      throw new CustomError("Failed to process CSV file: " + error.stack, 500);
+      throw new CustomError("Failed to process CSV file: " + error.message, 500);
     }
   }
 

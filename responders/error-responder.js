@@ -64,7 +64,7 @@ class ErrorHelper {
         authenticated: !!req.user,
         message,
         details,
-        stack: err.stack,
+        // stack: err.stack,
       };
 
       return res.status(statusCode).json({

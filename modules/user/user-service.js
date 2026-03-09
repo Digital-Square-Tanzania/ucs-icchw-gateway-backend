@@ -147,7 +147,7 @@ class UserService {
       return { alert: false, message: "Akaunti ya WAJA/UCS imeundwa. Sasa unaweza kutumia akaunti hiyo kwenye kishkwambi ulichopewa.", login: false };
     } catch (error) {
       await ApiLogger.log({ statusCode: error.statusCode || 500, body: error.message });
-      throw new CustomError(error.stack, error.status || 500);
+      throw new CustomError(error.message, error.status || 500);
     }
   }
 
@@ -432,7 +432,7 @@ class UserService {
       return newTeamMember;
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
-      console.error("❌ Error while registering CHW from HRHIS:", error.stack);
+      console.error("❌ Error while registering CHW from HRHIS:", error.message);
 
       // Rethrow with CustomError for the controller to catch
       throw new CustomError(error.message, error.statusCode || 400);

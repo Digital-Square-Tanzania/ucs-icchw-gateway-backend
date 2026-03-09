@@ -1,8 +1,12 @@
 import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import CustomError from "../utils/custom-error.js";
+import logger from "../utils/logger.js";
 
 dotenv.config();
+
+// Track whether we've already printed the eGA SMTP config in this process
+let hasLoggedEgaConfigOnce = false;
 
 class EmailService {
   constructor() {
@@ -72,7 +76,14 @@ class EmailService {
         console.warn("[email-service] Port 587: using secure=false, requireTLS=true (STARTTLS).");
       }
 
-      console.log("[email-service] eGA SMTP config:", { host, port, secure, requireTLS });
+      // Only log the SMTP config once (or when explicit debug is enabled),
+      // to avoid noisy repetition for every single email.
+      if (!hasLoggedEgaConfigOnce || process.env.DEBUG_SMTP === "true") {
+        hasLoggedEgaConfigOnce = true;
+        logger.info(
+          `[email-service] eGA SMTP config: host=${host}, port=${port}, secure=${secure}, requireTLS=${requireTLS}`,
+        );
+      }
 
       if (!host || (authRequired && (!authUser || !authPass))) {
         throw new CustomError("SMTP configuration is incomplete. Check EGA_SMTP_HOST, EGA_EMAIL_ADDRESS, EGA_EMAIL_PASSWORD, and EGA_SMTP_AUTH_REQUIRED.", 500);
@@ -106,7 +117,9 @@ class EmailService {
       };
 
       const info = await transporter.sendMail(mailOptions);
-      console.log(" > ✉️ eGA Email sent successfully:", info.response);
+      logger.info(
+        `eGA email sent successfully to ${to} with subject "${subject}". Response: ${info.response}`,
+      );
       return info;
     } catch (error) {
       const errorMessage = error?.message || "Unknown error";
@@ -156,7 +169,9 @@ class EmailService {
       };
 
       const info = await this.transporter.sendMail(mailOptions);
-      console.log(" > ✉️ Gmail Email sent:", info.response);
+      logger.info(
+        `Gmail email sent to ${emailData.to} with subject "${emailData.subject}". Response: ${info.response}`,
+      );
       return info;
     } catch (error) {
       throw new CustomError("Failed to send email via Gmail: " + error.message, 500);
@@ -170,7 +185,9 @@ class EmailService {
    */
   async sendEmail(emailData) {
     try {
-      console.log(` SUB: Sending email via ${this.emailProvider.toUpperCase()}...`);
+      logger.info(
+        `Sending email via ${this.emailProvider.toUpperCase()} to ${emailData.to} with subject "${emailData.subject}".`,
+      );
 
       if (this.emailProvider === "ega") {
         try {
@@ -179,7 +196,11 @@ class EmailService {
           const gmailUser = process.env.EMAIL_USERNAME;
           const gmailPass = process.env.EMAIL_PASSWORD;
           if (gmailUser && gmailPass) {
-            console.warn("[email-service] eGA email failed, attempting Gmail fallback:", egaError?.message || egaError);
+            logger.warn?.(
+              `[email-service] eGA email failed for ${emailData.to}, attempting Gmail fallback: ${
+                egaError?.message || egaError
+              }`,
+            );
             try {
               const gmailTransporter = nodemailer.createTransport({
                 service: "gmail",
@@ -196,7 +217,7 @@ class EmailService {
               console.log(" > ✉️ Email sent via Gmail fallback to", emailData.to);
               return info;
             } catch (gmailError) {
-              console.error("[email-service] Both eGA and Gmail fallback failed");
+              logger.error?.("[email-service] Both eGA and Gmail fallback failed");
               throw new CustomError(
                 `Failed to send email via eGA: ${egaError?.message || egaError}. Gmail fallback also failed: ${gmailError?.message || gmailError}`,
                 500
