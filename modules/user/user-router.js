@@ -13,7 +13,7 @@ router.get(
   AuthMiddleware.authenticate,
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   searchUserRateLimiter,
-  UserController.getAllUsers
+  UserController.getAllUsers,
 );
 
 router.get("/:id", AuthMiddleware.authenticate, UserController.getUserById);
@@ -26,7 +26,7 @@ router.post(
   createUserRateLimiter,
   ...ValidationMiddleware.sanitizeUserInputs(), // Spread the array of sanitization middleware
   ValidationMiddleware.validate(UserValidation.createChwSchema()), // Joi validation
-  UserController.createChwAccount
+  UserController.createChwAccount,
 );
 
 // Create Route: MOH_ADMIN, COUNCIL_COORDINATOR, and FACILITY_PROVIDER can create users
@@ -37,7 +37,7 @@ router.post(
   createUserRateLimiter,
   ...ValidationMiddleware.sanitizeUserInputs(), // Spread the array of sanitization middleware
   ValidationMiddleware.validate(UserValidation.createUserSchema()), // Joi validation
-  UserController.createUser
+  UserController.createUser,
 );
 
 // Update Route: Accessible to all authenticated users (no role check)
@@ -64,53 +64,23 @@ router.get("/chw/reset/:slug", UserController.renderActivationPage);
 // Admin: CHW activation email control dashboard (Pug)
 router.get(
   "/admin/activation-email-control",
-  AuthMiddleware.authenticate,
+  // AuthMiddleware.authenticate,
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
-  UserController.renderActivationEmailControlPage
+  UserController.renderActivationEmailControlPage,
 );
 
 // Admin JSON APIs for activation email metrics & control
-router.get(
-  "/admin/activation-email-stats",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
-  UserController.getActivationEmailStats
-);
+router.get("/admin/activation-email-stats", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationEmailStats);
 
-router.get(
-  "/admin/activation-schedule",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
-  UserController.getActivationSchedule
-);
+router.get("/admin/activation-schedule", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationSchedule);
 
-router.post(
-  "/admin/activation-schedule",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
-  UserController.updateActivationSchedule
-);
+router.post("/admin/activation-schedule", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.updateActivationSchedule);
 
-router.post(
-  "/admin/activation-resend/expired",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
-  UserController.resendExpiredActivationsBatch
-);
+router.post("/admin/activation-resend/expired", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.resendExpiredActivationsBatch);
 
-router.post(
-  "/admin/activation-resend/open",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
-  UserController.resendOpenActivationsBatch
-);
+router.post("/admin/activation-resend/open", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.resendOpenActivationsBatch);
 
 // Manual trigger for resend activation cron (for testing/admin use)
-router.post(
-  "/admin/resend-activations",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
-  UserController.manualResendActivations
-);
+router.post("/admin/resend-activations", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.manualResendActivations);
 
 export default router;
