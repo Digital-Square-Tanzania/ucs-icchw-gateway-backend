@@ -18,37 +18,37 @@ html
         .stats-grid(style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;")
           .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
             p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zimeisha Muda &amp; Hazijatumwa Tena
-            p#stat-unsentExpired(style="font-size:1.6rem; font-weight:600; color:#b91c1c;") #{stats?.unsentExpired ?? 0}
+            p#stat-unsentExpired(style="font-size:1.6rem; font-weight:600; color:#b91c1c;") #{(stats && stats.unsentExpired) || 0}
             p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
               | isUsed = false, isResent = false, tayari zime-expire.
 
           .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
             p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Akaunti Zilizowashwa
-            p#stat-activated(style="font-size:1.6rem; font-weight:600; color:#15803d;") #{stats?.activated ?? 0}
+            p#stat-activated(style="font-size:1.6rem; font-weight:600; color:#15803d;") #{(stats && stats.activated) || 0}
             p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
               | isUsed = true.
 
           .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
             p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zime-expire &amp; Zimerudishwa
-            p#stat-expiredResent(style="font-size:1.6rem; font-weight:600; color:#b45309;") #{stats?.expiredResent ?? 0}
+            p#stat-expiredResent(style="font-size:1.6rem; font-weight:600; color:#b45309;") #{(stats && stats.expiredResent) || 0}
             p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
               | isResent = true na expiryDate &lt; leo.
 
           .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
             p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Ziko Hai &amp; Hazijatumika
-            p#stat-openNotUsed(style="font-size:1.6rem; font-weight:600; color:#0369a1;") #{stats?.openNotUsed ?? 0}
+            p#stat-openNotUsed(style="font-size:1.6rem; font-weight:600; color:#0369a1;") #{(stats && stats.openNotUsed) || 0}
             p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
               | isUsed = false, expiryDate ≥ leo.
 
           .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
             p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Jumla ya Slugi za Uanzishaji
-            p#stat-total(style="font-size:1.6rem; font-weight:600; color:#111827;") #{stats?.total ?? 0}
+            p#stat-total(style="font-size:1.6rem; font-weight:600; color:#111827;") #{(stats && stats.total) || 0}
             p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
               | slugType = ACTIVATION (jumla).
 
           .stat-card(style="background:#fff; border:1px solid #e5e7eb; border-radius:0.75rem; padding:0.75rem;")
             p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zilizowahi Kurudishwa
-            p#stat-resentCount(style="font-size:1.6rem; font-weight:600; color:#7c2d12;") #{stats?.resentCount ?? 0}
+            p#stat-resentCount(style="font-size:1.6rem; font-weight:600; color:#7c2d12;") #{(stats && stats.resentCount) || 0}
             p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
               | isResent = true (aina zote).
 
@@ -108,21 +108,25 @@ html
         form#scheduleForm(onSubmit="return false;" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:0.75rem; align-items:flex-end;")
           .field
             label(for="scheduleEnabled" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Wezesha Scheduler
+            - const enabledVal = (schedule && typeof schedule.enabled === "boolean") ? schedule.enabled : true;
             select#scheduleEnabled(name="enabled" style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
-              option(value="true" selected=schedule?.enabled !== false) Ndiyo
-              option(value="false" selected=schedule?.enabled === false) Hapana
+              option(value="true" selected=enabledVal) Ndiyo
+              option(value="false" selected=!enabledVal) Hapana
 
           .field
             label(for="scheduleBatchSize" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Ukubwa wa Kundi (batchSize)
-            input#scheduleBatchSize(type="number" min="1" max="1000" step="1" name="batchSize" value=schedule?.batchSize || 500 style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+            - const batchSizeVal = (schedule && schedule.batchSize) ? schedule.batchSize : 500;
+            input#scheduleBatchSize(type="number" min="1" max="1000" step="1" name="batchSize" value=batchSizeVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
           .field
             label(for="scheduleMaxIterations" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Idadi ya Marudio (maxIterations)
-            input#scheduleMaxIterations(type="number" min="1" max="20" step="1" name="maxIterations" value=schedule?.maxIterations || 1 style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+            - const maxIterVal = (schedule && schedule.maxIterations) ? schedule.maxIterations : 1;
+            input#scheduleMaxIterations(type="number" min="1" max="20" step="1" name="maxIterations" value=maxIterVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
           .field
             label(for="scheduleDelayMs" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") Muda kati ya Marudio (ms)
-            input#scheduleDelayMs(type="number" min="0" step="1000" name="delayMsBetweenIterations" value=schedule?.delayMsBetweenIterations || 0 style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+            - const delayVal = (schedule && typeof schedule.delayMsBetweenIterations === "number") ? schedule.delayMsBetweenIterations : 0;
+            input#scheduleDelayMs(type="number" min="0" step="1000" name="delayMsBetweenIterations" value=delayVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
           button#btn-save-schedule(type="button" style="margin-top:0.9rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#111827; color:white; border:none; cursor:pointer;")
             | Hifadhi Ratiba
