@@ -5,50 +5,213 @@ html
     meta(charset="UTF-8")
     meta(name="viewport" content="width=device-width, initial-scale=1.0")
     link(rel="stylesheet", href=`${ssrUrlPrefix}/css/styles.css`)
+    style.
+      body {
+        min-height: 100vh;
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: radial-gradient(circle at top left, #e0f2fe, #eff6ff 40%, #f9fafb 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #111827;
+      }
+      .page-shell {
+        width: 100%;
+        max-width: 960px;
+        padding: 1.5rem;
+      }
+      .admin-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+        padding: 2rem 1.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.25);
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(0, 4fr);
+        gap: 1.5rem;
+      }
+      @media (max-width: 768px) {
+        .admin-card {
+          grid-template-columns: minmax(0, 1fr);
+          padding: 1.5rem 1.25rem;
+        }
+      }
+      .admin-intro h1 {
+        font-size: 1.5rem;
+        margin-bottom: 0.4rem;
+      }
+      .admin-intro p {
+        font-size: 0.9rem;
+        color: #4b5563;
+      }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.15rem 0.6rem;
+        border-radius: 999px;
+        background: #eff6ff;
+        font-size: 0.7rem;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+      }
+      .pill-dot {
+        width: 0.4rem;
+        height: 0.4rem;
+        border-radius: 999px;
+        background: #22c55e;
+      }
+      .login-panel h2 {
+        font-size: 1.15rem;
+        margin-bottom: 0.5rem;
+      }
+      .subtle {
+        font-size: 0.78rem;
+        color: #6b7280;
+        margin-bottom: 0.9rem;
+      }
+      .link-inline {
+        color: #1d4ed8;
+        text-decoration: underline;
+        font-size: 0.78rem;
+      }
+      .toast-container {
+        position: fixed;
+        right: 1rem;
+        bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        z-index: 50;
+      }
+      .toast {
+        min-width: 220px;
+        max-width: 320px;
+        padding: 0.6rem 0.8rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(148, 163, 184, 0.45);
+        background: #ffffff;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.25);
+        font-size: 0.8rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.55rem;
+        animation: fade-in 0.15s ease-out;
+      }
+      .toast-success {
+        border-color: rgba(34, 197, 94, 0.5);
+      }
+      .toast-error {
+        border-color: rgba(248, 113, 113, 0.7);
+      }
+      .toast-icon {
+        margin-top: 0.1rem;
+        font-size: 0.85rem;
+      }
+      .toast-close {
+        margin-left: auto;
+        cursor: pointer;
+        border: none;
+        background: none;
+        font-size: 0.85rem;
+        color: #6b7280;
+      }
+      @keyframes fade-in {
+        from { opacity: 0; transform: translateY(6px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
   body
-    .container
-      .bg-top
-        h1(style="margin-top:4%; font-size:1.8rem; color:#004d7a;") WAJA/UCS - Usimamizi wa Barua Pepe za Uanzishaji
-        p(style="font-size:0.9rem; color:#555; max-width:640px; margin:0 auto;")
-          | Tafadhali ingia kama msimamizi ili kudhibiti kutuma upya email za uanzishaji za CHW.
+    .page-shell
+      .admin-card
+        .admin-intro
+          span.pill
+            span.pill-dot
+            span Admin Tools
+          h1 WAJA/UCS - Usimamizi wa Email za Uanzishaji
+          p
+            | Huu ni ukurasa maalum wa wasimamizi kufuatilia na kudhibiti email za uanzishaji za
+            |  Wasaidizi wa Afya ya Jamii (CHW). Baada ya kuingia utaweza kuona takwimu, kutuma
+            |  upya makundi ya email na kusanidi ratiba za kutuma.
+          p(style="font-size:0.78rem; color:#6b7280; margin-top:0.8rem;")
+            | Hakikisha unatumia akaunti yenye ruhusa za
+            strong  MOH_ADMIN
+            |  au
+            strong  UCS_DEVELOPER
+            | .
 
-      .card(style="margin-top:1.5rem; max-width:420px; margin-left:auto; margin-right:auto; padding:1.5rem;")
-        h2(style="font-size:1.2rem; margin-bottom:0.75rem; color:#111827;") Ingia kama Msimamizi
+        .login-panel
+          h2 Ingia kama Msimamizi
+          p.subtle
+            | Tumia akaunti ileile unayotumia kwenye mfumo wa WAJA/UCS. Baada ya kuingia utapelekwa
+            |  kwenye ukurasa wa usimamizi wa email za uanzishaji.
 
-        form#loginForm(onSubmit="return false;")
-          label(for="email" style="display:block; font-size:0.8rem; color:#374151; margin-bottom:0.25rem;") Barua Pepe (Admin)
-          input#email(type="email" name="email" required placeholder="admin@example.org" style="width:100%; padding:0.5rem 0.6rem; border-radius:0.4rem; border:1px solid #d1d5db; font-size:0.85rem; margin-bottom:0.6rem;")
+          form#loginForm(onSubmit="return false;")
+            label(for="email" style="display:block; font-size:0.8rem; color:#374151; margin-bottom:0.25rem;") Barua Pepe (Admin)
+            input#email(type="email" name="email" required placeholder="admin@example.org" style="width:100%; padding:0.55rem 0.6rem; border-radius:0.5rem; border:1px solid #d1d5db; font-size:0.85rem; margin-bottom:0.7rem;")
 
-          label(for="password" style="display:block; font-size:0.8rem; color:#374151; margin-bottom:0.25rem;") Nenosiri
-          input#password(type="password" name="password" required placeholder="*******" style="width:100%; padding:0.5rem 0.6rem; border-radius:0.4rem; border:1px solid #d1d5db; font-size:0.85rem; margin-bottom:0.6rem;")
+            label(for="password" style="display:block; font-size:0.8rem; color:#374151; margin-bottom:0.25rem;") Nenosiri
+            input#password(type="password" name="password" required placeholder="*******" style="width:100%; padding:0.55rem 0.6rem; border-radius:0.5rem; border:1px solid #d1d5db; font-size:0.85rem; margin-bottom:0.8rem;")
 
-          button#btnLogin(type="submit" style="width:100%; margin-top:0.4rem; padding:0.55rem 0.6rem; font-size:0.9rem; border-radius:0.5rem; background:#1d4ed8; color:white; border:none; cursor:pointer;")
-            | Ingia
+            button#btnLogin(type="submit" style="width:100%; margin-top:0.4rem; padding:0.6rem 0.6rem; font-size:0.9rem; border-radius:999px; background:#1d4ed8; color:white; border:none; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:0.4rem;")
+              span#btnLoginSpinner(style="display:none; width:0.9rem; height:0.9rem; border-radius:999px; border:2px solid rgba(255,255,255,0.6); border-top-color:transparent; animation:spin 0.8s linear infinite;")
+              span Ingia
 
-          p#loginStatus(style="font-size:0.8rem; margin-top:0.6rem; color:#4b5563;")
+            p#loginStatus(style="font-size:0.78rem; margin-top:0.6rem; color:#6b7280; min-height:1.1rem;")
 
-        hr(style="margin:1.4rem 0; border-color:#e5e7eb;")
+          hr(style="margin:1.4rem 0; border-color:#e5e7eb;")
 
-        p(style="font-size:0.8rem; color:#374151; margin-bottom:0.3rem;")
-          | Baada ya kuingia, nenda moja kwa moja kwenye ukurasa wa kudhibiti email za uanzishaji:
-        a(href=`${ssrUrlPrefix}/api/v1/user/admin/activation-email-control` style="font-size:0.8rem; color:#1d4ed8; text-decoration:underline;")
-          | Fungua ukurasa wa Usimamizi wa Email za Uanzishaji
+          p(style="font-size:0.8rem; color:#374151; margin-bottom:0.3rem;")
+            | Baada ya kuingia, unaweza kufungua moja kwa moja ukurasa wa kudhibiti email za uanzishaji:
+          a.link-inline(href=`${ssrUrlPrefix}/api/v1/user/admin/activation-email-control`)
+            | Fungua ukurasa wa Usimamizi wa Email za Uanzishaji
+
+    // Toast container
+    .toast-container#toastContainer
 
     script.
       (function () {
         const prefix = "#{ssrUrlPrefix}".replace(/\/+$/, "");
         function $(id) { return document.getElementById(id); }
 
+        function pushToast(message, type) {
+          const container = $("toastContainer");
+          if (!container) return;
+          const toast = document.createElement("div");
+          toast.className = "toast " + (type === "success" ? "toast-success" : "toast-error");
+          toast.innerHTML =
+            '<span class="toast-icon">' +
+            (type === "success" ? "✅" : "⚠️") +
+            "</span><div>" +
+            message +
+            '</div><button class="toast-close" aria-label="Funga">&times;</button>';
+          const closeBtn = toast.querySelector(".toast-close");
+          if (closeBtn) {
+            closeBtn.addEventListener("click", function () {
+              container.removeChild(toast);
+            });
+          }
+          container.appendChild(toast);
+          setTimeout(function () {
+            if (container.contains(toast)) container.removeChild(toast);
+          }, 6000);
+        }
+
         async function doLogin() {
           const email = $("email")?.value || "";
           const password = $("password")?.value || "";
           const statusEl = $("loginStatus");
           if (!email || !password) {
-            if (statusEl) statusEl.textContent = "Tafadhali jaza barua pepe na nenosiri.";
+            const msg = "Tafadhali jaza barua pepe na nenosiri.";
+            if (statusEl) statusEl.textContent = msg;
+            pushToast(msg, "error");
             return;
           }
           if (statusEl) statusEl.textContent = "Inakutambua, tafadhali subiri...";
-          $("btnLogin").disabled = true;
+          const btn = $("btnLogin");
+          const spinner = $("btnLoginSpinner");
+          if (btn) btn.disabled = true;
+          if (spinner) spinner.style.display = "inline-block";
 
           try {
             const res = await fetch(prefix + "/api/v1/auth/login", {
@@ -60,14 +223,21 @@ html
             if (!res.ok || data?.status !== "success") {
               throw new Error(data?.message || "Imeshindikana kuingia. Hakikisha taarifa zako ziko sahihi.");
             }
-            if (statusEl) statusEl.textContent = "Umefanikiwa kuingia. Unapelekwa kwenye ukurasa wa usimamizi...";
+            const okMsg = "Umefanikiwa kuingia. Unapelekwa kwenye ukurasa wa usimamizi...";
+            if (statusEl) statusEl.textContent = okMsg;
+            pushToast(okMsg, "success");
             // Redirect to activation email control page
             window.location.href = prefix + "/api/v1/user/admin/activation-email-control";
           } catch (e) {
             console.error("Login failed:", e);
-            if (statusEl) statusEl.textContent = e.message || "Imeshindikana kuingia.";
+            const errMsg = e.message || "Imeshindikana kuingia.";
+            if (statusEl) statusEl.textContent = errMsg;
+            pushToast(errMsg, "error");
           } finally {
-            $("btnLogin").disabled = false;
+            const btn = $("btnLogin");
+            const spinner = $("btnLoginSpinner");
+            if (btn) btn.disabled = false;
+            if (spinner) spinner.style.display = "none";
           }
         }
 
