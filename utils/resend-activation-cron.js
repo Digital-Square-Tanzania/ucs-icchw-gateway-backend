@@ -14,6 +14,10 @@ class ResendActivationCron {
       maxIterations: Number(process.env.ACTIVATION_RESEND_MAX_ITERATIONS || 1),
       delayMsBetweenIterations: Number(process.env.ACTIVATION_RESEND_DELAY_MS || 0),
     };
+    // Load persisted configuration from DB (if available) on startup
+    this.loadScheduleConfigFromDb().catch((err) => {
+      console.warn("⚠️ Failed to load activation resend schedule config from DB:", err?.message || err);
+    });
   }
 
   /**
@@ -68,6 +72,70 @@ class ResendActivationCron {
    */
   getScheduleConfig() {
     return this.scheduleConfig;
+  }
+
+  /**
+   * Load schedule configuration from the database (activation_resend_config).
+   */
+  async loadScheduleConfigFromDb() {
+    try {
+      const existing = await prisma.activationResendConfig.findFirst({
+        where: { id: 1 },
+      });
+      if (existing) {
+        this.scheduleConfig = {
+          enabled: existing.enabled,
+          batchSize: existing.batchSize,
+          maxIterations: existing.maxIterations,
+          delayMsBetweenIterations: existing.delayMsBetweenIterations,
+        };
+        console.log("🔁 Loaded activation resend schedule config from DB:", this.scheduleConfig);
+      } else {
+        // Ensure a default row exists
+        const created = await prisma.activationResendConfig.create({
+          data: {
+            id: 1,
+            enabled: this.scheduleConfig.enabled,
+            batchSize: this.scheduleConfig.batchSize,
+            maxIterations: this.scheduleConfig.maxIterations,
+            delayMsBetweenIterations: this.scheduleConfig.delayMsBetweenIterations,
+          },
+        });
+        console.log("🔁 Created default activation resend schedule config in DB:", created);
+      }
+    } catch (err) {
+      console.error("❌ Error loading activation resend schedule config from DB:", err?.message || err);
+      throw err;
+    }
+  }
+
+  /**
+   * Persist current schedule configuration to the database.
+   */
+  async saveScheduleConfigToDb() {
+    try {
+      const cfg = this.scheduleConfig;
+      await prisma.activationResendConfig.upsert({
+        where: { id: 1 },
+        create: {
+          id: 1,
+          enabled: cfg.enabled,
+          batchSize: cfg.batchSize,
+          maxIterations: cfg.maxIterations,
+          delayMsBetweenIterations: cfg.delayMsBetweenIterations,
+        },
+        update: {
+          enabled: cfg.enabled,
+          batchSize: cfg.batchSize,
+          maxIterations: cfg.maxIterations,
+          delayMsBetweenIterations: cfg.delayMsBetweenIterations,
+        },
+      });
+      console.log("💾 Saved activation resend schedule config to DB:", cfg);
+    } catch (err) {
+      console.error("❌ Error saving activation resend schedule config to DB:", err?.message || err);
+      throw err;
+    }
   }
 
   /**

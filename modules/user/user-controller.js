@@ -221,6 +221,7 @@ class UserController {
 
       resendActivationCron.setScheduleConfig(partial);
       const updated = resendActivationCron.getScheduleConfig();
+      await resendActivationCron.saveScheduleConfigToDb();
       return BaseResponse.success(res, "Activation resend schedule updated", updated, 200);
     } catch (error) {
       next(new CustomError(error.message, 500));

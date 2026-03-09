@@ -311,6 +311,17 @@ model ApiLog {
   @@map("api_logs")
 }
 
+model ActivationResendConfig {
+  id                       Int      @id @default(1)
+  enabled                  Boolean  @default(true)
+  batchSize                Int      @default(500)
+  maxIterations            Int      @default(1)
+  delayMsBetweenIterations Int      @default(0)
+  updatedAt                DateTime @updatedAt @default(now()) @map("updated_at")
+
+  @@map("activation_resend_config")
+}
+
 enum slugType {
   ACTIVATION
   RESET
