@@ -213,7 +213,7 @@ html
               | Overview of the current state of activation slugs for CHW accounts.
           .matrix-wrapper
             .section-title(style="font-size:0.8rem; color:#6b7280; margin-bottom:0.2rem;")
-              | #{isSw ? 'Siku za hivi karibuni za uanzishaji (GitHub matrix style)' : 'Recent activation activity'}
+              | #{isSw ? 'Siku za hivi karibuni za uanzishaji' : 'Recent activation activity'}
             #activationMatrix.matrix-grid
             p.bottom-note
               | #{isSw ? 'Kila kisanduku kinaonyesha idadi ya slugi za uanzishaji zilizoundwa siku hiyo.' : 'Each square shows how many activation slugs were created that day.'}
@@ -296,7 +296,7 @@ html
               p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                 | isResent = true (all types).
 
-        button#btn-refresh-stats(type="button" style="margin-top:0.75rem; font-size:0.75rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid #333333; background:#f9fafb; cursor:pointer;")
+        button#btn-refresh-stats(type="button" style="margin-top:0.75rem; font-size:0.75rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid #ffeffe; background:#f9fafb; cursor:pointer; color: #333333")
           | #{isSw ? '🔄 Pakua takwimu upya' : '🔄 Refresh metrics'}
 
         .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
