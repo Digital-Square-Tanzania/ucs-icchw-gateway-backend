@@ -605,14 +605,14 @@ class UserService {
         COUNT(*)::int AS count
       FROM "account_activations"
       WHERE "slugType" = 'ACTIVATION'
-        AND "created_at" >= (CURRENT_DATE - ${windowDays}::int)
+        AND "createdAt" >= (CURRENT_DATE - ${windowDays}::int)
       GROUP BY date
       ORDER BY date ASC
     `;
 
     // Normalize to a simple { date: 'YYYY-MM-DD', count } array
     return rows.map((r) => ({
-      date: (r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date)),
+      date: r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date),
       count: Number(r.count) || 0,
     }));
   }
