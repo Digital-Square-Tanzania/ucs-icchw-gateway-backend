@@ -601,7 +601,7 @@ class UserService {
     // Use raw SQL to aggregate by day on created_at
     const rows = await prisma.$queryRaw`
       SELECT
-        date_trunc('day', "created_at")::date AS date,
+        date_trunc('day', "createdAt")::date AS date,
         COUNT(*)::int AS count
       FROM "account_activations"
       WHERE "slugType" = 'ACTIVATION'
