@@ -590,6 +590,32 @@ class UserService {
       failed,
     };
   }
+
+  /**
+   * Build a day-level activation matrix (GitHub-style) for the last N days.
+   * Counts ACTIVATION slugs created per day.
+   */
+  static async getActivationMatrix(days = 90) {
+    const windowDays = Number(days) > 0 ? Number(days) : 90;
+
+    // Use raw SQL to aggregate by day on created_at
+    const rows = await prisma.$queryRaw`
+      SELECT
+        date_trunc('day', "created_at")::date AS date,
+        COUNT(*)::int AS count
+      FROM "account_activations"
+      WHERE "slugType" = 'ACTIVATION'
+        AND "created_at" >= (CURRENT_DATE - ${windowDays}::int)
+      GROUP BY date
+      ORDER BY date ASC
+    `;
+
+    // Normalize to a simple { date: 'YYYY-MM-DD', count } array
+    return rows.map((r) => ({
+      date: (r.date instanceof Date ? r.date.toISOString().slice(0, 10) : String(r.date)),
+      count: Number(r.count) || 0,
+    }));
+  }
 }
 
 export default UserService;

@@ -174,6 +174,19 @@ class UserController {
   }
 
   /**
+   * JSON: Activation matrix for GitHub-style heatmap.
+   */
+  static async getActivationMatrix(req, res, next) {
+    try {
+      const days = Number(req.query?.days) || 90;
+      const matrix = await UserService.getActivationMatrix(days);
+      return BaseResponse.success(res, "Activation matrix loaded", { days, matrix }, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
    * JSON: Run a single batch of expired activation resends (manual trigger).
    */
   static async resendExpiredActivationsBatch(req, res, next) {

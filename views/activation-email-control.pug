@@ -85,6 +85,40 @@ html
         margin-bottom: 0.4rem;
         color: #1f2937;
       }
+      .matrix-wrapper {
+        margin-top: 0.75rem;
+      }
+      .matrix-grid {
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: 12px;
+        grid-template-rows: repeat(7, 12px);
+        gap: 2px;
+        padding: 0.25rem;
+        border-radius: 0.75rem;
+        background: #f9fafb;
+        border: 1px dashed #e5e7eb;
+        max-width: 100%;
+        overflow-x: auto;
+      }
+      .matrix-cell {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+        background: #e5e7eb;
+      }
+      .matrix-cell.level-1 {
+        background: #bfdbfe;
+      }
+      .matrix-cell.level-2 {
+        background: #60a5fa;
+      }
+      .matrix-cell.level-3 {
+        background: #2563eb;
+      }
+      .matrix-cell.level-4 {
+        background: #1d4ed8;
+      }
       .bottom-note {
         font-size: 0.7rem;
         color: #6b7280;
@@ -177,6 +211,12 @@ html
             .panel-header Activation Metrics
             p.panel-subtitle
               | Overview of the current state of activation slugs for CHW accounts.
+          .matrix-wrapper
+            .section-title(style="font-size:0.8rem; color:#6b7280; margin-bottom:0.2rem;")
+              | #{isSw ? 'Siku za hivi karibuni za uanzishaji (GitHub matrix style)' : 'Recent activation activity (GitHub-style matrix)'}
+            #activationMatrix.matrix-grid
+            p.bottom-note
+              | #{isSw ? 'Kila kisanduku kinaonyesha idadi ya slugi za uanzishaji zilizoundwa siku hiyo.' : 'Each square shows how many activation slugs were created that day.'}
         .stats-grid
           .stat-card
             if isSw
@@ -438,9 +478,69 @@ html
               if (el) el.textContent = String(map[id] ?? 0);
             });
             pushToast("#{isSw ? 'Takwimu zimepakiwa upya.' : 'Metrics refreshed.'}", "success");
+            await refreshMatrix(false);
           } catch (e) {
             console.error("Failed to refresh stats:", e);
             pushToast(e.message || "Failed to refresh metrics.", "error");
+          }
+        }
+
+        function buildDayArray(days, matrix) {
+          const today = new Date();
+          const start = new Date();
+          start.setDate(today.getDate() - (days - 1));
+          const byDate = {};
+          (matrix || []).forEach(function (row) {
+            byDate[row.date] = row.count || 0;
+          });
+          const arr = [];
+          for (let d = 0; d < days; d++) {
+            const cur = new Date(start.getTime());
+            cur.setDate(start.getDate() + d);
+            const key = cur.toISOString().slice(0, 10);
+            arr.push({ date: key, count: byDate[key] || 0, jsDate: cur });
+          }
+          return arr;
+        }
+
+        function renderMatrix(days, matrix) {
+          const container = $("activationMatrix");
+          if (!container) return;
+          container.innerHTML = "";
+          const daysData = buildDayArray(days, matrix);
+          const max = daysData.reduce((m, d) => (d.count > m ? d.count : m), 0);
+
+          function level(count) {
+            if (count <= 0) return 0;
+            if (max <= 1) return 2;
+            if (count >= max) return 4;
+            const ratio = count / max;
+            if (ratio > 0.75) return 4;
+            if (ratio > 0.5) return 3;
+            if (ratio > 0.25) return 2;
+            return 1;
+          }
+
+          daysData.forEach(function (item, idx) {
+            const cell = document.createElement("div");
+            const lvl = level(item.count);
+            cell.className = "matrix-cell" + (lvl ? " level-" + lvl : "");
+            const dateLabel = item.jsDate.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+            cell.title = dateLabel + " – " + item.count + (item.count === 1 ? " activation" : " activations");
+            container.appendChild(cell);
+          });
+        }
+
+        async function refreshMatrix(showToastOnError) {
+          try {
+            const data = await fetchJson(prefix + "/api/v1/user/admin/activation-matrix?days=90");
+            const payload = data?.data || data;
+            renderMatrix(payload.days || 90, payload.matrix || []);
+          } catch (e) {
+            console.error("Failed to load activation matrix:", e);
+            if (showToastOnError) {
+              pushToast(e.message || "Failed to load activation matrix.", "error");
+            }
           }
         }
 
@@ -556,6 +656,9 @@ html
           if (btnSaveSchedule) {
             btnSaveSchedule.addEventListener("click", saveSchedule);
           }
+
+          // Initial load
+          refreshMatrix(true);
         });
       })();
 

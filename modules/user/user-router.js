@@ -70,6 +70,8 @@ router.get("/admin/activation-email-control", AuthMiddleware.authenticate, AuthM
 // Admin JSON APIs for activation email metrics & control
 router.get("/admin/activation-email-stats", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationEmailStats);
 
+router.get("/admin/activation-matrix", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationMatrix);
+
 router.get("/admin/activation-schedule", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationSchedule);
 
 router.post("/admin/activation-schedule", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.updateActivationSchedule);
