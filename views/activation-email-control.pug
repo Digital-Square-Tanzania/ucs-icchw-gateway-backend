@@ -296,12 +296,12 @@ html
               p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                 | isResent = true (all types).
 
-        button#btn-refresh-stats(type="button" style="margin-top:0.75rem; font-size:0.75rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid #d1d5db; background:#f9fafb; cursor:pointer;")
+        button#btn-refresh-stats(type="button" style="margin-top:0.75rem; font-size:0.75rem; padding:0.4rem 0.8rem; border-radius:999px; border:1px solid #333333; background:#f9fafb; cursor:pointer;")
           | #{isSw ? '🔄 Pakua takwimu upya' : '🔄 Refresh metrics'}
 
         .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
           .batch-controls(style="flex:1 1 260px;")
-            h3(style="font-size:0.95rem; font-weight:600; color:#1e3a8a; margin-bottom:0.3rem;") Kundi la Slugi Zilizokwisha Muda (Expired)
+            h3(style="font-size:0.95rem; font-weight:600; color:#1e3a8a; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizokwisha Muda (Ekspaya)' : 'Expired Slugs'}
             p(style="font-size:0.75rem; color:#1e3a8a; margin-bottom:0.4rem;")
               if isSw
                 | Tuma upya email za uanzishaji kwa slugi za ACTIVAION ambazo zimeisha muda, hazijatumika na hazijawahi kurudishwa.
@@ -324,7 +324,7 @@ html
             p#status-expired(style="font-size:0.75rem; margin-top:0.3rem; color:#1e3a8a;")
 
           .batch-controls(style="flex:1 1 260px;")
-            h3(style="font-size:0.95rem; font-weight:600; color:#0f766e; margin-bottom:0.3rem;") Kundi la Slugi Zilizopo Hai (Open)
+            h3(style="font-size:0.95rem; font-weight:600; color:#0f766e; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizopo Hai' : 'Open Slugs'}
             p(style="font-size:0.75rem; color:#0f766e; margin-bottom:0.4rem;")
               if isSw
                 | Tuma upya email kwa slugi za ACTIVAION ambazo bado zina muda (hazija-expire) na hazijatumika.
@@ -363,8 +363,8 @@ html
             label(for="scheduleEnabled" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Wezesha Scheduler' : 'Enable scheduler'}
             - const enabledVal = (schedule && typeof schedule.enabled === "boolean") ? schedule.enabled : true;
             select#scheduleEnabled(name="enabled" style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
-              option(value="true" selected=enabledVal) Ndiyo
-              option(value="false" selected=!enabledVal) Hapana
+              option(value="true" selected=enabledVal) #{isSw ? 'Ndiyo' : 'Yes'}
+              option(value="false" selected=!enabledVal) #{isSw ? 'Hapana' : 'No'}
 
           .field
             label(for="scheduleBatchSize" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Ukubwa wa Kundi (batchSize)' : 'Batch size (batchSize)'}
@@ -382,7 +382,7 @@ html
             input#scheduleDelayMs(type="number" min="0" step="1000" name="delayMsBetweenIterations" value=delayVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
           button#btn-save-schedule(type="button" style="margin-top:0.9rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#111827; color:white; border:none; cursor:pointer;")
-            | Hifadhi Ratiba
+            | #{isSw ? 'Hifadhi Ratiba' : 'Save Schedule'}
 
           p#status-schedule.bottom-note
 
