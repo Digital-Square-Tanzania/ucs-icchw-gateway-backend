@@ -206,7 +206,8 @@ html
             |  for CHW activation emails.
 
       .activation-grid
-        .panel.panel-scheduler
+        .activation-col
+          .panel.panel-scheduler
           if isSw
             .panel-header Takwimu za Uanzishaji
             p.panel-subtitle
@@ -226,8 +227,9 @@ html
             #activationMatrix.matrix-grid
             p.bottom-note
               | #{isSw ? 'Kila kisanduku kinaonyesha idadi ya slugi za uanzishaji zilizoundwa siku hiyo.' : 'Each square shows how many activation slugs were created that day.'}
-        .stats-grid
-          .stat-card
+        .activation-col
+          .stats-grid
+            .stat-card
             if isSw
               p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zimeisha Muda &amp; Hazijatumwa Tena
             else
@@ -240,7 +242,7 @@ html
               p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                 | isUsed = false, isResent = false, and already expired.
 
-          .stat-card
+            .stat-card
             if isSw
               p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Akaunti Zilizowashwa
             else
@@ -253,7 +255,7 @@ html
               p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                 | isUsed = true.
 
-          .stat-card
+            .stat-card
             if isSw
               p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Zime-expire &amp; Zimerudishwa
             else
@@ -266,7 +268,7 @@ html
               p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                 | isResent = true and expiryDate &lt; today.
 
-          .stat-card
+            .stat-card
             if isSw
               p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Ziko Hai &amp; Hazijatumika
             else
@@ -279,7 +281,7 @@ html
               p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                 | isUsed = false, expiryDate ≥ today.
 
-          .stat-card
+            .stat-card
             if isSw
               p(style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.08em; color:#6b7280; margin-bottom:0.25rem;") Jumla ya Slugi za Uanzishaji
             else
@@ -305,8 +307,9 @@ html
               p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                 | isResent = true (all types).
 
-        .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
-          .batch-controls(style="flex:1 1 260px;")
+        .activation-col
+          .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start;")
+            .batch-controls(style="flex:1 1 260px;")
             h3(style="font-size:0.95rem; font-weight:600; color:#1e3a8a; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizokwisha Muda (Ekspaya)' : 'Expired Slugs'}
             p(style="font-size:0.75rem; color:#1e3a8a; margin-bottom:0.4rem;")
               if isSw
@@ -329,7 +332,7 @@ html
 
             p#status-expired(style="font-size:0.75rem; margin-top:0.3rem; color:#1e3a8a;")
 
-          .batch-controls(style="flex:1 1 260px;")
+            .batch-controls(style="flex:1 1 260px;")
             h3(style="font-size:0.95rem; font-weight:600; color:#0f766e; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizopo Hai' : 'Open Slugs'}
             p(style="font-size:0.75rem; color:#0f766e; margin-bottom:0.4rem;")
               if isSw
@@ -352,7 +355,8 @@ html
 
             p#status-open(style="font-size:0.75rem; margin-top:0.3rem; color:#0f766e;")
 
-        .panel
+        .activation-col
+          .panel
           if isSw
             h2.section-title Ratiba ya Kundi la Kila Siku (Scheduler)
             p.panel-subtitle
