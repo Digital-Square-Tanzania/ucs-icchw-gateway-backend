@@ -56,7 +56,7 @@ class AppServer {
       helmet({
         crossOriginOpenerPolicy: false,
         originAgentCluster: false,
-      })
+      }),
     );
     this.app.use((req, res, next) => {
       if (req.protocol === "https") {

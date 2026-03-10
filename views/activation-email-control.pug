@@ -113,16 +113,16 @@ html
         background: #e5e7eb;
       }
       .matrix-cell.level-1 {
-        background: #bfdbfe;
+        background: #e9f5f9
       }
       .matrix-cell.level-2 {
-        background: #60a5fa;
+        background: #a8d5e5;
       }
       .matrix-cell.level-3 {
-        background: #2563eb;
+        background: #66b6d2;
       }
       .matrix-cell.level-4 {
-        background: #1d4ed8;
+        background: #218cc5;
       }
       .bottom-note {
         font-size: 0.7rem;
@@ -192,6 +192,68 @@ html
         from { opacity: 0; transform: translateY(-4px); }
         to { opacity: 1; transform: translateY(0); }
       }
+
+      input[type="range"] {
+        -webkit-appearance: none; /* Crucial for Chrome/Safari */
+        appearance: none;
+        width: 100%;
+        background: transparent; /* Otherwise, a white box might appear */
+        cursor: pointer;
+      }
+
+      /* Chrome, Safari, Edge, Opera */
+      input[type="range"]::-webkit-slider-runnable-track {
+        background: #218cc5;
+        height: 0.5rem;
+        border-radius: 0.5rem;
+      }
+
+      /* Firefox */
+      input[type="range"]::-moz-range-track {
+        background: #218cc5;
+        height: 0.5rem;
+        border-radius: 0.5rem;
+      }
+      /* Chrome, Safari, Edge, Opera */
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; /* Must be repeated here */
+        appearance: none;
+        margin-top: -6px; /* Centers thumb on the track */
+        background-color: #218cc5;
+        height: 1.25rem;
+        width: 1.25rem;    
+        border-radius: 50%;
+      }
+
+      /* Firefox */
+      input[type="range"]::-moz-range-thumb {
+        border: none; /* Removes default border */
+        background-color: #1d77a8;
+        height: 1.25rem;
+        width: 1.25rem;
+        border-radius: 50%;
+      }
+
+      /* Expired Slider - Industrial Blue */
+      #expiredLimit::-webkit-slider-runnable-track {
+        background: #218cc5;
+      }
+      #expiredLimit::-webkit-slider-thumb {
+        background: #1d7696;
+        border-radius: 50%;
+        border: 1px solid #619eb4;
+      }
+
+      /* Open Slider - Sunset Orange */
+      #openLimit::-webkit-slider-runnable-track {
+        background: #c55a21;
+      }
+      #openLimit::-webkit-slider-thumb {
+        background: #743614;
+        border-radius: 50%; /* Round thumb */
+        /* transform: scale(1.2); */
+        border: 1px solid #8c776b;
+      }
   body
     .page-shell
       .page-header
@@ -220,9 +282,9 @@ html
                 | Overview of the current state of activation slugs for CHW accounts.
             button#btn-refresh-stats(
               type="button"
-              style="margin-top:0.3rem; margin-bottom:0.25rem; font-size:0.75rem; padding:0.35rem 0.9rem; border-radius:999px; border:none; background:#1d4ed8; color:#ffffff; cursor:pointer; float:right;"
+              style="margin-top:0.3rem; margin-bottom:0.25rem; font-size:0.95rem; padding:0.35rem 0.9rem; border-radius:10px; border:none; background:#218CC5; color:#ffffff; cursor:pointer; float:right;"
             )
-              | #{isSw ? '🔄 Pakua takwimu upya' : '🔄 Refresh metrics'}
+              | #{isSw ? 'Pakua takwimu upya' : 'Refresh metrics'}
             .matrix-wrapper
               .section-title(style="font-size:0.8rem; color:#6b7280; margin-bottom:0.2rem;")
                 | #{isSw ? 'Siku za hivi karibuni za uanzishaji' : 'Recent activation activity'}
@@ -232,50 +294,64 @@ html
 
           .batch-section(style="display:flex; flex-wrap:wrap; gap:1.5rem; align-items:flex-start; margin-top:1rem;")
             .batch-controls(style="flex:1 1 260px;")
-              h3(style="font-size:0.95rem; font-weight:600; color:#1e3a8a; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizokwisha Muda (Ekspaya)' : 'Expired Slugs'}
-              p(style="font-size:0.75rem; color:#1e3a8a; margin-bottom:0.4rem;")
+              h3(style="font-size:0.95rem; font-weight:600; color:#218cc5; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizokwisha Muda (Ekspaya)' : 'Expired Slugs'}
+              p(style="font-size:0.75rem; color:#218cc5; margin-bottom:0.4rem;")
                 if isSw
                   | Tuma upya email za uanzishaji kwa slugi za ACTIVAION ambazo zimeisha muda, hazijatumika na hazijawahi kurudishwa.
                 else
                   | Resend activation emails for ACTIVATION slugs that have expired, are unused and have never been resent.
 
-              label(for="expiredLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#1e40af; margin-bottom:0.15rem;")
+              label(for="expiredLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#218cc5; margin-bottom:0.15rem;")
                 span #{isSw ? 'Ukubwa wa kundi (emails kwa batch)' : 'Batch size (emails per batch)'}
                 span#expiredLimitValue #{100}
 
-              input#expiredLimit(type="range" min="10" max="500" step="10" value="100" style="width:100%;")
-              .batch-scale(style="display:flex; justify-content:space-between; font-size:0.65rem; color:#1e3a8a; margin-top:0.1rem;")
-                span 10
-                span 250
+              input#expiredLimit(type="range" min="5" max="500" step="5" value="100" style="width:100%;")
+              .batch-scale(style="display:flex; justify-content:space-between; font-size:0.65rem; color:#218cc5; margin-top:0.1rem;")
+                span 5
+                span 100
+                span 200
+                span 300
+                span 400
                 span 500
 
-              button#btn-resend-expired(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#1d4ed8; color:white; border:none; cursor:pointer;")
+              button#btn-resend-expired(
+                type="button" 
+                style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#218cc5; color:white; border:none; cursor:pointer;"
+                onmouseover="this.style.background='#1d7696'"
+                onmouseout="this.style.background='#218cc5'"
+              )
                 | #{isSw ? 'Tuma Upya Zilizokwisha Muda' : 'Resend Expired Batch'}
 
               p#status-expired(style="font-size:0.75rem; margin-top:0.3rem; color:#1e3a8a;")
 
             .batch-controls(style="flex:1 1 260px;")
-              h3(style="font-size:0.95rem; font-weight:600; color:#0f766e; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizopo Hai' : 'Open Slugs'}
-              p(style="font-size:0.75rem; color:#0f766e; margin-bottom:0.4rem;")
+              h3(style="font-size:0.95rem; font-weight:600; color:#c55a21; margin-bottom:0.3rem;") #{isSw ? 'Kundi la Slugi Zilizopo Hai' : 'Open Slugs'}
+              p(style="font-size:0.75rem; color:#c55a21; margin-bottom:0.4rem;")
                 if isSw
                   | Tuma upya email kwa slugi za ACTIVAION ambazo bado zina muda (hazija-expire) na hazijatumika.
                 else
                   | Resend emails for ACTIVATION slugs that are still valid (not expired) and unused.
 
-              label(for="openLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#0f766e; margin-bottom:0.15rem;")
+              label(for="openLimit" style="display:flex; justify-content:space-between; font-size:0.75rem; color:#c55a21; margin-bottom:0.15rem;")
                 span #{isSw ? 'Ukubwa wa kundi (emails kwa batch)' : 'Batch size (emails per batch)'}
                 span#openLimitValue #{100}
 
-              input#openLimit(type="range" min="10" max="500" step="10" value="100" style="width:100%;")
-              .batch-scale(style="display:flex; justify-content:space-between; font-size:0.65rem; color:#0f766e; margin-top:0.1rem;")
-                span 10
-                span 250
+              input#openLimit(type="range" min="5" max="500" step="5" value="100" style="width:100%;")
+              .batch-scale(style="display:flex; justify-content:space-between; font-size:0.65rem; color:#c55a21; margin-top:0.1rem;")
+                span 5
+                span 100
+                span 200
+                span 300
+                span 400
                 span 500
 
-              button#btn-resend-open(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#0f766e; color:white; border:none; cursor:pointer;")
+              button#btn-resend-open(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#c55a21; color:white; border:none; cursor:pointer;"
+                onmouseover="this.style.background='#743614'"
+                onmouseout="this.style.background='#c55a21'"
+              )
                 | #{isSw ? 'Tuma Upya Zilizopo Hai' : 'Resend Open Batch'}
 
-              p#status-open(style="font-size:0.75rem; margin-top:0.3rem; color:#0f766e;")
+              p#status-open(style="font-size:0.75rem; margin-top:0.3rem; color:#c55a21;")
 
         // Right column: stats + scheduler
         .activation-col
