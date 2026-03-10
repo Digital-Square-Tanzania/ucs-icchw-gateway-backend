@@ -61,7 +61,7 @@ html
       }
       .panel-scheduler {
         padding-top: 1.25rem;
-        margin-top: 0.5rem;
+        margin-top: 3.25rem;
       }
       .panel-header {
         font-size: 1rem;
@@ -282,7 +282,7 @@ html
                 | Overview of the current state of activation slugs for CHW accounts.
             button#btn-refresh-stats(
               type="button"
-              style="margin-top:0.3rem; margin-bottom:0.25rem; font-size:0.95rem; padding:0.35rem 0.9rem; border-radius:10px; border:none; background:#218CC5; color:#ffffff; cursor:pointer; float:right;"
+              style="margin-top:0.3rem; margin-bottom:0.25rem; font-size:0.95rem; padding:0.35rem 0.9rem; border-radius:0.45em; border:none; background:#218CC5; color:#ffffff; cursor:pointer; float:right;"
             )
               | #{isSw ? 'Pakua takwimu upya' : 'Refresh metrics'}
             .matrix-wrapper
@@ -462,14 +462,17 @@ html
               .field
                 label(for="scheduleMaxIterations" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Idadi ya Marudio (maxIterations)' : 'Number of iterations (maxIterations)'}
                 - const maxIterVal = (schedule && schedule.maxIterations) ? schedule.maxIterations : 1;
-                input#scheduleMaxIterations(type="number" min="1" max="20" step="1" name="maxIterations" value=maxIterVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
+                input#scheduleMaxIterations(type="number" min="1" max="20" step="1" name="maxIterations" value=maxIterVal style="width:93%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
               .field
                 label(for="scheduleDelayMs" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Muda kati ya Marudio (ms)' : 'Delay between iterations (ms)'}
                 - const delayVal = (schedule && typeof schedule.delayMsBetweenIterations === "number") ? schedule.delayMsBetweenIterations : 0;
                 input#scheduleDelayMs(type="number" min="0" step="1000" name="delayMsBetweenIterations" value=delayVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
-              button#btn-save-schedule(type="button" style="margin-top:0.9rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#111827; color:white; border:none; cursor:pointer;")
+              button#btn-save-schedule(type="button" style="margin-top:0.9rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#218cc5; color:white; border:none; cursor:pointer;"
+              onmouseover="this.style.background='#1d7696'"
+              onmouseout="this.style.background='#218cc5'"
+              )
                 | #{isSw ? 'Hifadhi Ratiba' : 'Save Schedule'}
 
             p#status-schedule.bottom-note
