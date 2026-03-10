@@ -61,7 +61,7 @@ html
       }
       .panel-scheduler {
         padding-top: 1.25rem;
-        margin-top: 3.25rem;
+        margin-top: 0.45rem;
       }
       .panel-header {
         font-size: 1rem;
@@ -75,8 +75,8 @@ html
       }
       .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-        gap: 0.85rem;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 0.45rem;
       }
       .stat-card {
         background: #ffffff;
@@ -315,10 +315,11 @@ html
                 span 500
 
               button#btn-resend-expired(
-                type="button" 
-                style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#218cc5; color:white; border:none; cursor:pointer;"
-                onmouseover="this.style.background='#1d7696'"
-                onmouseout="this.style.background='#218cc5'"
+                type="button"
+                disabled
+                style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#9ca3af; color:white; border:none; cursor:not-allowed; opacity:0.7;"
+                onmouseover="if(!this.disabled){this.style.background='#1d7696'}"
+                onmouseout="if(!this.disabled){this.style.background='#218cc5'}"
               )
                 | #{isSw ? 'Tuma Upya Zilizokwisha Muda' : 'Resend Expired Batch'}
 
@@ -345,9 +346,12 @@ html
                 span 400
                 span 500
 
-              button#btn-resend-open(type="button" style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#c55a21; color:white; border:none; cursor:pointer;"
-                onmouseover="this.style.background='#743614'"
-                onmouseout="this.style.background='#c55a21'"
+              button#btn-resend-open(
+                type="button"
+                disabled
+                style="margin-top:0.6rem; padding:0.45rem 0.9rem; font-size:0.8rem; border-radius:0.5rem; background:#9ca3af; color:white; border:none; cursor:not-allowed; opacity:0.7;"
+                onmouseover="if(!this.disabled){this.style.background='#743614'}"
+                onmouseout="if(!this.disabled){this.style.background='#c55a21'}"
               )
                 | #{isSw ? 'Tuma Upya Zilizopo Hai' : 'Resend Open Batch'}
 
@@ -434,17 +438,55 @@ html
                 p(style="font-size:0.7rem; color:#6b7280; margin-top:0.25rem;")
                   | isResent = true (all types).
 
+          // Location filter panel (Region → District → Council)
+          .panel.panel-location-filter(style="margin-top:0.75rem; padding:0.5rem 0.75rem; border-radius:0.5rem; border:1px solid #e5e7eb; background:#f9fafb;")
+            if isSw
+              h3(style="font-size:0.75rem; font-weight:600; margin-bottom:0.35rem; color:#374151;") Chagua Eneo la Kutuma Upya
+              p(style="font-size:0.7rem; color:#6b7280; margin-bottom:0.4rem;")
+                | Chagua Mkoa, Wilaya, halafu Halmashauri ili kuwezesha vitufe vya kutuma upya. Kundi litahusu akaunti za eneo hilo pekee.
+            else
+              h3(style="font-size:0.75rem; font-weight:600; margin-bottom:0.35rem; color:#374151;") Select resend location
+              p(style="font-size:0.7rem; color:#6b7280; margin-bottom:0.4rem;")
+                | Pick Region, then District, then Council to enable the resend buttons. Batches will target accounts in that council only.
+
+            .location-filter-grid(style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0.5rem; align-items:center;")
+              .field
+                label(for="regionSelect" style="font-size:0.7rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Mkoa' : 'Region'}
+                select#regionSelect(
+                  name="region"
+                  style="width:100%; padding:0.25rem 0.4rem; font-size:0.7rem; border-radius:0.35rem; border:1px solid #d1d5db; background-color:#ffffff;"
+                )
+                  option(value="") #{isSw ? 'Chagua Mkoa' : 'Select region'}
+
+              .field
+                label(for="districtSelect" style="font-size:0.7rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Wilaya' : 'District'}
+                select#districtSelect(
+                  name="district"
+                  disabled
+                  style="width:100%; padding:0.25rem 0.4rem; font-size:0.7rem; border-radius:0.35rem; border:1px solid #d1d5db; background-color:#f3f4f6;"
+                )
+                  option(value="") #{isSw ? 'Chagua Wilaya' : 'Select district'}
+
+              .field
+                label(for="councilSelect" style="font-size:0.7rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Halmashauri' : 'Council'}
+                select#councilSelect(
+                  name="council"
+                  disabled
+                  style="width:100%; padding:0.25rem 0.4rem; font-size:0.7rem; border-radius:0.35rem; border:1px solid #d1d5db; background-color:#f3f4f6;"
+                )
+                  option(value="") #{isSw ? 'Chagua Halmashauri' : 'Select council'}
+
           .panel.panel-scheduler
             if isSw
               h2.section-title Ratiba ya Kundi la Kila Siku (Scheduler)
-              p.panel-subtitle
-                | Hii ratiba hutumika kwenye kazi ya kila siku (cron) saa 23:55. Unaweza kuweka ukubwa wa kundi,
-                |  idadi ya marudio (iterations), na muda wa kusubiri kati ya marudio.
+              //- p.panel-subtitle
+              //-   | Hii ratiba hutumika kwenye kazi ya kila siku (cron) saa 23:55. Unaweza kuweka ukubwa wa kundi,
+              //-   |  idadi ya marudio (iterations), na muda wa kusubiri kati ya marudio.
             else
               h2.section-title Daily Batch Scheduler
-              p.panel-subtitle
-                | This scheduler runs with the nightly job (cron) at 23:55. Configure batch size, number of iterations,
-                |  and delay between iterations.
+              //- p.panel-subtitle
+              //-   | This scheduler runs with the nightly job (cron) at 23:55. Configure batch size, number of iterations,
+              //-   |  and delay between iterations.
 
             form#scheduleForm(onSubmit="return false;" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:1rem; align-items:flex-end; margin-top:0.75rem;")
               .field
@@ -455,17 +497,17 @@ html
                   option(value="false" selected=!enabledVal) #{isSw ? 'Hapana' : 'No'}
 
               .field
-                label(for="scheduleBatchSize" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Ukubwa wa Kundi (batchSize)' : 'Batch size (batchSize)'}
+                label(for="scheduleBatchSize" style="font-size:0.75rem; color:#111827; display:inline; margin-bottom:0.15rem;") #{isSw ? 'Ukubwa wa Kundi (batchSize)' : 'Batch size (batchSize)'}
                 - const batchSizeVal = (schedule && schedule.batchSize) ? schedule.batchSize : 500;
                 input#scheduleBatchSize(type="number" min="1" max="1000" step="1" name="batchSize" value=batchSizeVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
               .field
-                label(for="scheduleMaxIterations" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Idadi ya Marudio (maxIterations)' : 'Number of iterations (maxIterations)'}
+                label(for="scheduleMaxIterations" style="font-size:0.75rem; color:#111827; display:inline; margin-bottom:0.15rem;") #{isSw ? 'Idadi ya Marudio (maxIterations)' : 'Number of iterations (maxIterations)'}
                 - const maxIterVal = (schedule && schedule.maxIterations) ? schedule.maxIterations : 1;
                 input#scheduleMaxIterations(type="number" min="1" max="20" step="1" name="maxIterations" value=maxIterVal style="width:93%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
               .field
-                label(for="scheduleDelayMs" style="font-size:0.75rem; color:#111827; display:block; margin-bottom:0.15rem;") #{isSw ? 'Muda kati ya Marudio (ms)' : 'Delay between iterations (ms)'}
+                label(for="scheduleDelayMs" style="font-size:0.75rem; color:#111827; display:inline; margin-bottom:0.15rem;") #{isSw ? 'Muda kati ya Marudio (ms)' : 'Delay between iterations (ms)'}
                 - const delayVal = (schedule && typeof schedule.delayMsBetweenIterations === "number") ? schedule.delayMsBetweenIterations : 0;
                 input#scheduleDelayMs(type="number" min="0" step="1000" name="delayMsBetweenIterations" value=delayVal style="width:100%; padding:0.35rem 0.5rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db;")
 
@@ -493,6 +535,12 @@ html
         function $(id) {
           return document.getElementById(id);
         }
+
+        // Cached location hierarchy + current selection
+        let locationHierarchy = null;
+        let selectedRegion = "";
+        let selectedDistrict = "";
+        let selectedCouncil = "";
 
         function pushToast(message, type) {
           const container = $("toastContainer");
@@ -635,15 +683,213 @@ html
           }
         }
 
+        function getLocationFilter() {
+          const regionEl = $("regionSelect");
+          const districtEl = $("districtSelect");
+          const councilEl = $("councilSelect");
+          const region = regionEl?.value || "";
+          const district = districtEl?.value || "";
+          const council = councilEl?.value || "";
+          if (!council) {
+            return null;
+          }
+          return { region, district, council };
+        }
+
+        function setResendButtonsEnabled(enabled) {
+          const btnExpired = $("btn-resend-expired");
+          const btnOpen = $("btn-resend-open");
+          const applyState = (btn, activeBg) => {
+            if (!btn) return;
+            btn.disabled = !enabled;
+            if (enabled) {
+              btn.style.background = activeBg;
+              btn.style.cursor = "pointer";
+              btn.style.opacity = "1";
+            } else {
+              btn.style.background = "#9ca3af";
+              btn.style.cursor = "not-allowed";
+              btn.style.opacity = "0.7";
+            }
+          };
+          applyState(btnExpired, "#218cc5");
+          applyState(btnOpen, "#c55a21");
+        }
+
+        async function loadLocationHierarchy() {
+          try {
+            const data = await fetchJson(prefix + "/api/v1/openmrs/location/hierarchy/grouped");
+            locationHierarchy = data?.data || data || null;
+            populateRegionSelect();
+          } catch (e) {
+            console.error("Failed to load location hierarchy:", e);
+            pushToast(e.message || "Failed to load location hierarchy.", "error");
+          }
+        }
+
+        function populateRegionSelect() {
+          const regionSelect = $("regionSelect");
+          const districtSelect = $("districtSelect");
+          const councilSelect = $("councilSelect");
+          if (!regionSelect || !locationHierarchy) return;
+
+          // Reset downstream selects
+          if (districtSelect) {
+            districtSelect.innerHTML = "";
+            districtSelect.disabled = true;
+            districtSelect.style.backgroundColor = "#f3f4f6";
+            const opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "#{isSw ? 'Chagua Wilaya' : 'Select district'}";
+            districtSelect.appendChild(opt);
+          }
+          if (councilSelect) {
+            councilSelect.innerHTML = "";
+            councilSelect.disabled = true;
+            councilSelect.style.backgroundColor = "#f3f4f6";
+            const opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "#{isSw ? 'Chagua Halmashauri' : 'Select council'}";
+            councilSelect.appendChild(opt);
+          }
+
+          // Clear regions (keep placeholder)
+          regionSelect.innerHTML = "";
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = "#{isSw ? 'Chagua Mkoa' : 'Select region'}";
+          regionSelect.appendChild(placeholder);
+
+          const seen = new Set();
+          Object.values(locationHierarchy || {}).forEach((country) => {
+            if (!country || !country.zones) return;
+            Object.values(country.zones).forEach((zone) => {
+              if (!zone || !zone.regions) return;
+              Object.values(zone.regions).forEach((region) => {
+                if (!region) return;
+                const name = region.name || "";
+                if (!name || seen.has(name)) return;
+                seen.add(name);
+                const opt = document.createElement("option");
+                opt.value = name;
+                opt.textContent = name;
+                regionSelect.appendChild(opt);
+              });
+            });
+          });
+        }
+
+        function populateDistrictSelect(regionName) {
+          const districtSelect = $("districtSelect");
+          const councilSelect = $("councilSelect");
+          if (!districtSelect || !locationHierarchy) return;
+
+          // Reset downstream
+          if (councilSelect) {
+            councilSelect.innerHTML = "";
+            councilSelect.disabled = true;
+            councilSelect.style.backgroundColor = "#f3f4f6";
+            const opt = document.createElement("option");
+            opt.value = "";
+            opt.textContent = "#{isSw ? 'Chagua Halmashauri' : 'Select council'}";
+            councilSelect.appendChild(opt);
+          }
+
+          districtSelect.innerHTML = "";
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = "#{isSw ? 'Chagua Wilaya' : 'Select district'}";
+          districtSelect.appendChild(placeholder);
+
+          if (!regionName) {
+            districtSelect.disabled = true;
+            districtSelect.style.backgroundColor = "#f3f4f6";
+            return;
+          }
+
+          const seen = new Set();
+          Object.values(locationHierarchy || {}).forEach((country) => {
+            if (!country || !country.zones) return;
+            Object.values(country.zones).forEach((zone) => {
+              if (!zone || !zone.regions) return;
+              Object.values(zone.regions).forEach((region) => {
+                if (!region || region.name !== regionName || !region.districts) return;
+                Object.values(region.districts).forEach((district) => {
+                  if (!district) return;
+                  const name = district.name || "";
+                  if (!name || seen.has(name)) return;
+                  seen.add(name);
+                  const opt = document.createElement("option");
+                  opt.value = name;
+                  opt.textContent = name;
+                  districtSelect.appendChild(opt);
+                });
+              });
+            });
+          });
+
+          districtSelect.disabled = seen.size === 0;
+          districtSelect.style.backgroundColor = seen.size === 0 ? "#f3f4f6" : "#ffffff";
+        }
+
+        function populateCouncilSelect(regionName, districtName) {
+          const councilSelect = $("councilSelect");
+          if (!councilSelect || !locationHierarchy) return;
+
+          councilSelect.innerHTML = "";
+          const placeholder = document.createElement("option");
+          placeholder.value = "";
+          placeholder.textContent = "#{isSw ? 'Chagua Halmashauri' : 'Select council'}";
+          councilSelect.appendChild(placeholder);
+
+          if (!regionName || !districtName) {
+            councilSelect.disabled = true;
+            councilSelect.style.backgroundColor = "#f3f4f6";
+            return;
+          }
+
+          const seen = new Set();
+          Object.values(locationHierarchy || {}).forEach((country) => {
+            if (!country || !country.zones) return;
+            Object.values(country.zones).forEach((zone) => {
+              if (!zone || !zone.regions) return;
+              Object.values(zone.regions).forEach((region) => {
+                if (!region || region.name !== regionName || !region.districts) return;
+                Object.values(region.districts).forEach((district) => {
+                  if (!district || district.name !== districtName || !district.councils) return;
+                  Object.values(district.councils).forEach((council) => {
+                    if (!council) return;
+                    const name = council.name || "";
+                    if (!name || seen.has(name)) return;
+                    seen.add(name);
+                    const opt = document.createElement("option");
+                    opt.value = name;
+                    opt.textContent = name;
+                    councilSelect.appendChild(opt);
+                  });
+                });
+              });
+            });
+          });
+
+          councilSelect.disabled = seen.size === 0;
+          councilSelect.style.backgroundColor = seen.size === 0 ? "#f3f4f6" : "#ffffff";
+
+          // Disable resend buttons until a council is picked
+          setResendButtonsEnabled(false);
+        }
+
         async function postBatch(url, limit, statusId) {
           const statusEl = $(statusId);
           if (statusEl) {
             statusEl.textContent = "Inatuma... tafadhali subiri.";
           }
           try {
+            const locationFilter = getLocationFilter();
+            const payload = locationFilter ? { limit, locationFilter } : { limit };
             const data = await fetchJson(prefix + url, {
               method: "POST",
-              body: JSON.stringify({ limit }),
+              body: JSON.stringify(payload),
             });
             const summary = data?.data || data;
             if (statusEl) {
@@ -743,12 +989,44 @@ html
             });
           }
 
+          // Wire up location dropdowns
+          const regionSelect = $("regionSelect");
+          const districtSelect = $("districtSelect");
+          const councilSelect = $("councilSelect");
+
+          if (regionSelect) {
+            regionSelect.addEventListener("change", function () {
+              selectedRegion = this.value || "";
+              selectedDistrict = "";
+              selectedCouncil = "";
+              populateDistrictSelect(selectedRegion);
+              setResendButtonsEnabled(false);
+            });
+          }
+
+          if (districtSelect) {
+            districtSelect.addEventListener("change", function () {
+              selectedDistrict = this.value || "";
+              selectedCouncil = "";
+              populateCouncilSelect(selectedRegion, selectedDistrict);
+              setResendButtonsEnabled(false);
+            });
+          }
+
+          if (councilSelect) {
+            councilSelect.addEventListener("change", function () {
+              selectedCouncil = this.value || "";
+              setResendButtonsEnabled(!!selectedCouncil);
+            });
+          }
+
           const btnSaveSchedule = $("btn-save-schedule");
           if (btnSaveSchedule) {
             btnSaveSchedule.addEventListener("click", saveSchedule);
           }
 
           // Initial load
+          loadLocationHierarchy();
           refreshMatrix(true);
         });
       })();
