@@ -56,7 +56,7 @@ class AuthController {
       // Token missing or invalid; still clear cookie and redirect
     }
     res.clearCookie("accessToken", { httpOnly: true, sameSite: "lax" });
-    const base = (process.env.BACKEND_URL || "").replace(/\/+$/, "") + (process.env.SSR_URL_PREFIX || "");
+    const base = (process.env.BACKEND_URL || "").replace(/\/+$/, "");
     const loginPath = "/api/v1/user/admin/login";
     const lang = req.query?.lang === "sw" ? "?lang=sw" : "";
     const loginUrl = base ? base + loginPath + lang : req.protocol + "://" + req.get("host") + loginPath + lang;
