@@ -1,3 +1,4 @@
+import jwt from "jsonwebtoken";
 import AuthService from "./auth-service.js";
 import BaseResponse from "../../responders/base-responder.js";
 
@@ -28,12 +29,36 @@ class AuthController {
 
   static async logout(req, res) {
     try {
-      const token = req.headers.authorization?.split(" ")[1];
-      await AuthService.logout(token, req.user.id);
+      const token = req.cookies?.accessToken || req.headers.authorization?.split(" ")[1];
+      if (token && req.user?.id) {
+        await AuthService.logout(token, req.user.id);
+      }
+      res.clearCookie("accessToken", { httpOnly: true, sameSite: "lax" });
       return BaseResponse.success(res, "Logout successful");
     } catch (error) {
+      res.clearCookie("accessToken", { httpOnly: true, sameSite: "lax" });
       return BaseResponse.error(res, error.message, 500);
     }
+  }
+
+  /**
+   * GET logout: blacklist token from cookie if present, clear cookie, redirect to admin login.
+   * Used by the "Logout" link in the activation email control footer.
+   */
+  static async logoutAndRedirect(req, res) {
+    const token = req.cookies?.accessToken || req.headers.authorization?.split(" ")[1];
+    try {
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+        if (decoded?.id) await AuthService.logout(token, decoded.id);
+      }
+    } catch {
+      // Token missing or invalid; still clear cookie and redirect
+    }
+    res.clearCookie("accessToken", { httpOnly: true, sameSite: "lax" });
+    const loginUrl = "/api/v1/user/admin/login";
+    const lang = req.query?.lang === "sw" ? "?lang=sw" : "";
+    return res.redirect(302, loginUrl + lang);
   }
 
   static async logoutAll(req, res) {

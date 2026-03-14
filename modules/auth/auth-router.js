@@ -10,8 +10,9 @@ router.post("/login", AuthController.login);
 // Refresh Token Route
 router.post("/refresh-token", AuthController.refreshToken);
 
-// Logout Route
+// Logout Route (POST for API; GET for browser link – clears cookie and redirects to admin login)
 router.post("/logout", AuthMiddleware.authenticate, AuthController.logout);
+router.get("/logout", AuthController.logoutAndRedirect);
 
 // Logout from All Devices
 router.post("/logout-all", AuthMiddleware.authenticate, AuthController.logoutAll);

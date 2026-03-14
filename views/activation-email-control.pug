@@ -605,6 +605,8 @@ html
 
       .footer-switch
         - const baseHref = `${ssrUrlPrefix}/api/v1/user/admin/activation-email-control`;
+        - const logoutHref = `${ssrUrlPrefix}/api/v1/auth/logout${isSw ? '?lang=sw' : ''}`;
+        a(href=logoutHref style="margin-right:1rem;") #{isSw ? 'Toka' : 'Logout'}
         span Language:
         a(href=`${baseHref}?lang=en`, class=(!isSw ? 'active' : '')) English
         span |
