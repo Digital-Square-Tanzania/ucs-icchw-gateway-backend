@@ -842,6 +842,7 @@ html
           if (messageEl) messageEl.textContent = "#{isSw ? 'Inapakia...' : 'Loading...'}";
           if (tableEl) tableEl.style.display = "none";
           try {
+            
             const params = new URLSearchParams({ council, page: String(page), limit: String(councilMembersPageSize) });
             const data = await fetchJson(prefix + "/api/v1/user/admin/activation-council-members?" + params.toString());
             const payload = data?.data || data;
@@ -851,9 +852,10 @@ html
             if (tbody) {
               tbody.innerHTML = "";
               members.forEach((m) => {
+                const clean = (str) => (str ? str.split('-')[0].trim() : "");
                 const tr = document.createElement("tr");
                 tr.innerHTML =
-                  "<td>" + (m.given_name || "") + "</td><td>" + (m.family_name || "") + "</td><td>" + (m.username || "") + "</td><td>" + (m.ward_name || "") + "</td><td>" + (m.village_name || "") + "</td><td>" + (m.hamlet_name || "") + "</td>";
+                  "<td>" + (m.given_name || "") + "</td><td>" + (m.family_name || "") + "</td><td>" + (m.username || "") + "</td><td>" + (clean(m.ward_name) || "") + "</td><td>" + (clean(m.village_name) || "") + "</td><td>" + (clean(m.hamlet_name) || "") + "</td>";
                 tbody.appendChild(tr);
               });
             }
