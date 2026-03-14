@@ -134,7 +134,9 @@ class UserController {
    */
   static async renderAdminLoginPage(req, res, next) {
     try {
-      return res.render("admin-login");
+      const lang = (req.query.lang || req.cookies?.lang || "en").toLowerCase() === "sw" ? "sw" : "en";
+      res.cookie("lang", lang, { httpOnly: false, sameSite: "lax" });
+      return res.render("admin-login", { lang });
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
