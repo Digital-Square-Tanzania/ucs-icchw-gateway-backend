@@ -43,7 +43,7 @@ class AuthController {
 
   /**
    * GET logout: blacklist token from cookie if present, clear cookie, redirect to admin login.
-   * Used by the "Logout" link in the activation email control footer.
+   * Redirects to the full admin login URL (e.g. https://ucs.moh.go.tz/backend/api/v1/user/admin/login).
    */
   static async logoutAndRedirect(req, res) {
     const token = req.cookies?.accessToken || req.headers.authorization?.split(" ")[1];
@@ -56,9 +56,11 @@ class AuthController {
       // Token missing or invalid; still clear cookie and redirect
     }
     res.clearCookie("accessToken", { httpOnly: true, sameSite: "lax" });
-    const loginUrl = "/api/v1/user/admin/login";
+    const base = (process.env.BACKEND_URL || "").replace(/\/+$/, "") + (process.env.SSR_URL_PREFIX || "");
+    const loginPath = "/api/v1/user/admin/login";
     const lang = req.query?.lang === "sw" ? "?lang=sw" : "";
-    return res.redirect(302, loginUrl + lang);
+    const loginUrl = base ? base + loginPath + lang : req.protocol + "://" + req.get("host") + loginPath + lang;
+    return res.redirect(302, loginUrl);
   }
 
   static async logoutAll(req, res) {
