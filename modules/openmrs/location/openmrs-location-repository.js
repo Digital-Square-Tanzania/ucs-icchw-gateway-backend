@@ -112,6 +112,32 @@ class OpenMRSLocationRepository {
     return prisma.openMRSLocationHierarchyView.findMany();
   }
 
+  /**
+   * Get location codes for a given council (optionally scoped by region and district).
+   * Used to filter activation stats by council. Returns empty array if no match.
+   */
+  static async getLocationCodesByCouncil(region, district, council) {
+    if (!council || typeof council !== "string" || !council.trim()) {
+      return [];
+    }
+    const rows = await prisma.openMRSLocationHierarchyView.findMany({
+      where: {
+        council: { equals: council.trim(), mode: "insensitive" },
+        ...(region && region.trim() && { region: { equals: region.trim(), mode: "insensitive" } }),
+        ...(district && district.trim() && { district: { equals: district.trim(), mode: "insensitive" } }),
+      },
+      select: { uuid: true },
+    });
+    const uuids = [...new Set(rows.map((r) => r.uuid).filter(Boolean))];
+    if (uuids.length === 0) return [];
+    const locations = await prisma.openMRSLocation.findMany({
+      where: { uuid: { in: uuids }, locationCode: { not: null } },
+      select: { locationCode: true },
+    });
+    const codes = [...new Set(locations.map((l) => l.locationCode).filter(Boolean))];
+    return codes;
+  }
+
   // Refresh the materialized view
   static async refreshLocationHierarchyView() {
     await prisma.$executeRawUnsafe(`REFRESH MATERIALIZED VIEW openmrs_location_hierarchy_view`);

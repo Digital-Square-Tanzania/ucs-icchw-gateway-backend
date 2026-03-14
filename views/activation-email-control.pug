@@ -599,9 +599,18 @@ html
           return data;
         }
 
-        async function refreshStats() {
+        async function refreshStats(showToast) {
           try {
-            const data = await fetchJson(prefix + "/api/v1/user/admin/activation-email-stats");
+            const locationFilter = getLocationFilter();
+            const params = new URLSearchParams();
+            if (locationFilter) {
+              if (locationFilter.region) params.set("region", locationFilter.region);
+              if (locationFilter.district) params.set("district", locationFilter.district);
+              if (locationFilter.council) params.set("council", locationFilter.council);
+            }
+            const qs = params.toString();
+            const url = prefix + "/api/v1/user/admin/activation-email-stats" + (qs ? "?" + qs : "");
+            const data = await fetchJson(url);
             const stats = data?.data?.stats || data?.data || data;
             if (!stats) return;
             const map = {
@@ -616,7 +625,9 @@ html
               const el = $(id);
               if (el) el.textContent = String(map[id] ?? 0);
             });
-            pushToast("#{isSw ? 'Takwimu zimepakiwa upya.' : 'Metrics refreshed.'}", "success");
+            if (showToast !== false) {
+              pushToast("#{isSw ? 'Takwimu zimepakiwa upya.' : 'Metrics refreshed.'}", "success");
+            }
             await refreshMatrix(false);
           } catch (e) {
             console.error("Failed to refresh stats:", e);
@@ -1001,6 +1012,7 @@ html
               selectedCouncil = "";
               populateDistrictSelect(selectedRegion);
               setResendButtonsEnabled(false);
+              refreshStats(false);
             });
           }
 
@@ -1010,6 +1022,7 @@ html
               selectedCouncil = "";
               populateCouncilSelect(selectedRegion, selectedDistrict);
               setResendButtonsEnabled(false);
+              refreshStats(false);
             });
           }
 
@@ -1017,6 +1030,7 @@ html
             councilSelect.addEventListener("change", function () {
               selectedCouncil = this.value || "";
               setResendButtonsEnabled(!!selectedCouncil);
+              refreshStats(false);
             });
           }
 

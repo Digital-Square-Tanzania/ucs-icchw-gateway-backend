@@ -165,7 +165,11 @@ class UserController {
    */
   static async getActivationEmailStats(req, res, next) {
     try {
-      const stats = await UserService.getActivationEmailStats();
+      const region = req.query?.region ?? "";
+      const district = req.query?.district ?? "";
+      const council = req.query?.council ?? "";
+      const opts = council ? { region, district, council } : {};
+      const stats = await UserService.getActivationEmailStats(opts);
       const schedule = resendActivationCron.getScheduleConfig();
       return BaseResponse.success(res, "Activation email stats loaded", { stats, schedule }, 200);
     } catch (error) {

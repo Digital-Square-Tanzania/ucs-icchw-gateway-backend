@@ -442,14 +442,27 @@ class UserService {
   /**
    * Get activation email metrics for CHW accounts.
    * Mirrors (and extends) stats from ucs-peers email settings.
+   * @param {Object} [opts] - Optional filter by council
+   * @param {string} [opts.region] - Region name (with district and council)
+   * @param {string} [opts.district] - District name (with council)
+   * @param {string} [opts.council] - Council name; when set, stats are scoped to that council only
    */
-  static async getActivationEmailStats() {
+  static async getActivationEmailStats(opts = {}) {
     const now = new Date();
+    const { region, district, council } = opts;
+
+    let locationCodeFilter = {};
+    if (council) {
+      const locationCodes = await OpenMRSLocationRepository.getLocationCodesByCouncil(region, district, council);
+      locationCodeFilter = locationCodes.length > 0 ? { locationCode: { in: locationCodes } } : { locationCode: "__NO_MATCH__" };
+    }
+
+    const baseWhere = { slugType: "ACTIVATION", ...locationCodeFilter };
 
     const [unsentExpired, activated, expiredResent, openNotUsed, total, resentCount] = await Promise.all([
       prisma.accountActivation.count({
         where: {
-          slugType: "ACTIVATION",
+          ...baseWhere,
           isUsed: false,
           isResent: false,
           expiryDate: { lt: now },
@@ -457,32 +470,30 @@ class UserService {
       }),
       prisma.accountActivation.count({
         where: {
-          slugType: "ACTIVATION",
+          ...baseWhere,
           isUsed: true,
         },
       }),
       prisma.accountActivation.count({
         where: {
-          slugType: "ACTIVATION",
+          ...baseWhere,
           isResent: true,
           expiryDate: { lt: now },
         },
       }),
       prisma.accountActivation.count({
         where: {
-          slugType: "ACTIVATION",
+          ...baseWhere,
           isUsed: false,
           expiryDate: { gte: now },
         },
       }),
       prisma.accountActivation.count({
-        where: {
-          slugType: "ACTIVATION",
-        },
+        where: baseWhere,
       }),
       prisma.accountActivation.count({
         where: {
-          slugType: "ACTIVATION",
+          ...baseWhere,
           isResent: true,
         },
       }),
