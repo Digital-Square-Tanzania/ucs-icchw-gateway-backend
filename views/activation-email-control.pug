@@ -853,7 +853,7 @@ html
               members.forEach((m) => {
                 const tr = document.createElement("tr");
                 tr.innerHTML =
-                  "<td>" + (m.given_name || "") + "</td><td>" + (m.family_name || "") + "</td><td>" + (m.username || "") + "</td><td>" + (m.ward_name.split('-').[0].trim() || "") + "</td><td>" + (m.village_name.split('-').[0].trim() || "") + "</td><td>" + (m.hamlet_name.split('-').[0].trim() || "") + "</td>";
+                  "<td>" + (m.given_name || "") + "</td><td>" + (m.family_name || "") + "</td><td>" + (m.username || "") + "</td><td>" + (m.ward_name || "") + "</td><td>" + (m.village_name || "") + "</td><td>" + (m.hamlet_name || "") + "</td>";
                 tbody.appendChild(tr);
               });
             }
