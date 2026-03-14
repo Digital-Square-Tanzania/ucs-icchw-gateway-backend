@@ -192,11 +192,13 @@ class UserController {
 
   /**
    * JSON: Run a single batch of expired activation resends (manual trigger).
+   * When body.locationFilter.council is set, only resends for that council's members.
    */
   static async resendExpiredActivationsBatch(req, res, next) {
     try {
       const limit = Number(req.body?.limit) > 0 ? Number(req.body.limit) : 100;
-      const summary = await UserService.resendExpiredActivationsBatch(limit);
+      const locationFilter = req.body?.locationFilter || null;
+      const summary = await UserService.resendExpiredActivationsBatch(limit, locationFilter);
       return BaseResponse.success(res, "Expired activation resend batch completed", summary, 200);
     } catch (error) {
       next(new CustomError(error.message, 500));
@@ -205,12 +207,29 @@ class UserController {
 
   /**
    * JSON: Run a single batch of open (non-expired), not-used activation resends.
+   * When body.locationFilter.council is set, only resends for that council's members.
    */
   static async resendOpenActivationsBatch(req, res, next) {
     try {
       const limit = Number(req.body?.limit) > 0 ? Number(req.body.limit) : 100;
-      const summary = await UserService.resendOpenActivationsBatch(limit);
+      const locationFilter = req.body?.locationFilter || null;
+      const summary = await UserService.resendOpenActivationsBatch(limit, locationFilter);
       return BaseResponse.success(res, "Open activation resend batch completed", summary, 200);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  /**
+   * JSON: Get paginated council members (MySQL) for "View all members" dialog.
+   */
+  static async getActivationCouncilMembers(req, res, next) {
+    try {
+      const council = req.query?.council ?? "";
+      const page = Math.max(1, Number(req.query?.page) || 1);
+      const limit = Math.min(100, Math.max(1, Number(req.query?.limit) || 20));
+      const data = await UserService.getActivationCouncilMembers(council, page, limit);
+      return BaseResponse.success(res, "Council members loaded", { ...data, page, limit }, 200);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }

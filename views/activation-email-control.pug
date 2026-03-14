@@ -254,6 +254,83 @@ html
         /* transform: scale(1.2); */
         border: 1px solid #8c776b;
       }
+
+      .dialog-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        z-index: 100;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      }
+      .dialog-overlay.open {
+        display: flex;
+      }
+      .dialog-box {
+        background: #fff;
+        border-radius: 1rem;
+        box-shadow: 0 25px 50px rgba(15, 23, 42, 0.25);
+        max-width: 90vw;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        width: 800px;
+      }
+      .dialog-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .dialog-body {
+        padding: 1rem 1.25rem;
+        overflow: auto;
+        flex: 1;
+      }
+      .dialog-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.8rem;
+      }
+      .dialog-table th,
+      .dialog-table td {
+        text-align: left;
+        padding: 0.4rem 0.5rem;
+        border-bottom: 1px solid #e5e7eb;
+          }
+      .dialog-table th {
+        font-weight: 600;
+        color: #374151;
+        background: #f9fafb;
+      }
+      .dialog-footer {
+        padding: 0.75rem 1.25rem;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      .dialog-pagination {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .dialog-pagination button {
+        padding: 0.3rem 0.6rem;
+        font-size: 0.8rem;
+        border-radius: 0.35rem;
+        border: 1px solid #d1d5db;
+        background: #fff;
+        cursor: pointer;
+      }
+      .dialog-pagination button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
   body
     .page-shell
       .page-header
@@ -444,10 +521,14 @@ html
               h3(style="font-size:0.75rem; font-weight:600; margin-bottom:0.35rem; color:#374151;") Chagua Eneo la Kutuma Upya
               p(style="font-size:0.7rem; color:#6b7280; margin-bottom:0.4rem;")
                 | Chagua Mkoa, Wilaya, halafu Halmashauri ili kuwezesha vitufe vya kutuma upya. Kundi litahusu akaunti za eneo hilo pekee.
+              p(style="font-size:0.7rem; margin-bottom:0.5rem;")
+                a#link-view-council-members(href="#" style="color:#1d4ed8; text-decoration:none; display:none;") Angalia wanachama wote
             else
               h3(style="font-size:0.75rem; font-weight:600; margin-bottom:0.35rem; color:#374151;") Select resend location
               p(style="font-size:0.7rem; color:#6b7280; margin-bottom:0.4rem;")
                 | Pick Region, then District, then Council to enable the resend buttons. Batches will target accounts in that council only.
+              p(style="font-size:0.7rem; margin-bottom:0.5rem;")
+                a#link-view-council-members(href="#" style="color:#1d4ed8; text-decoration:none; display:none;") View all members
 
             .location-filter-grid(style="display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:0.5rem; align-items:center;")
               .field
@@ -525,6 +606,29 @@ html
         a(href=`${baseHref}?lang=en`, class=(!isSw ? 'active' : '')) English
         span |
         a(href=`${baseHref}?lang=sw`, class=(isSw ? 'active' : '')) Kiswahili
+
+    #councilMembersDialog.dialog-overlay(role="dialog" aria-modal="true" aria-labelledby="councilMembersDialogTitle")
+      .dialog-box
+        .dialog-title#councilMembersDialogTitle #{isSw ? 'Wanachama wa Halmashauri' : 'Council members'}
+        .dialog-body
+          p#councilMembersMessage(style="color:#6b7280; font-size:0.85rem;")
+          .dialog-table-wrapper(style="overflow:auto; max-height:50vh;")
+            table.dialog-table#councilMembersTable(style="display:none;")
+              thead
+                tr
+                  th #{isSw ? 'Jina la Kwanza' : 'First name'}
+                  th #{isSw ? 'Jina la Ukoo' : 'Family name'}
+                  th #{isSw ? 'Jina la mtumiaji' : 'Username'}
+                  th #{isSw ? 'Kata' : 'Ward'}
+                  th #{isSw ? 'Kijiji' : 'Village'}
+                  th #{isSw ? 'Kitongoji' : 'Hamlet'}
+              tbody#councilMembersTbody
+        .dialog-footer
+          .dialog-pagination
+            button#councilMembersPrev(type="button") #{isSw ? 'Kabla' : 'Previous'}
+            span#councilMembersPageInfo(style="font-size:0.8rem; color:#6b7280;")
+            button#councilMembersNext(type="button") #{isSw ? 'Ifuatayo' : 'Next'}
+          button#councilMembersClose(type="button" style="padding:0.35rem 0.75rem; font-size:0.8rem; border-radius:0.4rem; border:1px solid #d1d5db; background:#fff; cursor:pointer;") #{isSw ? 'Funga' : 'Close'}
 
     .toast-container#toastContainer
 
@@ -705,6 +809,80 @@ html
             return null;
           }
           return { region, district, council };
+        }
+
+        function updateViewMembersLinkVisibility() {
+          const link = $("link-view-council-members");
+          if (link) link.style.display = selectedCouncil ? "inline" : "none";
+        }
+
+        let councilMembersCurrentPage = 1;
+        const councilMembersPageSize = 20;
+
+        async function loadCouncilMembers(page) {
+          const council = getLocationFilter()?.council || "";
+          const messageEl = $("councilMembersMessage");
+          const tableEl = $("councilMembersTable");
+          const tbody = $("councilMembersTbody");
+          const prevBtn = $("councilMembersPrev");
+          const nextBtn = $("councilMembersNext");
+          const pageInfoEl = $("councilMembersPageInfo");
+          if (!council) {
+            if (messageEl) messageEl.textContent = "#{isSw ? 'Chagua halmashauri kwanza.' : 'Select a council first.'}";
+            if (tableEl) tableEl.style.display = "none";
+            if (tbody) tbody.innerHTML = "";
+            if (pageInfoEl) pageInfoEl.textContent = "";
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+            return;
+          }
+          if (messageEl) messageEl.textContent = "#{isSw ? 'Inapakia...' : 'Loading...'}";
+          if (tableEl) tableEl.style.display = "none";
+          try {
+            const params = new URLSearchParams({ council, page: String(page), limit: String(councilMembersPageSize) });
+            const data = await fetchJson(prefix + "/api/v1/user/admin/activation-council-members?" + params.toString());
+            const payload = data?.data || data;
+            const members = payload?.members || [];
+            const total = Number(payload?.total ?? 0) || 0;
+            if (messageEl) messageEl.textContent = total === 0 ? "#{isSw ? 'Hakuna wanachama walioonekana.' : 'No members found.'}" : "";
+            if (tbody) {
+              tbody.innerHTML = "";
+              members.forEach((m) => {
+                const tr = document.createElement("tr");
+                tr.innerHTML =
+                  "<td>" + (m.given_name || "") + "</td><td>" + (m.family_name || "") + "</td><td>" + (m.username || "") + "</td><td>" + (m.ward_name || "") + "</td><td>" + (m.village_name || "") + "</td><td>" + (m.hamlet_name || "") + "</td>";
+                tbody.appendChild(tr);
+              });
+            }
+            if (tableEl && members.length > 0) tableEl.style.display = "table";
+            const totalPages = Math.max(1, Math.ceil(total / councilMembersPageSize));
+            if (pageInfoEl) pageInfoEl.textContent = "#{isSw ? 'Ukurasa' : 'Page'} " + page + " " + "#{isSw ? 'ya' : 'of'} " + totalPages + " (" + total + " " + "#{isSw ? 'jumla' : 'total'} )";
+            if (prevBtn) prevBtn.disabled = page <= 1;
+            if (nextBtn) nextBtn.disabled = page >= totalPages;
+            councilMembersCurrentPage = page;
+          } catch (e) {
+            console.error("Failed to load council members:", e);
+            if (messageEl) messageEl.textContent = e.message || "#{isSw ? 'Imeshindikana kupakia.' : 'Failed to load.'}";
+            if (prevBtn) prevBtn.disabled = true;
+            if (nextBtn) nextBtn.disabled = true;
+          }
+        }
+
+        function openCouncilMembersDialog() {
+          const dialog = $("councilMembersDialog");
+          if (dialog) {
+            dialog.classList.add("open");
+            loadCouncilMembers(1);
+          }
+        }
+
+        function closeCouncilMembersDialog() {
+          const dialog = $("councilMembersDialog");
+          if (dialog) dialog.classList.remove("open");
+        }
+
+        function onCouncilMembersDialogOverlayClick(e) {
+          if (e.target.id === "councilMembersDialog") closeCouncilMembersDialog();
         }
 
         function setResendButtonsEnabled(enabled) {
@@ -1012,6 +1190,7 @@ html
               selectedCouncil = "";
               populateDistrictSelect(selectedRegion);
               setResendButtonsEnabled(false);
+              updateViewMembersLinkVisibility();
               refreshStats(false);
             });
           }
@@ -1022,6 +1201,7 @@ html
               selectedCouncil = "";
               populateCouncilSelect(selectedRegion, selectedDistrict);
               setResendButtonsEnabled(false);
+              updateViewMembersLinkVisibility();
               refreshStats(false);
             });
           }
@@ -1030,9 +1210,36 @@ html
             councilSelect.addEventListener("change", function () {
               selectedCouncil = this.value || "";
               setResendButtonsEnabled(!!selectedCouncil);
+              updateViewMembersLinkVisibility();
               refreshStats(false);
             });
           }
+
+          const linkViewMembers = $("link-view-council-members");
+          if (linkViewMembers) {
+            linkViewMembers.addEventListener("click", function (e) {
+              e.preventDefault();
+              if (!selectedCouncil) {
+                pushToast("#{isSw ? 'Chagua halmashauri kwanza.' : 'Select a council first.'}", "warning");
+                return;
+              }
+              openCouncilMembersDialog();
+            });
+          }
+
+          const councilMembersClose = $("councilMembersClose");
+          if (councilMembersClose) councilMembersClose.addEventListener("click", closeCouncilMembersDialog);
+
+          const councilMembersPrev = $("councilMembersPrev");
+          if (councilMembersPrev) councilMembersPrev.addEventListener("click", function () { loadCouncilMembers(councilMembersCurrentPage - 1); });
+
+          const councilMembersNext = $("councilMembersNext");
+          if (councilMembersNext) councilMembersNext.addEventListener("click", function () { loadCouncilMembers(councilMembersCurrentPage + 1); });
+
+          const councilMembersDialog = $("councilMembersDialog");
+          if (councilMembersDialog) councilMembersDialog.addEventListener("click", onCouncilMembersDialogOverlayClick);
+
+          updateViewMembersLinkVisibility();
 
           const btnSaveSchedule = $("btn-save-schedule");
           if (btnSaveSchedule) {

@@ -11,6 +11,7 @@ import OpenMRSUserHelper from "../openmrs/helpers/openmrs-user-helper.js";
 import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
 import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-repository.js";
 import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
+import { getCouncilUserUuids, getCouncilMembersPaginated } from "./council-members-repository.js";
 import TeamRepository from "../openmrs/team/openmrs-team-repository.js";
 import TeamService from "../openmrs/team/openmrs-team-service.js";
 import PayloadContent from "../gateway/helpers/payload-content.js";
@@ -449,15 +450,15 @@ class UserService {
    */
   static async getActivationEmailStats(opts = {}) {
     const now = new Date();
-    const { region, district, council } = opts;
+    const { council } = opts;
 
-    let locationCodeFilter = {};
+    let userUuidFilter = {};
     if (council) {
-      const locationCodes = await OpenMRSLocationRepository.getLocationCodesByCouncil(region, district, council);
-      locationCodeFilter = locationCodes.length > 0 ? { locationCode: { in: locationCodes } } : { locationCode: "__NO_MATCH__" };
+      const userUuids = await getCouncilUserUuids(council);
+      userUuidFilter = userUuids.length > 0 ? { userUuid: { in: userUuids } } : { userUuid: "__NO_MATCH__" };
     }
 
-    const baseWhere = { slugType: "ACTIVATION", ...locationCodeFilter };
+    const baseWhere = { slugType: "ACTIVATION", ...userUuidFilter };
 
     const [unsentExpired, activated, expiredResent, openNotUsed, total, resentCount] = await Promise.all([
       prisma.accountActivation.count({
@@ -511,11 +512,21 @@ class UserService {
 
   /**
    * Resend activation emails for expired, never-resent activations (single batch).
+   * When locationFilter.council is set, only activations for team members in that council (MySQL) are included.
    * Returns a summary object { total, success, failed }.
    */
-  static async resendExpiredActivationsBatch(limit = 100) {
+  static async resendExpiredActivationsBatch(limit = 100, locationFilter = null) {
     const now = new Date();
     const batchSize = Number(limit) > 0 ? Number(limit) : 100;
+
+    let userUuidFilter = {};
+    if (locationFilter?.council) {
+      const userUuids = await getCouncilUserUuids(locationFilter.council);
+      if (userUuids.length === 0) {
+        return { total: 0, success: 0, failed: 0 };
+      }
+      userUuidFilter = { userUuid: { in: userUuids } };
+    }
 
     const toResend = await prisma.accountActivation.findMany({
       where: {
@@ -527,6 +538,7 @@ class UserService {
           not: null,
           not: "",
         },
+        ...userUuidFilter,
       },
       take: batchSize,
       orderBy: {
@@ -558,11 +570,20 @@ class UserService {
 
   /**
    * Resend activation emails for open (non-expired), not-used activations.
-   * Useful when email delivery failed initially but slugs are still valid.
+   * When locationFilter.council is set, only activations for team members in that council (MySQL) are included.
    */
-  static async resendOpenActivationsBatch(limit = 100) {
+  static async resendOpenActivationsBatch(limit = 100, locationFilter = null) {
     const now = new Date();
     const batchSize = Number(limit) > 0 ? Number(limit) : 100;
+
+    let userUuidFilter = {};
+    if (locationFilter?.council) {
+      const userUuids = await getCouncilUserUuids(locationFilter.council);
+      if (userUuids.length === 0) {
+        return { total: 0, success: 0, failed: 0 };
+      }
+      userUuidFilter = { userUuid: { in: userUuids } };
+    }
 
     const toResend = await prisma.accountActivation.findMany({
       where: {
@@ -573,6 +594,7 @@ class UserService {
           not: null,
           not: "",
         },
+        ...userUuidFilter,
       },
       take: batchSize,
       orderBy: {
@@ -600,6 +622,16 @@ class UserService {
       success,
       failed,
     };
+  }
+
+  /**
+   * Get paginated council members from MySQL (for "View all members" dialog).
+   * @param {string} council - Council name
+   * @param {number} page - 1-based page
+   * @param {number} limit - Page size
+   */
+  static async getActivationCouncilMembers(council, page = 1, limit = 20) {
+    return getCouncilMembersPaginated(council, page, limit);
   }
 
   /**

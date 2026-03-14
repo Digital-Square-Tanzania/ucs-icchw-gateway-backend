@@ -72,6 +72,8 @@ router.get("/admin/activation-email-stats", AuthMiddleware.authenticate, AuthMid
 
 router.get("/admin/activation-matrix", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationMatrix);
 
+router.get("/admin/activation-council-members", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationCouncilMembers);
+
 router.get("/admin/activation-schedule", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.getActivationSchedule);
 
 router.post("/admin/activation-schedule", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), UserController.updateActivationSchedule);
