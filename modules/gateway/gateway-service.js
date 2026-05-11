@@ -22,6 +22,77 @@ import UserService from "../user/user-service.js";
 dotenv.config();
 
 class GatewayService {
+  static buildUsernameFromPhoneNumber(phoneNumber, firstName = "", lastName = "") {
+    return phoneNumber && phoneNumber.startsWith("+255")
+      ? phoneNumber.replace("+255", "0")
+      : (firstName.substring(0, 2) + lastName.substring(0, 2)).toLowerCase();
+  }
+
+  static ensureOpenMrsResponse(response, action) {
+    if (!response || response.isAxiosError || response.response) {
+      const message = response?.response?.data?.error?.message || response?.message || "Unknown OpenMRS error";
+      throw new ApiError(`${action}: ${message}`, response?.response?.status || 500, 5);
+    }
+
+    return response;
+  }
+
+  static async assertUsernameAvailableForUser(username, userUuid) {
+    const existingUsers = await openmrsApiClient.get("user", {
+      q: username,
+      v: "custom:(uuid,username,retired)",
+    });
+    GatewayService.ensureOpenMrsResponse(existingUsers, `Unable to check username availability for ${username}`);
+
+    const duplicateUser = existingUsers?.results?.find((user) => user.username === username && user.uuid !== userUuid);
+    if (duplicateUser) {
+      throw new ApiError(`Username ${username} is already assigned to another OpenMRS user.`, 409, 6);
+    }
+  }
+
+  static async updateOpenMrsUserUsername(userUuid, username) {
+    if (!userUuid) {
+      throw new ApiError("Cannot update CHW username because userUuid is missing.", 400, 7);
+    }
+
+    await GatewayService.assertUsernameAvailableForUser(username, userUuid);
+    const updatedUser = await openmrsApiClient.post(`user/${userUuid}`, {
+      username,
+      systemId: username,
+    });
+
+    return GatewayService.ensureOpenMrsResponse(updatedUser, `Unable to update OpenMRS username for user ${userUuid}`);
+  }
+
+  static async upsertPersonAttribute(personUuid, existingPerson, attributeTypeUuid, value, label) {
+    if (!attributeTypeUuid) {
+      throw new ApiError(`${label} attribute type UUID is not configured.`, 500, 5);
+    }
+
+    const newValue = value.trim();
+    const existingAttribute = (existingPerson.attributes || []).find((attr) => attr.attributeType?.uuid === attributeTypeUuid && !attr.voided);
+    const existingValue = existingAttribute?.value?.trim();
+
+    if (!existingAttribute) {
+      const createdAttribute = await openmrsApiClient.post(`person/${personUuid}/attribute`, {
+        attributeType: attributeTypeUuid,
+        value: newValue,
+      });
+      GatewayService.ensureOpenMrsResponse(createdAttribute, `Unable to create ${label} attribute for person ${personUuid}`);
+      return true;
+    }
+
+    if (existingValue !== newValue) {
+      const updatedAttribute = await openmrsApiClient.post(`person/${personUuid}/attribute/${existingAttribute.uuid}`, {
+        value: newValue,
+      });
+      GatewayService.ensureOpenMrsResponse(updatedAttribute, `Unable to update ${label} attribute for person ${personUuid}`);
+      return true;
+    }
+
+    return false;
+  }
+
   // Generate message ID
   static async generateMessageId() {
     const now = new Date();
@@ -242,6 +313,7 @@ class GatewayService {
         }
 
         const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, { v: "custom:(uuid,person:(uuid))" });
+        GatewayService.ensureOpenMrsResponse(teamMemberDetails, `Unable to fetch team member ${teamMember.openMrsUuid}`);
 
         const personUuid = teamMemberDetails.person?.uuid;
         if (!personUuid) {
@@ -251,10 +323,13 @@ class GatewayService {
         const existingPerson = await openmrsApiClient.get(`person/${personUuid}`, {
           v: "full",
         });
+        GatewayService.ensureOpenMrsResponse(existingPerson, `Unable to fetch person ${personUuid}`);
 
         const personUpdatePayload = {};
         const updatedFields = [];
         const emailAttributeTypeUuid = process.env.EMAIL_ATTRIBUTE_TYPE_UUID || "c60b17ba-1c41-454b-89a1-6c329c75417e";
+        const phoneNumberAttributeTypeUuid = process.env.PHONE_NUMBER_ATTRIBUTE_TYPE_UUID || "c1aa993d-251b-4295-9e58-4c5d8a73397e";
+        let currentUsername = teamMember.username;
 
         // ✅ Gender
         if (chw.sex && (chw.sex.toUpperCase() === "MALE" || chw.sex.toUpperCase() === "FEMALE")) {
@@ -297,29 +372,41 @@ class GatewayService {
         // ✅ Email
         if (chw.email) {
           const newEmail = chw.email.trim();
-          const existingEmailAttr = (existingPerson.attributes || []).find((attr) => attr.attributeType.uuid === emailAttributeTypeUuid && !attr.voided);
-
-          const existingEmail = existingEmailAttr?.value?.trim();
-
-          if (!existingEmailAttr) {
-            // Create new email attribute
-            await openmrsApiClient.post(`person/${personUuid}/attribute`, {
-              attributeType: emailAttributeTypeUuid,
-              value: newEmail,
-            });
+          const emailChanged = await GatewayService.upsertPersonAttribute(personUuid, existingPerson, emailAttributeTypeUuid, newEmail, "Email");
+          if (emailChanged || newEmail !== teamMember.email?.trim()) {
             updatedFields.push("email");
-          } else if (existingEmail !== newEmail) {
-            // Update existing email attribute
-            await openmrsApiClient.post(`person/${personUuid}/attribute/${existingEmailAttr.uuid}`, {
-              value: newEmail,
-            });
-            updatedFields.push("email");
+          }
+        }
+
+        // ✅ Phone number and derived username
+        if (chw.phoneNumber) {
+          const newPhoneNumber = chw.phoneNumber.trim();
+          const existingPhoneAttr = (existingPerson.attributes || []).find((attr) => attr.attributeType?.uuid === phoneNumberAttributeTypeUuid && !attr.voided);
+          const existingOpenMrsPhoneNumber = existingPhoneAttr?.value?.trim();
+          const existingLocalPhoneNumber = teamMember.phoneNumber?.trim();
+          const phoneNumberChanged = newPhoneNumber !== existingOpenMrsPhoneNumber || newPhoneNumber !== existingLocalPhoneNumber;
+          const newUsername = GatewayService.buildUsernameFromPhoneNumber(
+            newPhoneNumber,
+            chw.firstName ?? teamMember.firstName ?? "",
+            chw.lastName ?? teamMember.lastName ?? ""
+          );
+
+          if (newUsername !== teamMember.username) {
+            await GatewayService.updateOpenMrsUserUsername(teamMember.userUuid, newUsername);
+            currentUsername = newUsername;
+            updatedFields.push("username");
+          }
+
+          if (phoneNumberChanged) {
+            await GatewayService.upsertPersonAttribute(personUuid, existingPerson, phoneNumberAttributeTypeUuid, newPhoneNumber, "Phone number");
+            updatedFields.push("phoneNumber");
           }
         }
 
         // ✅ Apply core person updates (gender/names)
         if (Object.keys(personUpdatePayload).length > 0) {
-          await openmrsApiClient.post(`person/${personUuid}`, personUpdatePayload);
+          const updatedPerson = await openmrsApiClient.post(`person/${personUuid}`, personUpdatePayload);
+          GatewayService.ensureOpenMrsResponse(updatedPerson, `Unable to update person ${personUuid}`);
         }
 
         // Local DB upsert payload
@@ -332,7 +419,7 @@ class GatewayService {
           phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
           personUuid,
           userUuid: teamMember.userUuid,
-          username: teamMember.username,
+          username: currentUsername,
           teamUuid: teamMember.teamUuid,
           teamName: teamMember.teamName,
           teamIdentifier: teamMember.teamIdentifier,
@@ -340,7 +427,7 @@ class GatewayService {
           locationName: teamMember.locationName,
           locationDescription: teamMember.locationDescription,
           openMrsUuid: teamMember.openMrsUuid,
-          NIN: chw.NIN, // lowercase 'nin' to match Prisma field
+          NIN: chw.NIN,
           updatedAt: new Date(),
         };
 
@@ -358,7 +445,7 @@ class GatewayService {
           select: { slug: true },
         });
 
-        if (updatedFields.includes("email") && slug) {
+        if ((updatedFields.includes("email") || updatedFields.includes("phoneNumber") || updatedFields.includes("username")) && slug) {
           req.params.slug = slug.slug;
           req.params.emailChange = true;
           await UserService.handleResendEmail(req, res, next);

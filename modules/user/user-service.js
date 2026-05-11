@@ -194,11 +194,11 @@ class UserService {
       console.log("🔄 Valid email resend request received, resending the email for slug: ", slug);
 
       let payload = {};
-      payload.email = activation.email;
-      payload.nin = activation.nin;
+      payload.email = member.email || activation.email;
+      payload.nin = member.NIN || activation.nin;
       payload.firstName = member.firstName;
       payload.lastName = member.lastName;
-      payload.phoneNumber = activation.phoneNumber;
+      payload.phoneNumber = member.phoneNumber || activation.phoneNumber;
       payload.locationCode = activation.locationCode;
 
       // Generate an activation slug and record
