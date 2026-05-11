@@ -141,3 +141,5 @@ backup/
 
 # Storage for keys files
 keys/*
+
+.vscode/*
