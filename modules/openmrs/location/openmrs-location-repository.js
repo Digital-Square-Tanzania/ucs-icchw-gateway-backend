@@ -174,6 +174,32 @@ class OpenMRSLocationRepository {
     }
   }
 
+  /**
+   * Replace the entire openmrs_location table with a fresh set of rows in a
+   * single transaction. Used by the fast DB-to-DB sync. Refuses to run with an
+   * empty payload so a failed/empty upstream read never wipes existing data.
+   */
+  static async replaceAllLocations(rows) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+      throw new CustomError("Refusing to replace locations: no rows fetched from OpenMRS database.");
+    }
+
+    const chunkSize = 1000;
+
+    await prisma.$transaction(
+      async (tx) => {
+        await tx.openMRSLocation.deleteMany({});
+        for (let i = 0; i < rows.length; i += chunkSize) {
+          const chunk = rows.slice(i, i + chunkSize);
+          await tx.openMRSLocation.createMany({ data: chunk, skipDuplicates: true });
+        }
+      },
+      { timeout: 180000, maxWait: 30000 }
+    );
+
+    return rows.length;
+  }
+
   /*
    * Upsert location tags into the database
    */

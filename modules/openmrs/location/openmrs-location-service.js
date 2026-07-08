@@ -1,7 +1,43 @@
 import OpenMRSLocationRepository from "./openmrs-location-repository.js";
 import OpenMRSApiClient from "../../../utils/openmrs-api-client.js";
 import CustomError from "../../../utils/custom-error.js";
+import mysqlClient from "../../../utils/mysql-client.js";
 import pLimit from "p-limit";
+
+// Geographic location tags to mirror from OpenMRS into the flat openmrs_location
+// table. Order matters: later tags win when a location carries more than one
+// geographic tag. These are exactly the `type` values the hierarchy view and
+// facility/hamlet lookups depend on.
+const LOCATION_SYNC_TAGS = ["Country", "Zone", "Region", "District", "Council", "Ward", "Village", "Hamlet", "Facility"];
+
+// Pulls locations for a single OpenMRS tag straight from the OpenMRS MySQL
+// database (co-located on the same server), including the parent uuid and the
+// HFR Code / Code attributes. This avoids the slow REST v=full pagination.
+const LOCATIONS_BY_TAG_SQL = `
+  SELECT
+    l.location_id AS location_id,
+    l.uuid AS uuid,
+    l.name AS name,
+    l.description AS description,
+    l.latitude AS latitude,
+    l.longitude AS longitude,
+    COALESCE(l.retired, 0) AS retired,
+    l.date_created AS date_created,
+    parent.uuid AS parent_uuid,
+    MAX(CASE WHEN LOWER(TRIM(lat.name)) = 'hfr code' THEN TRIM(la.value_reference) END) AS hfr_code,
+    MAX(CASE WHEN LOWER(TRIM(lat.name)) = 'code' THEN TRIM(la.value_reference) END) AS code
+  FROM location l
+  INNER JOIN location_tag_map ltm ON l.location_id = ltm.location_id
+  INNER JOIN location_tag lt ON ltm.location_tag_id = lt.location_tag_id
+    AND LOWER(TRIM(lt.name)) = LOWER(TRIM(?))
+  LEFT JOIN location parent ON parent.location_id = l.parent_location
+  LEFT JOIN location_attribute la ON la.location_id = l.location_id
+    AND COALESCE(la.voided, 0) = 0
+  LEFT JOIN location_attribute_type lat ON lat.location_attribute_type_id = la.attribute_type_id
+  WHERE COALESCE(l.retired, 0) = 0
+  GROUP BY l.location_id, l.uuid, l.name, l.description, l.latitude, l.longitude, l.retired, l.date_created, parent.uuid
+  ORDER BY l.name
+`;
 
 class OpenMRSLocationService {
   // Get all locations with pagination
@@ -106,8 +142,75 @@ class OpenMRSLocationService {
     return await OpenMRSLocationRepository.refreshLocationHierarchyView();
   }
 
-  // Sync OpenMRS Locations in Batches
-  static async syncLocations(pageSize) {
+  // Sync OpenMRS Locations.
+  // Fast path: read directly from the OpenMRS MySQL database (same server).
+  // The `pageSize` argument is kept for backward compatibility with existing
+  // callers but is unused by the DB sync.
+  static async syncLocations(_pageSize) {
+    return await OpenMRSLocationService.syncLocationsFromDb();
+  }
+
+  // Fast OpenMRS location sync: mirror the OpenMRS MySQL location tree straight
+  // into the local flat `openmrs_location` table, then refresh the hierarchy
+  // view. Orders of magnitude faster than the REST-based sync.
+  static async syncLocationsFromDb() {
+    let connection;
+    try {
+      console.log("🚀 Fast-syncing OpenMRS locations directly from MySQL...");
+
+      connection = await mysqlClient.getConnection();
+      await connection.query("USE openmrs");
+
+      // Dedupe by uuid across tags so a location tagged with multiple
+      // geographic tags produces exactly one row (last tag wins).
+      const byUuid = new Map();
+
+      for (const tag of LOCATION_SYNC_TAGS) {
+        const [rows] = await connection.query(LOCATIONS_BY_TAG_SQL, [tag]);
+        for (const row of rows) {
+          if (!row.uuid) continue;
+          byUuid.set(row.uuid, {
+            locationId: Number(row.location_id),
+            name: row.name || "",
+            description: row.description || null,
+            latitude: row.latitude != null ? String(row.latitude) : null,
+            longitude: row.longitude != null ? String(row.longitude) : null,
+            retired: Boolean(Number(row.retired)),
+            uuid: row.uuid,
+            parent: row.parent_uuid || null,
+            type: tag,
+            hfrCode: row.hfr_code || null,
+            locationCode: row.code || null,
+            createdAt: row.date_created ? new Date(row.date_created) : new Date(),
+          });
+        }
+        console.log(`   • ${tag}: ${rows.length} location(s)`);
+      }
+
+      const locations = Array.from(byUuid.values());
+      const count = await OpenMRSLocationRepository.replaceAllLocations(locations);
+
+      // Refresh the hierarchy view so grouped-location lookups reflect the new
+      // data. Non-fatal: a view refresh failure shouldn't fail the whole sync.
+      try {
+        await OpenMRSLocationRepository.refreshLocationHierarchyView();
+        console.log("♻️  Refreshed openmrs_location_hierarchy_view.");
+      } catch (viewError) {
+        console.warn("⚠️  Location hierarchy view refresh failed:", viewError.message);
+      }
+
+      console.log(`✅ Fast location sync complete: ${count} location(s) synced.`);
+      return { synced: count };
+    } catch (error) {
+      console.error("❌ Error fast-syncing OpenMRS locations:", error.message);
+      throw new CustomError("OpenMRS Location Sync Error: " + error.message);
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+
+  // Legacy REST-based sync. Kept as a fallback; prefer syncLocationsFromDb().
+  static async syncLocationsViaApi(pageSize) {
     try {
       console.log("🔄 Syncing OpenMRS Locations in batches...");
 
