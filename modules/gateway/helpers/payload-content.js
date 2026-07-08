@@ -3,6 +3,7 @@ import TeamRepository from "../../openmrs/team/openmrs-team-repository.js";
 import TeamMemberRepository from "../../openmrs/team-member/openmrs-team-member-repository.js";
 import OpenMRSLocationRepository from "../../openmrs/location/openmrs-location-repository.js";
 import OpenmrsHelper from "./openmrs-helper.js";
+import LocationResolver from "./location-resolver.js";
 import ApiError from "../../../utils/api-error.js";
 
 class PayloadContent {
@@ -33,15 +34,15 @@ class PayloadContent {
       // Check if the location exists
       const location = await OpenMRSLocationRepository.getLocationByHfrCode(payload.message.body[0].hfrCode);
 
-      if (!location.uuid) {
+      if (!location || !location.uuid) {
         throw new ApiError("Invalid facilityCode.", 404, 4);
       }
 
-      // GET teamMemberLocation by location Code attribute
-      const teamMemberLocation = await OpenMRSLocationRepository.getLocationByCode(payload.message.body[0].locationCode);
-      if (!teamMemberLocation) {
-        throw new ApiError("Invalid locationCode.", 404, 4);
-      }
+      // Resolve the CHW team-member location from the incoming location code,
+      // honoring ICCHW_LOWEST_OPERATIONAL_HIERARCHY and ACCEPT_HAMLET_CODES_FROM_HRHIS.
+      // Resolved here (before any person/user/team is created) so a rejection needs
+      // no reversal.
+      const teamMemberLocation = await LocationResolver.resolve(payload.message.body[0].locationCode);
 
       // Check if a team exists without location
       let team = null;
@@ -64,6 +65,11 @@ class PayloadContent {
 
       return { teamMemberLocation, team };
     } catch (error) {
+      // Preserve specific errors (duplicate CHW, invalid facility/location code,
+      // hierarchy-policy rejections) with their own status/custom codes and messages.
+      if (error instanceof ApiError) {
+        throw error;
+      }
       throw new ApiError(`Invalid payload: ${error.message}`, 400, 1);
     }
   }
