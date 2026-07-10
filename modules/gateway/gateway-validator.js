@@ -61,7 +61,12 @@ class GatewayValidator {
               //   return value;
               // }, "HFR Code Checksum Validation"),
               locationCode: Joi.string().required(),
-              locationType: Joi.string().required(),
+              // Optional. When present must be Hamlet | Village | Ward; the
+              // locationCode is then checked against that OpenMRS tag.
+              locationType: Joi.string()
+                .valid("Hamlet", "Village", "Ward", "hamlet", "village", "ward", "HAMLET", "VILLAGE", "WARD")
+                .allow(null, "")
+                .optional(),
             })
           )
           .required(),
@@ -115,7 +120,10 @@ class GatewayValidator {
         .pattern(/^\d{6}-\d$/)
         .optional(),
       locationCode: Joi.string().optional(),
-      locationType: Joi.string().optional(),
+      locationType: Joi.string()
+        .valid("Hamlet", "Village", "Ward", "hamlet", "village", "ward", "HAMLET", "VILLAGE", "WARD")
+        .allow(null, "")
+        .optional(),
     });
 
     const schema = Joi.object({

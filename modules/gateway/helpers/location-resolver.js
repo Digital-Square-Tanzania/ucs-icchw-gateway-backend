@@ -29,27 +29,30 @@ const LEVEL_SEGMENTS = {
 const ALLOWED_OPERATIONAL_LEVELS = ["Ward", "Village", "Hamlet"];
 const DEFAULT_OPERATIONAL_LEVEL = "Village";
 
+// Village and Mtaa/Mitaa are the same hierarchy level (rural vs urban councils).
+const TYPE_ALIASES = {
+  Ward: ["Ward"],
+  Village: ["Village", "Mtaa", "Mitaa"],
+  Hamlet: ["Hamlet"],
+};
+
 /**
  * Resolves the location that a CHW team membership should be attached to from the
- * location code sent by HRHIS, honoring two environment flags:
+ * location code sent by HRHIS.
+ *
+ * When `locationType` is provided (Hamlet | Village | Ward), the exact
+ * locationCode is looked up and must carry that OpenMRS tag; a mismatch is
+ * rejected. When omitted, resolution falls back to the ENV-driven policy:
  *
  *  - ICCHW_LOWEST_OPERATIONAL_HIERARCHY: Hamlet | Village | Ward (default Village)
- *      The level at which CHWs are pinned. Incoming codes at this level resolve
- *      directly.
- *
  *  - ACCEPT_HAMLET_CODES_FROM_HRHIS: true | false (default false)
- *      When true, codes that are *deeper* than the operational level (e.g. a
- *      Hamlet code while operating at Village) are accepted and the operational
- *      location is derived by trimming the trailing segment(s). When false/absent
- *      such codes are rejected so the caller can reverse the registration.
- *      Ignored when the operational level is Hamlet (nothing is deeper).
  */
 class LocationResolver {
   static getOperationalLevel() {
     const raw = (process.env.ICCHW_LOWEST_OPERATIONAL_HIERARCHY || "").trim();
     if (!raw) return DEFAULT_OPERATIONAL_LEVEL;
 
-    const normalized = raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+    const normalized = LocationResolver.normalizeLevel(raw);
     if (!ALLOWED_OPERATIONAL_LEVELS.includes(normalized)) {
       console.warn(
         `⚠️ Invalid ICCHW_LOWEST_OPERATIONAL_HIERARCHY="${raw}". Expected one of ` +
@@ -64,6 +67,13 @@ class LocationResolver {
     return String(process.env.ACCEPT_HAMLET_CODES_FROM_HRHIS || "").trim().toLowerCase() === "true";
   }
 
+  /** Normalize a level/type string to Title case (e.g. "village" -> "Village"). */
+  static normalizeLevel(value) {
+    const raw = String(value || "").trim();
+    if (!raw) return "";
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  }
+
   /** Trim/normalize a dotted code into clean segments joined by single dots. */
   static normalizeCode(locationCode) {
     return String(locationCode || "")
@@ -74,13 +84,70 @@ class LocationResolver {
       .join(".");
   }
 
+  static typesMatchDeclared(actualType, declaredLevel) {
+    const aliases = TYPE_ALIASES[declaredLevel] || [declaredLevel];
+    const actual = String(actualType || "").trim().toLowerCase();
+    return aliases.some((alias) => alias.toLowerCase() === actual);
+  }
+
   /**
    * @param {string} locationCode e.g. "TZ.CL.SD.MN.4.20.3" (Village) or "...3.3" (Hamlet)
+   * @param {string|null|undefined} locationType optional Hamlet | Village | Ward from HRHIS
    * @returns {Promise<Object>} the resolved OpenMRS location row
    * @throws {ApiError} when the code cannot or should not be resolved; the caller
    *   must abort and reverse any other transactions.
    */
-  static async resolve(locationCode) {
+  static async resolve(locationCode, locationType) {
+    const declared = LocationResolver.normalizeLevel(locationType);
+    if (declared) {
+      return LocationResolver.resolveByDeclaredType(locationCode, declared);
+    }
+    return LocationResolver.resolveByEnvPolicy(locationCode);
+  }
+
+  /**
+   * Explicit locationType path: look up the exact code and require its OpenMRS
+   * tag to match the declared type (Village also accepts Mtaa/Mitaa).
+   */
+  static async resolveByDeclaredType(locationCode, declaredLevel) {
+    if (!ALLOWED_OPERATIONAL_LEVELS.includes(declaredLevel)) {
+      throw new ApiError(
+        `Invalid locationType '${declaredLevel}'. Expected one of ${ALLOWED_OPERATIONAL_LEVELS.join(", ")}.`,
+        422,
+        4
+      );
+    }
+
+    const normalized = LocationResolver.normalizeCode(locationCode);
+    if (!normalized) {
+      throw new ApiError("Missing or empty locationCode.", 422, 4);
+    }
+
+    const location = await OpenMRSLocationRepository.getLocationByCode(normalized);
+    if (!location || !location.uuid) {
+      throw new ApiError(
+        `Invalid locationCode: no location found for code '${normalized}'.`,
+        404,
+        4
+      );
+    }
+
+    if (!LocationResolver.typesMatchDeclared(location.type, declaredLevel)) {
+      throw new ApiError(
+        `locationType mismatch: locationCode '${normalized}' is tagged as '${location.type || "unknown"}' ` +
+          `but locationType was '${declaredLevel}'.`,
+        422,
+        4
+      );
+    }
+
+    return location;
+  }
+
+  /**
+   * ENV-driven path used when locationType is omitted.
+   */
+  static async resolveByEnvPolicy(locationCode) {
     const operationalLevel = LocationResolver.getOperationalLevel();
     const targetSegments = LEVEL_SEGMENTS[operationalLevel];
 

@@ -38,11 +38,15 @@ class PayloadContent {
         throw new ApiError("Invalid facilityCode.", 404, 4);
       }
 
-      // Resolve the CHW team-member location from the incoming location code,
-      // honoring ICCHW_LOWEST_OPERATIONAL_HIERARCHY and ACCEPT_HAMLET_CODES_FROM_HRHIS.
-      // Resolved here (before any person/user/team is created) so a rejection needs
-      // no reversal.
-      const teamMemberLocation = await LocationResolver.resolve(payload.message.body[0].locationCode);
+      // Resolve the CHW team-member location from the incoming location code.
+      // When locationType is set, the code must match that OpenMRS tag; otherwise
+      // ENV policy (ICCHW_LOWEST_OPERATIONAL_HIERARCHY / ACCEPT_HAMLET_CODES_FROM_HRHIS)
+      // applies. Resolved before any person/user/team is created so a rejection
+      // needs no reversal.
+      const teamMemberLocation = await LocationResolver.resolve(
+        payload.message.body[0].locationCode,
+        payload.message.body[0].locationType
+      );
 
       // Check if a team exists without location
       let team = null;
