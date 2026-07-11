@@ -47,11 +47,23 @@ class AppServer {
     this.app.use(cookieParser());
     this.app.use(cors());
     // this.app.use(SecurityMiddleware.applyHelmet());
-    // Expose env variable to pug
-    this.app.locals.ssrUrlPrefix = process.env.SSR_URL_PREFIX || "";
+    // Expose env variable to pug (path prefix when behind a reverse proxy, e.g. /gateway).
+    const ssrUrlPrefix = String(process.env.SSR_URL_PREFIX || "")
+      .trim()
+      .replace(/\/+$/, "");
+    this.app.locals.ssrUrlPrefix = ssrUrlPrefix;
+
     this.app.set("views", path.join(__dirname, "views"));
     this.app.set("view engine", "pug");
-    this.app.use(express.static(path.join(__dirname, "public")));
+
+    // Serve static assets at the app root and under SSR_URL_PREFIX so Pug pages
+    // that reference `${ssrUrlPrefix}/css/...` work both behind a /gateway proxy
+    // and when hitting the Node port directly (staging).
+    const publicDir = path.join(__dirname, "public");
+    this.app.use(express.static(publicDir));
+    if (ssrUrlPrefix) {
+      this.app.use(ssrUrlPrefix, express.static(publicDir));
+    }
     this.app.use(
       helmet({
         crossOriginOpenerPolicy: false,
