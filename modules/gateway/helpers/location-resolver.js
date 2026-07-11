@@ -7,7 +7,7 @@ import ApiError from "../../../utils/api-error.js";
  * Codes are strictly hierarchical, e.g. TZ.NT.KL.MS.4.5.1.1:
  *   TZ -> Country  (1)   4 -> Council       (5)
  *   NT -> Zone     (2)   5 -> Ward          (6)
- *   KL -> Region   (3)   1 -> Village/Mtaa  (7)
+ *   KL -> Region   (3)   1 -> Village/Mtaa/Street (7)
  *   MS -> District (4)   1 -> Hamlet        (8)
  *
  * Because the hierarchy is encoded positionally, dropping the trailing
@@ -25,14 +25,28 @@ const LEVEL_SEGMENTS = {
   Hamlet: 8,
 };
 
-// Levels a CHW team membership may be pinned to (per spec: Hamlet | Village | Ward).
+// Canonical operational levels (ENV + resolution targets).
 const ALLOWED_OPERATIONAL_LEVELS = ["Ward", "Village", "Hamlet"];
 const DEFAULT_OPERATIONAL_LEVEL = "Village";
 
-// Village and Mtaa/Mitaa are the same hierarchy level (rural vs urban councils).
+/**
+ * Map an HRHIS locationType to the canonical hierarchy level.
+ * Mtaa / Street are English/Swahili labels for the Village-level unit in
+ * municipal (MC/CC) councils; rural DCs use Village.
+ */
+const DECLARED_TYPE_TO_LEVEL = {
+  Ward: "Ward",
+  Village: "Village",
+  Hamlet: "Hamlet",
+  Mtaa: "Village",
+  Street: "Village",
+  Mitaa: "Village",
+};
+
+// OpenMRS tags accepted when matching a declared/canonical Village-level pin.
 const TYPE_ALIASES = {
   Ward: ["Ward"],
-  Village: ["Village", "Mtaa", "Mitaa"],
+  Village: ["Village", "Mtaa", "Mitaa", "Street"],
   Hamlet: ["Hamlet"],
 };
 
@@ -40,9 +54,10 @@ const TYPE_ALIASES = {
  * Resolves the location that a CHW team membership should be attached to from the
  * location code sent by HRHIS.
  *
- * When `locationType` is provided (Hamlet | Village | Ward), the exact
- * locationCode is looked up and must carry that OpenMRS tag; a mismatch is
- * rejected. When omitted, resolution falls back to the ENV-driven policy:
+ * When `locationType` is provided (Hamlet | Village | Ward | Mtaa | Street), the
+ * exact locationCode is looked up and must carry a matching OpenMRS tag; a
+ * mismatch is rejected. When omitted, resolution falls back to the ENV-driven
+ * policy:
  *
  *  - ICCHW_LOWEST_OPERATIONAL_HIERARCHY: Hamlet | Village | Ward (default Village)
  *  - ACCEPT_HAMLET_CODES_FROM_HRHIS: true | false (default false)
@@ -84,15 +99,15 @@ class LocationResolver {
       .join(".");
   }
 
-  static typesMatchDeclared(actualType, declaredLevel) {
-    const aliases = TYPE_ALIASES[declaredLevel] || [declaredLevel];
+  static typesMatchDeclared(actualType, canonicalLevel) {
+    const aliases = TYPE_ALIASES[canonicalLevel] || [canonicalLevel];
     const actual = String(actualType || "").trim().toLowerCase();
     return aliases.some((alias) => alias.toLowerCase() === actual);
   }
 
   /**
    * @param {string} locationCode e.g. "TZ.CL.SD.MN.4.20.3" (Village) or "...3.3" (Hamlet)
-   * @param {string|null|undefined} locationType optional Hamlet | Village | Ward from HRHIS
+   * @param {string|null|undefined} locationType optional type from HRHIS
    * @returns {Promise<Object>} the resolved OpenMRS location row
    * @throws {ApiError} when the code cannot or should not be resolved; the caller
    *   must abort and reverse any other transactions.
@@ -107,12 +122,13 @@ class LocationResolver {
 
   /**
    * Explicit locationType path: look up the exact code and require its OpenMRS
-   * tag to match the declared type (Village also accepts Mtaa/Mitaa).
+   * tag to match the declared type. Mtaa/Street are treated as Village-level.
    */
-  static async resolveByDeclaredType(locationCode, declaredLevel) {
-    if (!ALLOWED_OPERATIONAL_LEVELS.includes(declaredLevel)) {
+  static async resolveByDeclaredType(locationCode, declaredType) {
+    const canonicalLevel = DECLARED_TYPE_TO_LEVEL[declaredType];
+    if (!canonicalLevel) {
       throw new ApiError(
-        `Invalid locationType '${declaredLevel}'. Expected one of ${ALLOWED_OPERATIONAL_LEVELS.join(", ")}.`,
+        `Invalid locationType '${declaredType}'. Expected one of Hamlet, Village, Ward, Mtaa, or Street.`,
         422,
         4
       );
@@ -132,10 +148,11 @@ class LocationResolver {
       );
     }
 
-    if (!LocationResolver.typesMatchDeclared(location.type, declaredLevel)) {
+    if (!LocationResolver.typesMatchDeclared(location.type, canonicalLevel)) {
       throw new ApiError(
         `locationType mismatch: locationCode '${normalized}' is tagged as '${location.type || "unknown"}' ` +
-          `but locationType was '${declaredLevel}'.`,
+          `but locationType was '${declaredType}' (expected a ${canonicalLevel}-level tag` +
+          `${canonicalLevel === "Village" ? ": Village, Mtaa, or Street" : ""}).`,
         422,
         4
       );

@@ -1,6 +1,26 @@
 import Joi from "joi";
 import CustomError from "../../utils/custom-error.js";
 
+// Optional HRHIS locationType values. Mtaa/Street are the municipal (MC/CC)
+// equivalent of Village (same hierarchy level; Villages are used in rural DCs).
+const LOCATION_TYPE_VALUES = [
+  "Hamlet",
+  "Village",
+  "Ward",
+  "Mtaa",
+  "Street",
+  "hamlet",
+  "village",
+  "ward",
+  "mtaa",
+  "street",
+  "HAMLET",
+  "VILLAGE",
+  "WARD",
+  "MTAA",
+  "STREET",
+];
+
 class GatewayValidator {
   // Validate month and year
   static validateMonthAndYear(month, year) {
@@ -61,13 +81,10 @@ class GatewayValidator {
               //   return value;
               // }, "HFR Code Checksum Validation"),
               locationCode: Joi.string().required(),
-              // Optional. When present must be Hamlet | Village | Ward; the
-              // locationCode is then checked against that OpenMRS tag.
-              locationType: Joi.string()
-                .valid("Hamlet", "Village", "Ward", "hamlet", "village", "ward", "HAMLET", "VILLAGE", "WARD")
-                .allow(null, "")
-                .optional(),
-            })
+              // Optional. When present: Hamlet | Village | Ward | Mtaa | Street.
+              // Mtaa/Street = Village level (municipal). Checked against OpenMRS tag.
+              locationType: Joi.string().valid(...LOCATION_TYPE_VALUES).allow(null, "").optional(),
+            }),
           )
           .required(),
       }).required(),
@@ -120,10 +137,7 @@ class GatewayValidator {
         .pattern(/^\d{6}-\d$/)
         .optional(),
       locationCode: Joi.string().optional(),
-      locationType: Joi.string()
-        .valid("Hamlet", "Village", "Ward", "hamlet", "village", "ward", "HAMLET", "VILLAGE", "WARD")
-        .allow(null, "")
-        .optional(),
+      locationType: Joi.string().valid(...LOCATION_TYPE_VALUES).allow(null, "").optional(),
     });
 
     const schema = Joi.object({
@@ -138,7 +152,7 @@ class GatewayValidator {
         body: Joi.alternatives()
           .try(
             chwSchema, // for single object
-            Joi.array().items(chwSchema).min(1) // for multiple objects
+            Joi.array().items(chwSchema).min(1), // for multiple objects
           )
           .required(),
       }).required(),
@@ -179,7 +193,7 @@ class GatewayValidator {
                 .messages({
                   "string.pattern.base": "newHfrCode must follow the format: 100056-9",
                 }),
-            })
+            }),
           )
           .required()
           .messages({
