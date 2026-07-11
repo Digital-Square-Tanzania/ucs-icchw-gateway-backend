@@ -244,6 +244,78 @@ class TeamMemberRepository {
   }
 
   /**
+   * Remove a locally persisted CHW and related Postgres rows so registration can
+   * be retried after OpenMRS was rolled back (e.g. delete_person) but UCS was not.
+   * @param {Object} member - openmrs_team_members row
+   */
+  static async purgeLocalChwRecords(member) {
+    if (!member?.id) {
+      return;
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Drop FK from member → account_activations before deleting activations.
+      await tx.openMRSTeamMember.update({
+        where: { id: member.id },
+        data: { accountActivationId: null },
+      });
+
+      if (member.userUuid) {
+        await tx.accountActivation.deleteMany({ where: { userUuid: member.userUuid } });
+      }
+      if (member.NIN) {
+        await tx.accountActivation.deleteMany({ where: { nin: member.NIN } });
+        await tx.openMRSUsernameCounter.deleteMany({ where: { NIN: member.NIN } });
+      }
+      if (member.personUuid) {
+        await tx.openMRSPersonAttribute.deleteMany({ where: { personUuid: member.personUuid } });
+      }
+
+      await tx.openMRSTeamMember.delete({ where: { id: member.id } });
+    });
+
+    console.log(
+      `🧹 Purged local CHW records for NIN=${member.NIN || "n/a"} id=${member.id} openMrsUuid=${member.openMrsUuid || "n/a"}`
+    );
+  }
+
+  /**
+   * Lightweight rows used when scanning for OpenMRS orphans.
+   */
+  static async getAllMembersForOrphanScan() {
+    return prisma.openMRSTeamMember.findMany({
+      select: {
+        id: true,
+        NIN: true,
+        openMrsUuid: true,
+        userUuid: true,
+        personUuid: true,
+        username: true,
+        firstName: true,
+        lastName: true,
+      },
+      orderBy: { createdAt: "asc" },
+    });
+  }
+
+  /**
+   * True when the OpenMRS team member UUID still resolves.
+   */
+  static async openMrsTeamMemberExists(openMrsUuid) {
+    if (!openMrsUuid) return false;
+
+    const response = await openmrsApiClient.get(`team/teammember/${openMrsUuid}`, {
+      v: "custom:(uuid)",
+    });
+
+    if (!response || response.isAxiosError || response.response) {
+      return false;
+    }
+
+    return Boolean(response.uuid);
+  }
+
+  /**
    * Get username counter by NIN
    * @param {string} nin - Team member NIN
    * @returns {Promise<Object>} - Username counter object

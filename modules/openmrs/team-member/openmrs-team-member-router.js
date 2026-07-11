@@ -21,6 +21,12 @@ const upload = multer({ storage: storage, fileFilter: fileFilter });
 router.get("/", AuthMiddleware.authenticate, TeamMemberController.getTeamMembers);
 router.post("/", AuthMiddleware.authenticate, TeamMemberController.createTeamMember);
 router.get("/sync", AuthMiddleware.authenticate, TeamMemberController.syncTeamMembers);
+router.post(
+  "/purge-orphans",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  TeamMemberController.purgeOrphanedLocalRecords
+);
 router.put("/:uuid", AuthMiddleware.authenticate, TeamMemberController.updateTeamMember);
 router.get("/:uuid", AuthMiddleware.authenticate, TeamMemberController.getTeamMemberByUuid);
 router.delete("/person/:maxPersonId", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), TeamMemberController.deletePerson);

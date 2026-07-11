@@ -37,6 +37,13 @@ class GatewayService {
     return response;
   }
 
+  /**
+   * True when the OpenMRS team member UUID still resolves (not voided/deleted).
+   */
+  static async openMrsTeamMemberExists(openMrsUuid) {
+    return TeamMemberRepository.openMrsTeamMemberExists(openMrsUuid);
+  }
+
   static async assertUsernameAvailableForUser(username, userUuid) {
     const existingUsers = await openmrsApiClient.get("user", {
       q: username,
@@ -364,21 +371,37 @@ class GatewayService {
       const chw = payload.message.body[0];
       const existingMember = await TeamMemberRepository.getTeamMemberByNin(chw.NIN);
 
-      // Existing CHW: treat registration as a demographic update (HTTP 200 via controller).
-      if (existingMember?.openMrsUuid) {
-        console.log(`ℹ️ CHW NIN ${chw.NIN} already exists — applying as update.`);
-        const result = await GatewayService.applyChwDemographicUpdate(req, res, next, chw, existingMember);
-        await ApiLogger.log(req, { action: "REGISTER_AS_UPDATE", nin: chw.NIN, updatedFields: result.updatedFields });
-        return {
-          created: false,
-          updated: true,
-          message:
-            result.updatedFields.length === 0
-              ? "No fields were updated for this CHW."
-              : "CHW details updated successfully.",
+      // Local row exists: update if still present in OpenMRS; otherwise purge
+      // orphaned Postgres rows (failed registration + delete_person) and create anew.
+      if (existingMember) {
+        const existsInOpenMrs = await GatewayService.openMrsTeamMemberExists(existingMember.openMrsUuid);
+
+        if (existsInOpenMrs) {
+          console.log(`ℹ️ CHW NIN ${chw.NIN} already exists in OpenMRS — applying as update.`);
+          const result = await GatewayService.applyChwDemographicUpdate(req, res, next, chw, existingMember);
+          await ApiLogger.log(req, { action: "REGISTER_AS_UPDATE", nin: chw.NIN, updatedFields: result.updatedFields });
+          return {
+            created: false,
+            updated: true,
+            message:
+              result.updatedFields.length === 0
+                ? "No fields were updated for this CHW."
+                : "CHW details updated successfully.",
+            nin: chw.NIN,
+            updatedFields: result.updatedFields,
+          };
+        }
+
+        console.warn(
+          `⚠️ CHW NIN ${chw.NIN} exists locally (openMrsUuid=${existingMember.openMrsUuid}) but not in OpenMRS. ` +
+            `Purging local records and re-running registration.`
+        );
+        await TeamMemberRepository.purgeLocalChwRecords(existingMember);
+        await ApiLogger.log(req, {
+          action: "REGISTER_PURGE_ORPHAN_AND_RECREATE",
           nin: chw.NIN,
-          updatedFields: result.updatedFields,
-        };
+          purgedOpenMrsUuid: existingMember.openMrsUuid,
+        });
       }
 
       // New CHW create path

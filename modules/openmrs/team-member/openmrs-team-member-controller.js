@@ -113,6 +113,19 @@ class TeamMemberController {
       next(error);
     }
   }
+
+  // Purge local team members that no longer exist in OpenMRS
+  static async purgeOrphanedLocalRecords(req, res, next) {
+    try {
+      const stats = await TeamMemberService.purgeOrphanedLocalRecords();
+      const message =
+        `Orphan purge completed: scanned ${stats.scanned}, kept ${stats.kept}, ` +
+        `purged ${stats.purged}, errors ${stats.errors}.`;
+      return BaseResponse.success(res, message, stats);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default TeamMemberController;

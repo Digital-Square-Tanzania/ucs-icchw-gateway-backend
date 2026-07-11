@@ -625,6 +625,67 @@ class TeamMemberService {
       throw new CustomError("Failed to fetch team members by team UUID: " + error.message, 500);
     }
   }
+
+  /**
+   * Scan all local openmrs_team_members and purge those whose OpenMRS
+   * team-member UUID no longer exists (orphans after failed registration + delete_person).
+   */
+  static async purgeOrphanedLocalRecords() {
+    const members = await TeamMemberRepository.getAllMembersForOrphanScan();
+    const concurrency = Math.max(1, parseInt(process.env.P_LIMIT_CONCURRENCY || "10", 10) || 10);
+    const limit = pLimit(concurrency);
+
+    const stats = {
+      scanned: members.length,
+      kept: 0,
+      purged: 0,
+      errors: 0,
+      purgedSamples: [],
+      errorSamples: [],
+    };
+
+    console.log(`🧹 Scanning ${members.length} local team member(s) for OpenMRS orphans (concurrency=${concurrency})...`);
+
+    await Promise.all(
+      members.map((member) =>
+        limit(async () => {
+          try {
+            const exists = await TeamMemberRepository.openMrsTeamMemberExists(member.openMrsUuid);
+            if (exists) {
+              stats.kept += 1;
+              return;
+            }
+
+            await TeamMemberRepository.purgeLocalChwRecords(member);
+            stats.purged += 1;
+            if (stats.purgedSamples.length < 50) {
+              stats.purgedSamples.push({
+                nin: member.NIN || null,
+                openMrsUuid: member.openMrsUuid || null,
+                username: member.username || null,
+                name: [member.firstName, member.lastName].filter(Boolean).join(" ") || null,
+              });
+            }
+          } catch (error) {
+            stats.errors += 1;
+            if (stats.errorSamples.length < 20) {
+              stats.errorSamples.push({
+                nin: member.NIN || null,
+                openMrsUuid: member.openMrsUuid || null,
+                message: error.message,
+              });
+            }
+            console.error(`❌ Orphan purge failed for NIN=${member.NIN}:`, error.message);
+          }
+        })
+      )
+    );
+
+    console.log(
+      `✅ Orphan purge complete: scanned=${stats.scanned} kept=${stats.kept} purged=${stats.purged} errors=${stats.errors}`
+    );
+    return stats;
+  }
 }
 
 export default TeamMemberService;
