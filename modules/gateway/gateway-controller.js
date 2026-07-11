@@ -19,7 +19,9 @@ class GatewayController {
   static async registerChwFromHrhis(req, res, next) {
     try {
       const response = await GatewayService.registerChwFromHrhis(req, res, next);
-      return GatewayResponder.success(req, res, response, 1, 201, req.signature);
+      const statusCode = response?.created === false ? 200 : 201;
+      const message = typeof response === "object" && response?.message ? response.message : response;
+      return GatewayResponder.success(req, res, message, 1, statusCode, req.signature);
     } catch (error) {
       return GatewayResponder.error(req, res, error.message, 3, error.statusCode, null);
     }

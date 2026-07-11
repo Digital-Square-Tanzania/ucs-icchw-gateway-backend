@@ -154,20 +154,239 @@ class GatewayService {
     }
   }
 
-  // Register new CHW from HRHIS
-  static async registerChwFromHrhis(req, _res, _next) {
+  /**
+   * Notify a CHW by email when credential-related fields change.
+   * Always emails the current (post-update) address when email/phone/username changed.
+   */
+  static async notifyChwOfCredentialChanges(member, updatedFields) {
+    const credentialFields = ["email", "phoneNumber", "username"];
+    const changed = credentialFields.filter((field) => updatedFields.includes(field));
+    if (!changed.length || !member?.email) {
+      return;
+    }
+
+    const username = member.username || "";
+    const phone = member.phoneNumber || "";
+    const email = member.email;
+    const name = [member.firstName, member.lastName].filter(Boolean).join(" ") || "WAJA";
+
+    try {
+      await EmailService.sendEmail({
+        to: email,
+        subject: "Taarifa ya Mabadiliko ya Akaunti ya UCS/WAJA",
+        text:
+          `Habari ${name},\n\n` +
+          `Taarifa zako za akaunti ya UCS/WAJA zimebadilishwa.\n` +
+          `Barua pepe: ${email}\n` +
+          `Namba ya simu: ${phone}\n` +
+          `Jina la mtumiaji: ${username}\n\n` +
+          `Ikiwa hukuomba mabadiliko haya, wasiliana na mratibu wako wa wilaya/halmashauri.`,
+        html:
+          `<p>Habari <strong>${name}</strong>,</p>` +
+          `<p>Taarifa zako za akaunti ya UCS/WAJA zimebadilishwa.</p>` +
+          `<ul>` +
+          `<li>Barua pepe: <strong>${email}</strong></li>` +
+          `<li>Namba ya simu: <strong>${phone}</strong></li>` +
+          `<li>Jina la mtumiaji: <strong>${username}</strong></li>` +
+          `</ul>` +
+          `<p>Ikiwa hukuomba mabadiliko haya, wasiliana na mratibu wako wa wilaya/halmashauri.</p>`,
+      });
+      console.log(`✅ Credential-change email sent to ${email} (fields: ${changed.join(", ")})`);
+    } catch (emailError) {
+      // Do not roll back the demographic update if notification fails.
+      console.error(`⚠️ Failed to send credential-change email to ${email}:`, emailError.message);
+    }
+  }
+
+  /**
+   * Apply demographic updates for a single existing CHW (by NIN).
+   * Shared by /chw/update and by /chw/register when the NIN already exists.
+   * @returns {Promise<{ message: string, nin: string, personUuid: string, updatedFields: string[], member: Object }>}
+   */
+  static async applyChwDemographicUpdate(req, res, next, chw, teamMember) {
+    const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, {
+      v: "custom:(uuid,person:(uuid))",
+    });
+    GatewayService.ensureOpenMrsResponse(teamMemberDetails, `Unable to fetch team member ${teamMember.openMrsUuid}`);
+
+    const personUuid = teamMemberDetails.person?.uuid;
+    if (!personUuid) {
+      throw new ApiError(`Person UUID not found for NIN ${chw.NIN}`, 400, 7);
+    }
+
+    const existingPerson = await openmrsApiClient.get(`person/${personUuid}`, {
+      v: "full",
+    });
+    GatewayService.ensureOpenMrsResponse(existingPerson, `Unable to fetch person ${personUuid}`);
+
+    const personUpdatePayload = {};
+    const updatedFields = [];
+    const emailAttributeTypeUuid = process.env.EMAIL_ATTRIBUTE_TYPE_UUID || "c60b17ba-1c41-454b-89a1-6c329c75417e";
+    const phoneNumberAttributeTypeUuid = process.env.PHONE_NUMBER_ATTRIBUTE_TYPE_UUID || "c1aa993d-251b-4295-9e58-4c5d8a73397e";
+    let currentUsername = teamMember.username;
+
+    if (chw.sex && (chw.sex.toUpperCase() === "MALE" || chw.sex.toUpperCase() === "FEMALE")) {
+      const gender = chw.sex.toUpperCase() === "MALE" ? "M" : "F";
+      if (gender !== existingPerson.gender) {
+        personUpdatePayload.gender = gender;
+        updatedFields.push("sex");
+      }
+    }
+
+    const existingName = existingPerson.preferredName || {};
+    const nameUpdate = {};
+    let nameChanged = false;
+
+    if (chw.firstName && chw.firstName !== existingName.givenName) {
+      nameUpdate.givenName = chw.firstName;
+      updatedFields.push("firstName");
+      nameChanged = true;
+    }
+    if (chw.middleName !== undefined && chw.middleName !== existingName.middleName) {
+      nameUpdate.middleName = chw.middleName;
+      updatedFields.push("middleName");
+      nameChanged = true;
+    }
+    if (chw.lastName && chw.lastName !== existingName.familyName) {
+      nameUpdate.familyName = chw.lastName;
+      updatedFields.push("lastName");
+      nameChanged = true;
+    }
+
+    if (nameChanged) {
+      nameUpdate.givenName = nameUpdate.givenName || existingName.givenName || "";
+      nameUpdate.middleName = nameUpdate.middleName !== undefined ? nameUpdate.middleName : existingName.middleName || null;
+      nameUpdate.familyName = nameUpdate.familyName || existingName.familyName || "";
+      personUpdatePayload.names = [nameUpdate];
+    }
+
+    if (chw.email) {
+      const newEmail = chw.email.trim();
+      const emailChanged = await GatewayService.upsertPersonAttribute(personUuid, existingPerson, emailAttributeTypeUuid, newEmail, "Email");
+      if (emailChanged || newEmail !== teamMember.email?.trim()) {
+        updatedFields.push("email");
+      }
+    }
+
+    if (chw.phoneNumber) {
+      const newPhoneNumber = chw.phoneNumber.trim();
+      const existingPhoneAttr = (existingPerson.attributes || []).find(
+        (attr) => attr.attributeType?.uuid === phoneNumberAttributeTypeUuid && !attr.voided
+      );
+      const existingOpenMrsPhoneNumber = existingPhoneAttr?.value?.trim();
+      const existingLocalPhoneNumber = teamMember.phoneNumber?.trim();
+      const phoneNumberChanged = newPhoneNumber !== existingOpenMrsPhoneNumber || newPhoneNumber !== existingLocalPhoneNumber;
+      const newUsername = GatewayService.buildUsernameFromPhoneNumber(
+        newPhoneNumber,
+        chw.firstName ?? teamMember.firstName ?? "",
+        chw.lastName ?? teamMember.lastName ?? ""
+      );
+
+      if (newUsername !== teamMember.username) {
+        await GatewayService.updateOpenMrsUserUsername(teamMember.userUuid, newUsername);
+        currentUsername = newUsername;
+        updatedFields.push("username");
+      }
+
+      if (phoneNumberChanged) {
+        await GatewayService.upsertPersonAttribute(personUuid, existingPerson, phoneNumberAttributeTypeUuid, newPhoneNumber, "Phone number");
+        updatedFields.push("phoneNumber");
+      }
+    }
+
+    if (Object.keys(personUpdatePayload).length > 0) {
+      const updatedPerson = await openmrsApiClient.post(`person/${personUuid}`, personUpdatePayload);
+      GatewayService.ensureOpenMrsResponse(updatedPerson, `Unable to update person ${personUuid}`);
+    }
+
+    const member = {
+      identifier: teamMember.identifier,
+      firstName: chw.firstName ?? teamMember.firstName,
+      middleName: chw.middleName ?? teamMember.middleName,
+      lastName: chw.lastName ?? teamMember.lastName,
+      email: chw.email ?? teamMember.email,
+      phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
+      personUuid,
+      userUuid: teamMember.userUuid,
+      username: currentUsername,
+      teamUuid: teamMember.teamUuid,
+      teamName: teamMember.teamName,
+      teamIdentifier: teamMember.teamIdentifier,
+      locationUuid: teamMember.locationUuid,
+      locationName: teamMember.locationName,
+      locationDescription: teamMember.locationDescription,
+      openMrsUuid: teamMember.openMrsUuid,
+      NIN: chw.NIN,
+      updatedAt: new Date(),
+    };
+
+    await TeamMemberRepository.upsertTeamMembers([member]);
+
+    const slug = await prisma.accountActivation.findFirst({
+      where: { userUuid: teamMember.userUuid, slugType: "ACTIVATION", isUsed: false },
+      select: { slug: true },
+    });
+
+    const credentialsChanged =
+      updatedFields.includes("email") || updatedFields.includes("phoneNumber") || updatedFields.includes("username");
+
+    // Not-yet-activated CHWs: refresh activation email when credentials change.
+    let sentActivationResend = false;
+    if (credentialsChanged && slug) {
+      req.params.slug = slug.slug;
+      req.params.emailChange = true;
+      await UserService.handleResendEmail(req, res, next);
+      sentActivationResend = true;
+    }
+
+    // Already-activated (or no open slug): send a change notification instead.
+    if (credentialsChanged && !sentActivationResend) {
+      await GatewayService.notifyChwOfCredentialChanges(member, updatedFields);
+    }
+
+    return {
+      message: updatedFields.length > 0 ? "CHW demographic updated." : "No fields were updated for this CHW.",
+      nin: chw.NIN,
+      personUuid,
+      updatedFields,
+      member,
+    };
+  }
+
+  // Register new CHW from HRHIS (or update demographics when NIN already exists)
+  static async registerChwFromHrhis(req, res, next) {
     console.log("TASK: Registering CHW from HRHIS...");
     let newPerson = null;
     try {
-      // Get the payload from the request body
       const payload = req.body;
+      GatewayValidator.validateChwDemographics(payload);
 
-      // Validate incoming CHW deployment payload
+      const chw = payload.message.body[0];
+      const existingMember = await TeamMemberRepository.getTeamMemberByNin(chw.NIN);
+
+      // Existing CHW: treat registration as a demographic update (HTTP 200 via controller).
+      if (existingMember?.openMrsUuid) {
+        console.log(`ℹ️ CHW NIN ${chw.NIN} already exists — applying as update.`);
+        const result = await GatewayService.applyChwDemographicUpdate(req, res, next, chw, existingMember);
+        await ApiLogger.log(req, { action: "REGISTER_AS_UPDATE", nin: chw.NIN, updatedFields: result.updatedFields });
+        return {
+          created: false,
+          updated: true,
+          message:
+            result.updatedFields.length === 0
+              ? "No fields were updated for this CHW."
+              : "CHW details updated successfully.",
+          nin: chw.NIN,
+          updatedFields: result.updatedFields,
+        };
+      }
+
+      // New CHW create path
       const payloadContent = new PayloadContent(payload);
       const validatedContent = await payloadContent.validate();
 
       // Create a new person and attributes
-      let newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
+      newPerson = await OpenmrsHelper.createOpenmrsPerson(payload);
 
       // Capture the person ID for reverting deletion
       const newPersonId = await openmrsApiClient.get(`person/${newPerson.uuid}`, {
@@ -215,7 +434,12 @@ class GatewayService {
 
       // Log the entire brouhaha
       await ApiLogger.log(req, { member: newTeamMember, slug });
-      return "Facility and personnel details processed successfully.";
+      return {
+        created: true,
+        updated: false,
+        message: "Facility and personnel details processed successfully.",
+        nin: chw.NIN,
+      };
     } catch (error) {
       await ApiLogger.log(req, { statusCode: error.statusCode || 500, body: error.message });
 
@@ -312,144 +536,13 @@ class GatewayService {
           continue;
         }
 
-        const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, { v: "custom:(uuid,person:(uuid))" });
-        GatewayService.ensureOpenMrsResponse(teamMemberDetails, `Unable to fetch team member ${teamMember.openMrsUuid}`);
-
-        const personUuid = teamMemberDetails.person?.uuid;
-        if (!personUuid) {
-          throw new ApiError(`Person UUID not found for NIN ${chw.NIN}`, 400, 7);
-        }
-
-        const existingPerson = await openmrsApiClient.get(`person/${personUuid}`, {
-          v: "full",
-        });
-        GatewayService.ensureOpenMrsResponse(existingPerson, `Unable to fetch person ${personUuid}`);
-
-        const personUpdatePayload = {};
-        const updatedFields = [];
-        const emailAttributeTypeUuid = process.env.EMAIL_ATTRIBUTE_TYPE_UUID || "c60b17ba-1c41-454b-89a1-6c329c75417e";
-        const phoneNumberAttributeTypeUuid = process.env.PHONE_NUMBER_ATTRIBUTE_TYPE_UUID || "c1aa993d-251b-4295-9e58-4c5d8a73397e";
-        let currentUsername = teamMember.username;
-
-        // ✅ Gender
-        if (chw.sex && (chw.sex.toUpperCase() === "MALE" || chw.sex.toUpperCase() === "FEMALE")) {
-          const gender = chw.sex.toUpperCase() === "MALE" ? "M" : "F";
-          if (gender !== existingPerson.gender) {
-            personUpdatePayload.gender = gender;
-            updatedFields.push("sex");
-          }
-        }
-
-        // ✅ Names
-        const existingName = existingPerson.preferredName || {};
-        const nameUpdate = {};
-        let nameChanged = false;
-
-        if (chw.firstName && chw.firstName !== existingName.givenName) {
-          nameUpdate.givenName = chw.firstName;
-          updatedFields.push("firstName");
-          nameChanged = true;
-        }
-        if (chw.middleName !== undefined && chw.middleName !== existingName.middleName) {
-          nameUpdate.middleName = chw.middleName;
-          updatedFields.push("middleName");
-          nameChanged = true;
-        }
-        if (chw.lastName && chw.lastName !== existingName.familyName) {
-          nameUpdate.familyName = chw.lastName;
-          updatedFields.push("lastName");
-          nameChanged = true;
-        }
-
-        if (nameChanged) {
-          nameUpdate.givenName = nameUpdate.givenName || existingName.givenName || "";
-          nameUpdate.middleName = nameUpdate.middleName !== undefined ? nameUpdate.middleName : existingName.middleName || null;
-          nameUpdate.familyName = nameUpdate.familyName || existingName.familyName || "";
-
-          personUpdatePayload.names = [nameUpdate];
-        }
-
-        // ✅ Email
-        if (chw.email) {
-          const newEmail = chw.email.trim();
-          const emailChanged = await GatewayService.upsertPersonAttribute(personUuid, existingPerson, emailAttributeTypeUuid, newEmail, "Email");
-          if (emailChanged || newEmail !== teamMember.email?.trim()) {
-            updatedFields.push("email");
-          }
-        }
-
-        // ✅ Phone number and derived username
-        if (chw.phoneNumber) {
-          const newPhoneNumber = chw.phoneNumber.trim();
-          const existingPhoneAttr = (existingPerson.attributes || []).find((attr) => attr.attributeType?.uuid === phoneNumberAttributeTypeUuid && !attr.voided);
-          const existingOpenMrsPhoneNumber = existingPhoneAttr?.value?.trim();
-          const existingLocalPhoneNumber = teamMember.phoneNumber?.trim();
-          const phoneNumberChanged = newPhoneNumber !== existingOpenMrsPhoneNumber || newPhoneNumber !== existingLocalPhoneNumber;
-          const newUsername = GatewayService.buildUsernameFromPhoneNumber(
-            newPhoneNumber,
-            chw.firstName ?? teamMember.firstName ?? "",
-            chw.lastName ?? teamMember.lastName ?? ""
-          );
-
-          if (newUsername !== teamMember.username) {
-            await GatewayService.updateOpenMrsUserUsername(teamMember.userUuid, newUsername);
-            currentUsername = newUsername;
-            updatedFields.push("username");
-          }
-
-          if (phoneNumberChanged) {
-            await GatewayService.upsertPersonAttribute(personUuid, existingPerson, phoneNumberAttributeTypeUuid, newPhoneNumber, "Phone number");
-            updatedFields.push("phoneNumber");
-          }
-        }
-
-        // ✅ Apply core person updates (gender/names)
-        if (Object.keys(personUpdatePayload).length > 0) {
-          const updatedPerson = await openmrsApiClient.post(`person/${personUuid}`, personUpdatePayload);
-          GatewayService.ensureOpenMrsResponse(updatedPerson, `Unable to update person ${personUuid}`);
-        }
-
-        // Local DB upsert payload
-        const member = {
-          identifier: teamMember.identifier,
-          firstName: chw.firstName ?? teamMember.firstName,
-          middleName: chw.middleName ?? teamMember.middleName,
-          lastName: chw.lastName ?? teamMember.lastName,
-          email: chw.email ?? teamMember.email,
-          phoneNumber: chw.phoneNumber ?? teamMember.phoneNumber,
-          personUuid,
-          userUuid: teamMember.userUuid,
-          username: currentUsername,
-          teamUuid: teamMember.teamUuid,
-          teamName: teamMember.teamName,
-          teamIdentifier: teamMember.teamIdentifier,
-          locationUuid: teamMember.locationUuid,
-          locationName: teamMember.locationName,
-          locationDescription: teamMember.locationDescription,
-          openMrsUuid: teamMember.openMrsUuid,
-          NIN: chw.NIN,
-          updatedAt: new Date(),
-        };
-
-        await TeamMemberRepository.upsertTeamMembers([member]);
-
+        const result = await GatewayService.applyChwDemographicUpdate(req, res, next, chw, teamMember);
         results.push({
-          message: updatedFields.length > 0 ? "CHW demographic updated." : "No changes detected for CHW.",
-          nin: chw.NIN,
-          personUuid,
-          updatedFields,
+          message: result.message,
+          nin: result.nin,
+          personUuid: result.personUuid,
+          updatedFields: result.updatedFields,
         });
-
-        const slug = await prisma.accountActivation.findFirst({
-          where: { userUuid: teamMember.userUuid, slugType: "ACTIVATION", isUsed: false },
-          select: { slug: true },
-        });
-
-        if ((updatedFields.includes("email") || updatedFields.includes("phoneNumber") || updatedFields.includes("username")) && slug) {
-          req.params.slug = slug.slug;
-          req.params.emailChange = true;
-          await UserService.handleResendEmail(req, res, next);
-        }
       }
 
       console.log("✅ CHW demographic updates processed.");

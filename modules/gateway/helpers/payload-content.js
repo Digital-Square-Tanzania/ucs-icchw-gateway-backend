@@ -1,6 +1,5 @@
 import GatewayValidator from "../gateway-validator.js";
 import TeamRepository from "../../openmrs/team/openmrs-team-repository.js";
-import TeamMemberRepository from "../../openmrs/team-member/openmrs-team-member-repository.js";
 import OpenMRSLocationRepository from "../../openmrs/location/openmrs-location-repository.js";
 import OpenmrsHelper from "./openmrs-helper.js";
 import LocationResolver from "./location-resolver.js";
@@ -12,26 +11,17 @@ class PayloadContent {
   }
 
   /**
-   * @param {Object} payload - The payload object to validate
-   * @description Validates the payload for CHW deployment
+   * Validates the payload for CHW deployment (create path).
+   * Does not reject existing NINs — the register service routes those to update.
    * @throws {ApiError} If the payload is invalid
-   * @returns {Promise<TeamMemberLocation>}
+   * @returns {Promise<{ teamMemberLocation: Object, team: Object }>}
    */
   async validate() {
     try {
       const { payload } = this;
 
-      // Validate incoming CHW deployment payload
       GatewayValidator.validateChwDemographics(payload);
 
-      // Check if the CHW exists in team members by NIN
-      const teamMember = await TeamMemberRepository.getTeamMemberByNin(payload.message.body[0].NIN);
-
-      if (teamMember) {
-        throw new ApiError("Duplicate CHW ID found.", 409, 2);
-      }
-
-      // Check if the location exists
       const location = await OpenMRSLocationRepository.getLocationByHfrCode(payload.message.body[0].hfrCode);
 
       if (!location || !location.uuid) {
@@ -48,7 +38,6 @@ class PayloadContent {
         payload.message.body[0].locationType
       );
 
-      // Check if a team exists without location
       let team = null;
       try {
         team = await TeamRepository.getTeamByLocationUuid(location.uuid);
@@ -58,7 +47,6 @@ class PayloadContent {
 
       if (!team) {
         try {
-          // create team
           team = await OpenmrsHelper.createOpenmrsTeam(location);
         } catch (error) {
           throw new ApiError(`Failed to create team: ${error.message}`, 500, 6);
@@ -69,8 +57,6 @@ class PayloadContent {
 
       return { teamMemberLocation, team };
     } catch (error) {
-      // Preserve specific errors (duplicate CHW, invalid facility/location code,
-      // hierarchy-policy rejections) with their own status/custom codes and messages.
       if (error instanceof ApiError) {
         throw error;
       }
