@@ -205,10 +205,12 @@ class DashboardRepository {
   }
 
   /**
-   * Daily HRHIS register traffic for Settings charts.
-   * - incoming: api_logs responder rows for /chw/register (deduped vs service logs)
-   * - created: new ACTIVATION slugs (true successful creates)
-   * - updated: REGISTER_AS_UPDATE service logs (existing NIN treated as update)
+   * Daily HRHIS register traffic for Settings charts — entirely from api_logs.
+   * Uses GatewayResponder rows for /chw/register (response.body.message.body envelope)
+   * so each HTTP attempt is counted once:
+   * - incoming: all such rows
+   * - succeeded: envelope status = success (HTTP 2xx create or update-as-register)
+   * - failed: envelope status = fail or HTTP >= 400
    */
   static async getHrhisRegisterTimeseries(days = 30) {
     const dayCount = Math.min(90, Math.max(7, Number.parseInt(String(days), 10) || 30));
@@ -221,55 +223,55 @@ class DashboardRepository {
           INTERVAL '1 day'
         )::date AS day
       ),
-      incoming AS (
-        SELECT (("createdAt")::date) AS day, COUNT(*)::int AS count
+      register_logs AS (
+        SELECT
+          ("createdAt")::date AS day,
+          LOWER(COALESCE(response->'body'->'message'->'body'->>'status', '')) AS outcome,
+          COALESCE(NULLIF(response->>'status', '')::int, 0) AS http_status
         FROM api_logs
         WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
           AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
           AND response->'body'->'message'->'body' IS NOT NULL
-        GROUP BY 1
       ),
-      created AS (
-        SELECT (("createdAt")::date) AS day, COUNT(*)::int AS count
-        FROM account_activations
-        WHERE "slugType" = 'ACTIVATION'
-          AND "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
-        GROUP BY 1
-      ),
-      updated AS (
-        SELECT (("createdAt")::date) AS day, COUNT(*)::int AS count
-        FROM api_logs
-        WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
-          AND response->'body'->>'action' = 'REGISTER_AS_UPDATE'
-        GROUP BY 1
+      daily AS (
+        SELECT
+          day,
+          COUNT(*)::int AS incoming,
+          COUNT(*) FILTER (
+            WHERE outcome = 'fail' OR http_status >= 400
+          )::int AS failed,
+          COUNT(*) FILTER (
+            WHERE outcome = 'success'
+               OR (outcome NOT IN ('success', 'fail') AND http_status >= 200 AND http_status < 400)
+          )::int AS succeeded
+        FROM register_logs
+        GROUP BY day
       )
       SELECT
         to_char(d.day, 'YYYY-MM-DD') AS day,
-        COALESCE(i.count, 0)::int AS incoming,
-        COALESCE(c.count, 0)::int AS created,
-        COALESCE(u.count, 0)::int AS updated
+        COALESCE(r.incoming, 0)::int AS incoming,
+        COALESCE(r.succeeded, 0)::int AS succeeded,
+        COALESCE(r.failed, 0)::int AS failed
       FROM days d
-      LEFT JOIN incoming i ON i.day = d.day
-      LEFT JOIN created c ON c.day = d.day
-      LEFT JOIN updated u ON u.day = d.day
+      LEFT JOIN daily r ON r.day = d.day
       ORDER BY d.day ASC
     `;
 
     const buckets = (Array.isArray(rows) ? rows : []).map((row) => ({
       day: String(row.day),
       incoming: Number(row.incoming) || 0,
-      created: Number(row.created) || 0,
-      updated: Number(row.updated) || 0,
+      succeeded: Number(row.succeeded) || 0,
+      failed: Number(row.failed) || 0,
     }));
 
     const totals = buckets.reduce(
       (acc, b) => {
         acc.incoming += b.incoming;
-        acc.created += b.created;
-        acc.updated += b.updated;
+        acc.succeeded += b.succeeded;
+        acc.failed += b.failed;
         return acc;
       },
-      { incoming: 0, created: 0, updated: 0 }
+      { incoming: 0, succeeded: 0, failed: 0 }
     );
 
     return { days: dayCount, buckets, totals };
