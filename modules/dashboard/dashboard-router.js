@@ -11,6 +11,13 @@ const router = express.Router();
  */
 router.get("/stats", AuthMiddleware.authenticate, DashboardController.getDashboardStats);
 
+router.get(
+  "/hrhis-register-timeseries",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  DashboardController.getHrhisRegisterTimeseries
+);
+
 // Sync dashboard data (MOH_ADMIN and UCS_DEVELOPER roles)
 router.post("/sync", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"), DashboardController.syncDashboard);
 

@@ -90,6 +90,15 @@ class DashboardService {
     });
     return { synced: true };
   }
+
+  static async getHrhisRegisterTimeseries(days) {
+    try {
+      return await DashboardRepository.getHrhisRegisterTimeseries(days);
+    } catch (error) {
+      console.error("❌ Error fetching HRHIS register timeseries:", error.message);
+      throw new CustomError("Failed to fetch HRHIS register timeseries. " + error.message, 400);
+    }
+  }
 }
 
 export default DashboardService;

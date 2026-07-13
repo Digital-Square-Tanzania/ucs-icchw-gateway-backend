@@ -203,6 +203,77 @@ class DashboardRepository {
     ORDER BY team_size_category;
   `;
   }
+
+  /**
+   * Daily HRHIS register traffic for Settings charts.
+   * - incoming: api_logs responder rows for /chw/register (deduped vs service logs)
+   * - created: new ACTIVATION slugs (true successful creates)
+   * - updated: REGISTER_AS_UPDATE service logs (existing NIN treated as update)
+   */
+  static async getHrhisRegisterTimeseries(days = 30) {
+    const dayCount = Math.min(90, Math.max(7, Number.parseInt(String(days), 10) || 30));
+
+    const rows = await prisma.$queryRaw`
+      WITH days AS (
+        SELECT generate_series(
+          (CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day'))::date,
+          CURRENT_DATE,
+          INTERVAL '1 day'
+        )::date AS day
+      ),
+      incoming AS (
+        SELECT (("createdAt")::date) AS day, COUNT(*)::int AS count
+        FROM api_logs
+        WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
+          AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
+          AND response->'body'->'message'->'body' IS NOT NULL
+        GROUP BY 1
+      ),
+      created AS (
+        SELECT (("createdAt")::date) AS day, COUNT(*)::int AS count
+        FROM account_activations
+        WHERE "slugType" = 'ACTIVATION'
+          AND "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
+        GROUP BY 1
+      ),
+      updated AS (
+        SELECT (("createdAt")::date) AS day, COUNT(*)::int AS count
+        FROM api_logs
+        WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
+          AND response->'body'->>'action' = 'REGISTER_AS_UPDATE'
+        GROUP BY 1
+      )
+      SELECT
+        to_char(d.day, 'YYYY-MM-DD') AS day,
+        COALESCE(i.count, 0)::int AS incoming,
+        COALESCE(c.count, 0)::int AS created,
+        COALESCE(u.count, 0)::int AS updated
+      FROM days d
+      LEFT JOIN incoming i ON i.day = d.day
+      LEFT JOIN created c ON c.day = d.day
+      LEFT JOIN updated u ON u.day = d.day
+      ORDER BY d.day ASC
+    `;
+
+    const buckets = (Array.isArray(rows) ? rows : []).map((row) => ({
+      day: String(row.day),
+      incoming: Number(row.incoming) || 0,
+      created: Number(row.created) || 0,
+      updated: Number(row.updated) || 0,
+    }));
+
+    const totals = buckets.reduce(
+      (acc, b) => {
+        acc.incoming += b.incoming;
+        acc.created += b.created;
+        acc.updated += b.updated;
+        return acc;
+      },
+      { incoming: 0, created: 0, updated: 0 }
+    );
+
+    return { days: dayCount, buckets, totals };
+  }
 }
 
 export default DashboardRepository;

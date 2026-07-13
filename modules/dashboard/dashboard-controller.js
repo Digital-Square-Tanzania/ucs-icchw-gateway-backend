@@ -44,6 +44,18 @@ class DashboardController {
       next(error);
     }
   }
+
+  /**
+   * HRHIS register incoming vs successful creates (and updates) over time
+   */
+  static async getHrhisRegisterTimeseries(req, res, next) {
+    try {
+      const data = await DashboardService.getHrhisRegisterTimeseries(req.query.days);
+      return BaseResponse.success(res, "HRHIS register timeseries retrieved successfully", data);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default DashboardController;
