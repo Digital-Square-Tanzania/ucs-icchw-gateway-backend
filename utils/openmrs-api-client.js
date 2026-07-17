@@ -38,7 +38,7 @@ class OpenMRSApiClient {
       console.error(`❌ OpenMRS POST Error (${endpoint}):`, {
         status: error.response?.status,
         message: error.response?.data?.error?.message || error.message,
-        details: error.response?.data || null,
+        // details: error.response?.data || null,
       });
       return error;
     }
