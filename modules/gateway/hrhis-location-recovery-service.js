@@ -8,11 +8,33 @@ import pLimit from "p-limit";
 const MAX_SCAN = 500;
 const MAX_RECOVER = 100;
 const RECOVERY_SOURCE = "hrhis-location-recovery";
+/** OpenMRS location codes use 5 segments at Council level (TZ.ZONE.REG.DIST.COUNCIL). */
+const COUNCIL_CODE_SEGMENTS = 5;
 
 class HrhisLocationRecoveryService {
   /**
-   * Resolve OpenMRS location codes for the selected council so we can match
-   * failed request locationCodes by exact match or descendant prefix.
+   * Derive council-level prefixes (first 5 segments) from any dotted location codes.
+   * Failed villages are often missing from Postgres — we still match them via the
+   * council prefix shared with sibling locations that are synced.
+   */
+  static deriveCouncilPrefixesFromCodes(codes) {
+    const prefixes = new Set();
+    for (const raw of codes || []) {
+      const code = String(raw || "").trim();
+      if (!code) continue;
+      const segments = code.split(".").filter(Boolean);
+      if (segments.length >= COUNCIL_CODE_SEGMENTS) {
+        prefixes.add(segments.slice(0, COUNCIL_CODE_SEGMENTS).join("."));
+      } else if (segments.length > 0) {
+        prefixes.add(code);
+      }
+    }
+    return [...prefixes];
+  }
+
+  /**
+   * Resolve OpenMRS location-code prefixes for the selected council so we can
+   * match failed request locationCodes by exact match or descendant prefix.
    */
   static async resolveCouncilPrefixes(region, district, council) {
     if (!region?.trim() || !district?.trim() || !council?.trim()) {
@@ -29,33 +51,35 @@ class HrhisLocationRecoveryService {
       select: { uuid: true },
     });
 
-    const uuids = [...new Set(hierarchyRows.map((r) => r.uuid).filter(Boolean))];
-    if (uuids.length === 0) {
+    const councilUuids = [...new Set(hierarchyRows.map((r) => r.uuid).filter(Boolean))];
+    if (councilUuids.length === 0) {
       throw new CustomError(
         `No council location found for ${region} / ${district} / ${council}. Refresh the location hierarchy view after syncing locations.`,
         404
       );
     }
 
-    const locations = await prisma.openMRSLocation.findMany({
-      where: { uuid: { in: uuids }, locationCode: { not: null } },
+    const councilLocations = await prisma.openMRSLocation.findMany({
+      where: { uuid: { in: councilUuids }, locationCode: { not: null } },
       select: { locationCode: true },
     });
 
-    const prefixes = [
-      ...new Set(locations.map((l) => String(l.locationCode || "").trim()).filter(Boolean)),
-    ];
+    const underCouncilCodes = await OpenMRSLocationRepository.getLocationCodesByCouncil(
+      region,
+      district,
+      council
+    );
+
+    const prefixes = HrhisLocationRecoveryService.deriveCouncilPrefixesFromCodes([
+      ...councilLocations.map((l) => l.locationCode),
+      ...underCouncilCodes,
+    ]);
 
     if (prefixes.length === 0) {
-      const codes = await OpenMRSLocationRepository.getLocationCodesByCouncil(region, district, council);
-      if (codes.length === 0) {
-        throw new CustomError(
-          `Council '${council}' has no location codes in Postgres. Sync OpenMRS locations first.`,
-          404
-        );
-      }
-      const shortest = Math.min(...codes.map((c) => String(c).split(".").length));
-      return codes.filter((c) => String(c).split(".").length === shortest);
+      throw new CustomError(
+        `Council '${council}' has no location codes in Postgres to derive a prefix. Sync OpenMRS locations (and refresh the hierarchy view) first.`,
+        404
+      );
     }
 
     return prefixes;
@@ -181,13 +205,15 @@ class HrhisLocationRecoveryService {
           AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
       ),
       succeeded_nins AS (
+        -- Only real HRHIS success envelopes (or Settings recovery retries).
+        -- Do NOT treat intermediate ApiLogger 200 rows (member/slug dumps) as success —
+        -- those lack message.body.status and were incorrectly wiping eligible failures.
         SELECT DISTINCT nin
         FROM register_logs
         WHERE nin IS NOT NULL
           AND nin <> ''
           AND (
             outcome = 'success'
-            OR (outcome NOT IN ('success', 'fail') AND http_status >= 200 AND http_status < 400)
             OR recovery_source = ${RECOVERY_SOURCE}
           )
       )
@@ -224,7 +250,8 @@ class HrhisLocationRecoveryService {
       LIMIT ${MAX_SCAN * 5}
     `;
 
-    const scoped = (Array.isArray(allFailed) ? allFailed : []).filter((row) =>
+    const candidates = Array.isArray(allFailed) ? allFailed : [];
+    const scoped = candidates.filter((row) =>
       HrhisLocationRecoveryService.locationCodeMatchesPrefixes(row.locationCode, prefixes)
     );
 
@@ -254,6 +281,11 @@ class HrhisLocationRecoveryService {
       days: dayCount,
       count: failures.length,
       failures,
+      debug: {
+        locationFailuresBeforeCouncilFilter: candidates.length,
+        afterCouncilPrefixFilter: scoped.length,
+        afterNinDedupe: failures.length,
+      },
     };
   }
 
