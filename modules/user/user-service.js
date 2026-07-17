@@ -11,6 +11,7 @@ import OpenMRSUserHelper from "../openmrs/helpers/openmrs-user-helper.js";
 import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
 import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-repository.js";
 import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
+import OpenMRSLocationService from "../openmrs/location/openmrs-location-service.js";
 import { getCouncilUserUuids, getCouncilMembersPaginated } from "./council-members-repository.js";
 import TeamRepository from "../openmrs/team/openmrs-team-repository.js";
 import TeamService from "../openmrs/team/openmrs-team-service.js";
@@ -18,8 +19,104 @@ import PayloadContent from "../gateway/helpers/payload-content.js";
 import resendActivationCron from "../../utils/resend-activation-cron.js";
 
 const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
+const COUNCIL_CODE_SEGMENTS = 5;
 
 class UserService {
+  /**
+   * Build a Prisma where-clause fragment that scopes activations to a council.
+   * Combines:
+   *  1) OpenMRS user UUIDs for team members under the council subtree (any pin level)
+   *  2) AccountActivation.locationCode prefixes for that council (covers recoveries
+   *     whose activation row has the HRHIS code even if MySQL name matching is odd)
+   */
+  static async buildCouncilActivationFilter({ region, district, council } = {}) {
+    if (!council || typeof council !== "string" || !council.trim()) {
+      return {};
+    }
+
+    const councilName = council.trim();
+    const orClauses = [];
+
+    const userUuids = await getCouncilUserUuids(councilName);
+    if (userUuids.length > 0) {
+      orClauses.push({ userUuid: { in: userUuids } });
+    }
+
+    const prefixes = await UserService.resolveCouncilLocationPrefixes(region, district, councilName);
+    if (prefixes.length > 0) {
+      orClauses.push({
+        OR: prefixes.map((prefix) => ({
+          locationCode: { startsWith: prefix, mode: "insensitive" },
+        })),
+      });
+    }
+
+    if (orClauses.length === 0) {
+      console.warn(
+        `⚠️ No council activation matches for '${councilName}' ` +
+          `(MySQL users=0, location prefixes=0). Stats/resends will be empty.`
+      );
+      return { userUuid: "__NO_MATCH__" };
+    }
+
+    return orClauses.length === 1 ? orClauses[0] : { OR: orClauses };
+  }
+
+  static async resolveCouncilLocationPrefixes(region, district, council) {
+    try {
+      const hierarchyRows = await prisma.openMRSLocationHierarchyView.findMany({
+        where: {
+          type: { equals: "Council", mode: "insensitive" },
+          council: { equals: council.trim(), mode: "insensitive" },
+          ...(region?.trim() && { region: { equals: region.trim(), mode: "insensitive" } }),
+          ...(district?.trim() && { district: { equals: district.trim(), mode: "insensitive" } }),
+        },
+        select: { uuid: true },
+      });
+      const uuids = [...new Set(hierarchyRows.map((r) => r.uuid).filter(Boolean))];
+
+      let codes = [];
+      if (uuids.length > 0) {
+        const councilLocations = await prisma.openMRSLocation.findMany({
+          where: { uuid: { in: uuids }, locationCode: { not: null } },
+          select: { locationCode: true },
+        });
+        codes.push(...councilLocations.map((l) => l.locationCode));
+      }
+
+      const underCouncil = await OpenMRSLocationRepository.getLocationCodesByCouncil(
+        region,
+        district,
+        council
+      );
+      codes.push(...underCouncil);
+
+      let prefixes = UserService.deriveCouncilPrefixes(codes);
+      if (prefixes.length === 0 && uuids.length > 0) {
+        const mysqlCodes = await OpenMRSLocationService.getCodesUnderLocationUuidsFromMysql(uuids);
+        prefixes = UserService.deriveCouncilPrefixes(mysqlCodes);
+      }
+      return prefixes;
+    } catch (error) {
+      console.warn(`⚠️ Failed to resolve council location prefixes for '${council}':`, error.message);
+      return [];
+    }
+  }
+
+  static deriveCouncilPrefixes(codes) {
+    const prefixes = new Set();
+    for (const raw of codes || []) {
+      const code = String(raw || "").trim();
+      if (!code) continue;
+      const segments = code.split(".").filter(Boolean);
+      if (segments.length >= COUNCIL_CODE_SEGMENTS) {
+        prefixes.add(segments.slice(0, COUNCIL_CODE_SEGMENTS).join("."));
+      } else if (segments.length > 0) {
+        prefixes.add(code);
+      }
+    }
+    return [...prefixes];
+  }
   static async createUser(userData) {
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     userData.password = hashedPassword;
@@ -450,15 +547,13 @@ class UserService {
    */
   static async getActivationEmailStats(opts = {}) {
     const now = new Date();
-    const { council } = opts;
+    const { region, district, council } = opts;
 
-    let userUuidFilter = {};
-    if (council) {
-      const userUuids = await getCouncilUserUuids(council);
-      userUuidFilter = userUuids.length > 0 ? { userUuid: { in: userUuids } } : { userUuid: "__NO_MATCH__" };
-    }
+    const councilFilter = council
+      ? await UserService.buildCouncilActivationFilter({ region, district, council })
+      : {};
 
-    const baseWhere = { slugType: "ACTIVATION", ...userUuidFilter };
+    const baseWhere = { slugType: "ACTIVATION", ...councilFilter };
 
     const [unsentExpired, activated, expiredResent, openNotUsed, total, resentCount] = await Promise.all([
       prisma.accountActivation.count({
@@ -512,20 +607,19 @@ class UserService {
 
   /**
    * Resend activation emails for expired, never-resent activations (single batch).
-   * When locationFilter.council is set, only activations for team members in that council (MySQL) are included.
+   * When locationFilter.council is set, only activations for that council are included.
    * Returns a summary object { total, success, failed }.
    */
   static async resendExpiredActivationsBatch(limit = 100, locationFilter = null) {
     const now = new Date();
     const batchSize = Number(limit) > 0 ? Number(limit) : 100;
 
-    let userUuidFilter = {};
+    let councilFilter = {};
     if (locationFilter?.council) {
-      const userUuids = await getCouncilUserUuids(locationFilter.council);
-      if (userUuids.length === 0) {
+      councilFilter = await UserService.buildCouncilActivationFilter(locationFilter);
+      if (councilFilter.userUuid === "__NO_MATCH__") {
         return { total: 0, success: 0, failed: 0 };
       }
-      userUuidFilter = { userUuid: { in: userUuids } };
     }
 
     const toResend = await prisma.accountActivation.findMany({
@@ -538,7 +632,7 @@ class UserService {
           not: null,
           not: "",
         },
-        ...userUuidFilter,
+        ...councilFilter,
       },
       take: batchSize,
       orderBy: {
@@ -570,19 +664,18 @@ class UserService {
 
   /**
    * Resend activation emails for open (non-expired), not-used activations.
-   * When locationFilter.council is set, only activations for team members in that council (MySQL) are included.
+   * When locationFilter.council is set, only activations for that council are included.
    */
   static async resendOpenActivationsBatch(limit = 100, locationFilter = null) {
     const now = new Date();
     const batchSize = Number(limit) > 0 ? Number(limit) : 100;
 
-    let userUuidFilter = {};
+    let councilFilter = {};
     if (locationFilter?.council) {
-      const userUuids = await getCouncilUserUuids(locationFilter.council);
-      if (userUuids.length === 0) {
+      councilFilter = await UserService.buildCouncilActivationFilter(locationFilter);
+      if (councilFilter.userUuid === "__NO_MATCH__") {
         return { total: 0, success: 0, failed: 0 };
       }
-      userUuidFilter = { userUuid: { in: userUuids } };
     }
 
     const toResend = await prisma.accountActivation.findMany({
@@ -594,7 +687,7 @@ class UserService {
           not: null,
           not: "",
         },
-        ...userUuidFilter,
+        ...councilFilter,
       },
       take: batchSize,
       orderBy: {
