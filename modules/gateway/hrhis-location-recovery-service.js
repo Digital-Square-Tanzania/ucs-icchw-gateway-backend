@@ -1,11 +1,13 @@
 import prisma from "../../config/prisma.js";
 import CustomError from "../../utils/custom-error.js";
+import ApiLogger from "../../utils/api-logger.js";
 import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
 import GatewayService from "./gateway-service.js";
 import pLimit from "p-limit";
 
 const MAX_SCAN = 500;
 const MAX_RECOVER = 100;
+const RECOVERY_SOURCE = "hrhis-location-recovery";
 
 class HrhisLocationRecoveryService {
   /**
@@ -66,6 +68,77 @@ class HrhisLocationRecoveryService {
   }
 
   /**
+   * Build a GatewayResponder-shaped success envelope so the Settings chart can
+   * count this recovery as a succeeded/retry row.
+   */
+  static async buildRecoverySuccessEnvelope(req, result) {
+    let responseObject;
+    try {
+      responseObject = await GatewayService.generateHrhisReponseParts(req);
+    } catch {
+      const header = req?.body?.message?.header || {};
+      responseObject = {
+        header: {
+          sender: header.receiver || "UCS",
+          receiver: header.sender || "HRHIS",
+          messageType: "CHW_DEPLOYMENT_RESPONSE",
+          messageId: `recovery-${Date.now()}`,
+          createdAt: new Date().toISOString(),
+        },
+      };
+    }
+
+    responseObject.body = {
+      code: 1,
+      status: "success",
+      message: result?.message || "Recovered via Settings location recovery.",
+    };
+
+    return {
+      message: responseObject,
+      signature: null,
+      recovery: {
+        source: RECOVERY_SOURCE,
+        created: Boolean(result?.created),
+        updated: Boolean(result?.updated),
+      },
+    };
+  }
+
+  /**
+   * Write a chart-compatible success log for the retry, then annotate the
+   * original failure so scanners and the failed-series skip it.
+   */
+  static async recordSuccessfulRecovery(originalLog, mockReq, result) {
+    const statusCode = result?.created === false ? 200 : 201;
+    const envelope = await HrhisLocationRecoveryService.buildRecoverySuccessEnvelope(mockReq, result);
+
+    envelope.recovery.recoveredFromLogId = originalLog.id;
+    envelope.recovery.recoveredFromLogUuid = originalLog.uuid;
+
+    const recoveryLog = await ApiLogger.log(
+      {
+        ...mockReq,
+        url: mockReq.url || "/api/v1/gateway/chw/register",
+        headers: {
+          ...(mockReq.headers || {}),
+          "x-ucs-recovery-source": RECOVERY_SOURCE,
+        },
+      },
+      { statusCode, body: envelope }
+    );
+
+    if (recoveryLog?.id) {
+      await ApiLogger.annotateRecovered(originalLog.id, {
+        recoveredByLogId: recoveryLog.id,
+        recoveredByLogUuid: recoveryLog.uuid,
+      });
+    }
+
+    return recoveryLog;
+  }
+
+  /**
    * Scan api_logs for failed /chw/register attempts caused by location resolution,
    * scoped to the selected council. Excludes NINs that later registered successfully.
    */
@@ -100,7 +173,9 @@ class HrhisLocationRecoveryService {
             ''
           ) AS err_msg,
           LOWER(COALESCE(response->'body'->'message'->'body'->>'status', '')) AS outcome,
-          COALESCE(NULLIF(response->>'status', '')::int, 0) AS http_status
+          COALESCE(NULLIF(response->>'status', '')::int, 0) AS http_status,
+          COALESCE(response->'body'->'recovery'->>'source', '') AS recovery_source,
+          response->>'recoveredAt' AS recovered_at
         FROM api_logs
         WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
           AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
@@ -113,6 +188,7 @@ class HrhisLocationRecoveryService {
           AND (
             outcome = 'success'
             OR (outcome NOT IN ('success', 'fail') AND http_status >= 200 AND http_status < 400)
+            OR recovery_source = ${RECOVERY_SOURCE}
           )
       )
       SELECT
@@ -128,6 +204,8 @@ class HrhisLocationRecoveryService {
       FROM register_logs f
       LEFT JOIN succeeded_nins s ON s.nin = f.nin
       WHERE s.nin IS NULL
+        AND f.recovered_at IS NULL
+        AND COALESCE(f.recovery_source, '') <> ${RECOVERY_SOURCE}
         AND f.location_code IS NOT NULL
         AND f.location_code <> ''
         AND (f.outcome = 'fail' OR f.http_status >= 400)
@@ -255,6 +333,11 @@ class HrhisLocationRecoveryService {
 
           try {
             const result = await GatewayService.registerChwFromHrhis(mockReq, {}, () => {});
+            const recoveryLog = await HrhisLocationRecoveryService.recordSuccessfulRecovery(
+              log,
+              mockReq,
+              result
+            );
             return {
               id: target.id,
               NIN: target.NIN,
@@ -262,6 +345,7 @@ class HrhisLocationRecoveryService {
               message: result?.message || "Recovered",
               created: Boolean(result?.created),
               updated: Boolean(result?.updated),
+              recoveryLogId: recoveryLog?.id ?? null,
             };
           } catch (error) {
             return {

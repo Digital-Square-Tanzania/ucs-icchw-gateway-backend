@@ -208,12 +208,14 @@ class DashboardRepository {
    * Daily HRHIS register traffic for Settings charts — entirely from api_logs.
    * Uses GatewayResponder rows for /chw/register (response.body.message.body envelope)
    * so each HTTP attempt is counted once:
-   * - incoming: all such rows
-   * - succeeded: envelope status = success (HTTP 2xx create or update-as-register)
-   * - failed: envelope status = fail or HTTP >= 400
+   * - incoming: live HRHIS traffic (excludes Settings recovery retries)
+   * - succeeded: live successes (excludes recovery retries)
+   * - failed: open failures (excludes rows later annotated as recovered)
+   * - recovered: Settings location-recovery success retries
    */
   static async getHrhisRegisterTimeseries(days = 30) {
     const dayCount = Math.min(90, Math.max(7, Number.parseInt(String(days), 10) || 30));
+    const recoverySource = "hrhis-location-recovery";
 
     const rows = await prisma.$queryRaw`
       WITH days AS (
@@ -227,7 +229,9 @@ class DashboardRepository {
         SELECT
           ("createdAt")::date AS day,
           LOWER(COALESCE(response->'body'->'message'->'body'->>'status', '')) AS outcome,
-          COALESCE(NULLIF(response->>'status', '')::int, 0) AS http_status
+          COALESCE(NULLIF(response->>'status', '')::int, 0) AS http_status,
+          COALESCE(response->'body'->'recovery'->>'source', '') AS recovery_source,
+          response->>'recoveredAt' AS recovered_at
         FROM api_logs
         WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
           AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
@@ -236,14 +240,25 @@ class DashboardRepository {
       daily AS (
         SELECT
           day,
-          COUNT(*)::int AS incoming,
           COUNT(*) FILTER (
-            WHERE outcome = 'fail' OR http_status >= 400
+            WHERE recovery_source <> ${recoverySource}
+          )::int AS incoming,
+          COUNT(*) FILTER (
+            WHERE recovery_source <> ${recoverySource}
+              AND (outcome = 'fail' OR http_status >= 400)
+              AND recovered_at IS NULL
           )::int AS failed,
           COUNT(*) FILTER (
-            WHERE outcome = 'success'
-               OR (outcome NOT IN ('success', 'fail') AND http_status >= 200 AND http_status < 400)
-          )::int AS succeeded
+            WHERE recovery_source <> ${recoverySource}
+              AND (
+                outcome = 'success'
+                OR (outcome NOT IN ('success', 'fail') AND http_status >= 200 AND http_status < 400)
+              )
+          )::int AS succeeded,
+          COUNT(*) FILTER (
+            WHERE recovery_source = ${recoverySource}
+              AND outcome = 'success'
+          )::int AS recovered
         FROM register_logs
         GROUP BY day
       )
@@ -251,7 +266,8 @@ class DashboardRepository {
         to_char(d.day, 'YYYY-MM-DD') AS day,
         COALESCE(r.incoming, 0)::int AS incoming,
         COALESCE(r.succeeded, 0)::int AS succeeded,
-        COALESCE(r.failed, 0)::int AS failed
+        COALESCE(r.failed, 0)::int AS failed,
+        COALESCE(r.recovered, 0)::int AS recovered
       FROM days d
       LEFT JOIN daily r ON r.day = d.day
       ORDER BY d.day ASC
@@ -262,6 +278,7 @@ class DashboardRepository {
       incoming: Number(row.incoming) || 0,
       succeeded: Number(row.succeeded) || 0,
       failed: Number(row.failed) || 0,
+      recovered: Number(row.recovered) || 0,
     }));
 
     const totals = buckets.reduce(
@@ -269,9 +286,10 @@ class DashboardRepository {
         acc.incoming += b.incoming;
         acc.succeeded += b.succeeded;
         acc.failed += b.failed;
+        acc.recovered += b.recovered;
         return acc;
       },
-      { incoming: 0, succeeded: 0, failed: 0 }
+      { incoming: 0, succeeded: 0, failed: 0, recovered: 0 }
     );
 
     return { days: dayCount, buckets, totals };
