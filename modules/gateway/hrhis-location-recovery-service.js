@@ -2,6 +2,7 @@ import prisma from "../../config/prisma.js";
 import CustomError from "../../utils/custom-error.js";
 import ApiLogger from "../../utils/api-logger.js";
 import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
+import OpenMRSLocationService from "../openmrs/location/openmrs-location-service.js";
 import GatewayService from "./gateway-service.js";
 import pLimit from "p-limit";
 
@@ -75,14 +76,34 @@ class HrhisLocationRecoveryService {
       ...underCouncilCodes,
     ]);
 
-    if (prefixes.length === 0) {
+    if (prefixes.length > 0) {
+      return prefixes;
+    }
+
+    // Postgres often has the council UUID in the hierarchy view but no Code values
+    // under it (council itself may lack a Code attribute; descendant villages may
+    // be missing from the hierarchy view even after a full location sync). Fall
+    // back to OpenMRS MySQL and walk the live parent/child tree.
+    console.warn(
+      `⚠️ No location_code values in Postgres for council '${council}'. ` +
+        `Deriving prefixes from OpenMRS MySQL under ${councilUuids.length} council uuid(s)…`
+    );
+    const mysqlCodes = await OpenMRSLocationService.getCodesUnderLocationUuidsFromMysql(councilUuids);
+    const mysqlPrefixes = HrhisLocationRecoveryService.deriveCouncilPrefixesFromCodes(mysqlCodes);
+
+    if (mysqlPrefixes.length === 0) {
       throw new CustomError(
-        `Council '${council}' has no location codes in Postgres to derive a prefix. Sync OpenMRS locations (and refresh the hierarchy view) first.`,
+        `Council '${council}' has no location Code attributes in Postgres or OpenMRS MySQL ` +
+          `under uuid(s): ${councilUuids.join(", ")}. Check OpenMRS location attributes for this council.`,
         404
       );
     }
 
-    return prefixes;
+    console.log(
+      `ℹ️ Derived ${mysqlPrefixes.length} council prefix(es) from MySQL for '${council}': ` +
+        mysqlPrefixes.join(", ")
+    );
+    return mysqlPrefixes;
   }
 
   static locationCodeMatchesPrefixes(locationCode, prefixes) {
