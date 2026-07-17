@@ -109,31 +109,6 @@ const LOCATION_BY_ID_SQL = `
   LIMIT 1
 `;
 
-// All non-voided "Code" attributes on a location and its descendants (by uuid).
-// Used when Postgres openmrs_location.location_code is empty for a council tree
-// (common when the council itself has no Code attr and hierarchy links are incomplete).
-const CODES_UNDER_LOCATION_UUID_SQL = `
-  WITH RECURSIVE subtree AS (
-    SELECT l.location_id
-    FROM location l
-    WHERE l.uuid = ?
-      AND COALESCE(l.retired, 0) = 0
-    UNION ALL
-    SELECT child.location_id
-    FROM location child
-    INNER JOIN subtree parent ON child.parent_location = parent.location_id
-    WHERE COALESCE(child.retired, 0) = 0
-  )
-  SELECT DISTINCT TRIM(la.value_reference) AS code
-  FROM subtree s
-  INNER JOIN location_attribute la
-    ON la.location_id = s.location_id AND COALESCE(la.voided, 0) = 0
-  INNER JOIN location_attribute_type lat
-    ON lat.location_attribute_type_id = la.attribute_type_id
-    AND LOWER(TRIM(lat.name)) = 'code'
-  WHERE TRIM(la.value_reference) <> ''
-`;
-
 // Preference order for local `type` (later wins), matching full sync + municipal aliases.
 const TYPE_TAG_PREFERENCE = [
   "Country",
@@ -343,8 +318,10 @@ class OpenMRSLocationService {
 
   /**
    * Collect OpenMRS "Code" attribute values for a location and all descendants.
-   * Used by HRHIS recovery when Postgres has the council UUID but no location_code
-   * values under that council (hierarchy incomplete or Code not mirrored locally).
+   * Used by HRHIS recovery / activation filters when Postgres has the council UUID
+   * but no location_code values under that council.
+   *
+   * Walks the tree iteratively (MySQL 5.7 compatible — no WITH RECURSIVE).
    */
   static async getCodesUnderLocationUuidsFromMysql(uuids) {
     const unique = [...new Set((uuids || []).map((u) => String(u || "").trim()).filter(Boolean))];
@@ -355,15 +332,53 @@ class OpenMRSLocationService {
       connection = await mysqlClient.getConnection();
       await connection.query("USE openmrs");
 
-      const codes = new Set();
+      const allLocationIds = new Set();
+
       for (const uuid of unique) {
-        const [rows] = await connection.query(CODES_UNDER_LOCATION_UUID_SQL, [uuid]);
-        for (const row of rows || []) {
-          const code = String(row.code || "").trim();
-          if (code) codes.add(code);
+        const [roots] = await connection.query(
+          `SELECT location_id FROM location WHERE uuid = ? AND COALESCE(retired, 0) = 0`,
+          [uuid]
+        );
+        if (!roots?.length) continue;
+
+        let frontier = roots.map((r) => Number(r.location_id)).filter(Number.isFinite);
+        for (const id of frontier) allLocationIds.add(id);
+
+        for (let depth = 0; depth < 8 && frontier.length > 0; depth++) {
+          const placeholders = frontier.map(() => "?").join(",");
+          const [children] = await connection.query(
+            `SELECT location_id FROM location
+             WHERE parent_location IN (${placeholders}) AND COALESCE(retired, 0) = 0`,
+            frontier
+          );
+          const next = [];
+          for (const row of children || []) {
+            const id = Number(row.location_id);
+            if (!Number.isFinite(id) || allLocationIds.has(id)) continue;
+            allLocationIds.add(id);
+            next.push(id);
+          }
+          frontier = next;
         }
       }
-      return [...codes];
+
+      if (allLocationIds.size === 0) return [];
+
+      const ids = [...allLocationIds];
+      const placeholders = ids.map(() => "?").join(",");
+      const [codeRows] = await connection.query(
+        `SELECT DISTINCT TRIM(la.value_reference) AS code
+         FROM location_attribute la
+         INNER JOIN location_attribute_type lat
+           ON lat.location_attribute_type_id = la.attribute_type_id
+           AND LOWER(TRIM(lat.name)) = 'code'
+         WHERE la.location_id IN (${placeholders})
+           AND COALESCE(la.voided, 0) = 0
+           AND TRIM(la.value_reference) <> ''`,
+        ids
+      );
+
+      return [...new Set((codeRows || []).map((r) => String(r.code || "").trim()).filter(Boolean))];
     } catch (error) {
       console.error("❌ MySQL getCodesUnderLocationUuidsFromMysql failed:", error.message);
       return [];
