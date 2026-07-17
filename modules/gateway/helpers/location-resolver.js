@@ -1,4 +1,5 @@
 import OpenMRSLocationRepository from "../../openmrs/location/openmrs-location-repository.js";
+import OpenMRSLocationService from "../../openmrs/location/openmrs-location-service.js";
 import ApiError from "../../../utils/api-error.js";
 
 /**
@@ -139,7 +140,7 @@ class LocationResolver {
       throw new ApiError("Missing or empty locationCode.", 422, 4);
     }
 
-    const location = await OpenMRSLocationRepository.getLocationByCode(normalized);
+    const location = await LocationResolver.getLocationByCodeWithMysqlFallback(normalized);
     if (!location || !location.uuid) {
       throw new ApiError(
         `Invalid locationCode: no location found for code '${normalized}'.`,
@@ -212,8 +213,20 @@ class LocationResolver {
     );
   }
 
+  /**
+   * Postgres-first lookup. On miss, query OpenMRS MySQL for the Code attribute,
+   * upsert the location (and ancestors) locally, then retry.
+   */
+  static async getLocationByCodeWithMysqlFallback(code) {
+    let location = await OpenMRSLocationRepository.getLocationByCode(code);
+    if (location?.uuid) return location;
+
+    location = await OpenMRSLocationService.ensureLocationByCodeFromMysql(code);
+    return location;
+  }
+
   static async findByCodeOrThrow(code, operationalLevel, originalCode) {
-    const location = await OpenMRSLocationRepository.getLocationByCode(code);
+    const location = await LocationResolver.getLocationByCodeWithMysqlFallback(code);
     if (!location || !location.uuid) {
       const derivedNote = code === originalCode ? "" : ` (derived from '${originalCode}')`;
       throw new ApiError(

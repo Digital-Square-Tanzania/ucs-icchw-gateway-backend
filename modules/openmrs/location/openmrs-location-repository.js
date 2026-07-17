@@ -292,6 +292,67 @@ class OpenMRSLocationRepository {
     });
   }
 
+  /**
+   * Upsert a single mirrored OpenMRS location row by uuid.
+   * Used by on-demand MySQL fallback when registration hits a missing code.
+   */
+  static async upsertLocationRow(row) {
+    if (!row?.uuid) {
+      throw new CustomError("Cannot upsert location without uuid.");
+    }
+
+    const createData = {
+      locationId: row.locationId,
+      name: row.name || "",
+      description: row.description || null,
+      latitude: row.latitude != null ? String(row.latitude) : null,
+      longitude: row.longitude != null ? String(row.longitude) : null,
+      retired: Boolean(row.retired),
+      uuid: row.uuid,
+      parent: row.parent || null,
+      type: row.type || null,
+      hfrCode: row.hfrCode || null,
+      locationCode: row.locationCode || null,
+      createdAt: row.createdAt || new Date(),
+    };
+
+    const updateData = {
+      name: createData.name,
+      description: createData.description,
+      latitude: createData.latitude,
+      longitude: createData.longitude,
+      retired: createData.retired,
+      parent: createData.parent,
+      type: createData.type,
+      hfrCode: createData.hfrCode,
+      locationCode: createData.locationCode,
+    };
+
+    try {
+      return await prisma.openMRSLocation.upsert({
+        where: { uuid: row.uuid },
+        create: createData,
+        update: updateData,
+      });
+    } catch (error) {
+      // locationId is the PK; if OpenMRS id collides with an existing local row
+      // that has a different uuid, fall back to update-by-uuid or create without
+      // forcing the OpenMRS id.
+      if (String(error?.code) === "P2002") {
+        const existing = await prisma.openMRSLocation.findUnique({ where: { uuid: row.uuid } });
+        if (existing) {
+          return prisma.openMRSLocation.update({
+            where: { uuid: row.uuid },
+            data: updateData,
+          });
+        }
+        const { locationId: _omit, ...withoutId } = createData;
+        return prisma.openMRSLocation.create({ data: withoutId });
+      }
+      throw new CustomError(`Failed to upsert location ${row.uuid}: ${error.message}`);
+    }
+  }
+
   // Search for facilities by name allowing variations like Facility, Favility, facility, etc.
   static async searchFacilities(name) {
     return prisma.openMRSLocation.findMany({

@@ -1,4 +1,5 @@
 import GatewayService from "./gateway-service.js";
+import HrhisLocationRecoveryService from "./hrhis-location-recovery-service.js";
 import GatewayResponder from "../../responders/gateway-responder.js";
 import FfarsResponder from "../../responders/ffars-responder.js";
 import CustomError from "../../utils/custom-error.js";
@@ -107,6 +108,53 @@ class GatewayController {
       }
       const signature = await GatewayService.signMessage(message);
       return BaseResponse.success(res, "Message signed successfully", { signature });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Scan api_logs for location-related /chw/register failures in a council.
+   * Query: region, district, council, days (optional, default 90).
+   */
+  static async scanHrhisLocationFailures(req, res, next) {
+    try {
+      const { region, district, council, days } = req.query;
+      const data = await HrhisLocationRecoveryService.scanLocationFailures({
+        region,
+        district,
+        council,
+        days,
+      });
+      return BaseResponse.success(
+        res,
+        `Found ${data.count} recoverable location failure(s) for ${data.council}.`,
+        data
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Reprocess stored location-failure register payloads for a council.
+   * Body: { region, district, council, logIds?, days? }
+   */
+  static async recoverHrhisLocationFailures(req, res, next) {
+    try {
+      const { region, district, council, logIds, days } = req.body || {};
+      const data = await HrhisLocationRecoveryService.recoverLocationFailures({
+        region,
+        district,
+        council,
+        logIds,
+        days,
+      });
+      return BaseResponse.success(
+        res,
+        `Recovery finished: ${data.recovered} recovered, ${data.stillFailed} still failed, ${data.skipped} skipped.`,
+        data
+      );
     } catch (error) {
       next(error);
     }

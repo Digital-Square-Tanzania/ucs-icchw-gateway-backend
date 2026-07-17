@@ -39,6 +39,92 @@ const LOCATIONS_BY_TAG_SQL = `
   ORDER BY l.name
 `;
 
+// On-demand lookup by the OpenMRS "Code" attribute (used when Postgres is stale).
+// Includes tag names so we can set the local `type` the same way the full sync does.
+const LOCATION_BY_CODE_SQL = `
+  SELECT
+    l.location_id AS location_id,
+    l.uuid AS uuid,
+    l.name AS name,
+    l.description AS description,
+    l.latitude AS latitude,
+    l.longitude AS longitude,
+    COALESCE(l.retired, 0) AS retired,
+    l.date_created AS date_created,
+    l.parent_location AS parent_location_id,
+    parent.uuid AS parent_uuid,
+    MAX(CASE WHEN LOWER(TRIM(lat.name)) = 'hfr code' THEN TRIM(la.value_reference) END) AS hfr_code,
+    MAX(CASE WHEN LOWER(TRIM(code_lat.name)) = 'code' THEN TRIM(code_la.value_reference) END) AS code,
+    GROUP_CONCAT(DISTINCT TRIM(lt.name) ORDER BY lt.name SEPARATOR ',') AS tag_names
+  FROM location l
+  INNER JOIN location_attribute code_la
+    ON code_la.location_id = l.location_id AND COALESCE(code_la.voided, 0) = 0
+  INNER JOIN location_attribute_type code_lat
+    ON code_lat.location_attribute_type_id = code_la.attribute_type_id
+    AND LOWER(TRIM(code_lat.name)) = 'code'
+    AND TRIM(code_la.value_reference) = ?
+  LEFT JOIN location parent ON parent.location_id = l.parent_location
+  LEFT JOIN location_attribute la
+    ON la.location_id = l.location_id AND COALESCE(la.voided, 0) = 0
+  LEFT JOIN location_attribute_type lat
+    ON lat.location_attribute_type_id = la.attribute_type_id
+  LEFT JOIN location_tag_map ltm ON ltm.location_id = l.location_id
+  LEFT JOIN location_tag lt
+    ON lt.location_tag_id = ltm.location_tag_id AND COALESCE(lt.retired, 0) = 0
+  WHERE COALESCE(l.retired, 0) = 0
+  GROUP BY
+    l.location_id, l.uuid, l.name, l.description, l.latitude, l.longitude,
+    l.retired, l.date_created, l.parent_location, parent.uuid
+  LIMIT 1
+`;
+
+const LOCATION_BY_ID_SQL = `
+  SELECT
+    l.location_id AS location_id,
+    l.uuid AS uuid,
+    l.name AS name,
+    l.description AS description,
+    l.latitude AS latitude,
+    l.longitude AS longitude,
+    COALESCE(l.retired, 0) AS retired,
+    l.date_created AS date_created,
+    l.parent_location AS parent_location_id,
+    parent.uuid AS parent_uuid,
+    MAX(CASE WHEN LOWER(TRIM(lat.name)) = 'hfr code' THEN TRIM(la.value_reference) END) AS hfr_code,
+    MAX(CASE WHEN LOWER(TRIM(lat.name)) = 'code' THEN TRIM(la.value_reference) END) AS code,
+    GROUP_CONCAT(DISTINCT TRIM(lt.name) ORDER BY lt.name SEPARATOR ',') AS tag_names
+  FROM location l
+  LEFT JOIN location parent ON parent.location_id = l.parent_location
+  LEFT JOIN location_attribute la
+    ON la.location_id = l.location_id AND COALESCE(la.voided, 0) = 0
+  LEFT JOIN location_attribute_type lat
+    ON lat.location_attribute_type_id = la.attribute_type_id
+  LEFT JOIN location_tag_map ltm ON ltm.location_id = l.location_id
+  LEFT JOIN location_tag lt
+    ON lt.location_tag_id = ltm.location_tag_id AND COALESCE(lt.retired, 0) = 0
+  WHERE l.location_id = ? AND COALESCE(l.retired, 0) = 0
+  GROUP BY
+    l.location_id, l.uuid, l.name, l.description, l.latitude, l.longitude,
+    l.retired, l.date_created, l.parent_location, parent.uuid
+  LIMIT 1
+`;
+
+// Preference order for local `type` (later wins), matching full sync + municipal aliases.
+const TYPE_TAG_PREFERENCE = [
+  "Country",
+  "Zone",
+  "Region",
+  "District",
+  "Council",
+  "Ward",
+  "Village",
+  "Mtaa",
+  "Mitaa",
+  "Street",
+  "Hamlet",
+  "Facility",
+];
+
 class OpenMRSLocationService {
   // Get all locations with pagination
   static async getAllLocations(page = 1, limit = 10) {
@@ -140,6 +226,94 @@ class OpenMRSLocationService {
   // Refresh the materialized view
   static async refreshLocationHierarchyView() {
     return await OpenMRSLocationRepository.refreshLocationHierarchyView();
+  }
+
+  /** Pick the most specific geographic tag from a comma-separated MySQL tag list. */
+  static pickTypeFromTagNames(tagNames) {
+    const tags = String(tagNames || "")
+      .split(",")
+      .map((t) => t.trim())
+      .filter(Boolean);
+    if (tags.length === 0) return null;
+
+    let chosen = null;
+    for (const preferred of TYPE_TAG_PREFERENCE) {
+      const match = tags.find((t) => t.toLowerCase() === preferred.toLowerCase());
+      if (match) chosen = match;
+    }
+    return chosen || tags[0];
+  }
+
+  static mapMysqlLocationRow(row) {
+    return {
+      locationId: Number(row.location_id),
+      name: row.name || "",
+      description: row.description || null,
+      latitude: row.latitude != null ? String(row.latitude) : null,
+      longitude: row.longitude != null ? String(row.longitude) : null,
+      retired: Boolean(Number(row.retired)),
+      uuid: row.uuid,
+      parent: row.parent_uuid || null,
+      type: OpenMRSLocationService.pickTypeFromTagNames(row.tag_names),
+      hfrCode: row.hfr_code || null,
+      locationCode: row.code || null,
+      createdAt: row.date_created ? new Date(row.date_created) : new Date(),
+      parentLocationId: row.parent_location_id != null ? Number(row.parent_location_id) : null,
+    };
+  }
+
+  /**
+   * When Postgres has no row for a location code, look it up in OpenMRS MySQL
+   * (same server), upsert the location and its ancestors into openmrs_location,
+   * then return the local row. Returns null if MySQL also has no match.
+   */
+  static async ensureLocationByCodeFromMysql(locationCode) {
+    const code = String(locationCode || "").trim();
+    if (!code) return null;
+
+    let connection;
+    try {
+      connection = await mysqlClient.getConnection();
+      await connection.query("USE openmrs");
+
+      const [byCodeRows] = await connection.query(LOCATION_BY_CODE_SQL, [code]);
+      if (!byCodeRows?.length || !byCodeRows[0].uuid) {
+        return null;
+      }
+
+      const chain = [];
+      let current = OpenMRSLocationService.mapMysqlLocationRow(byCodeRows[0]);
+      const seen = new Set();
+
+      while (current?.uuid && !seen.has(current.uuid)) {
+        seen.add(current.uuid);
+        chain.push(current);
+
+        if (!current.parentLocationId) break;
+
+        const [parentRows] = await connection.query(LOCATION_BY_ID_SQL, [current.parentLocationId]);
+        if (!parentRows?.length || !parentRows[0].uuid) break;
+        current = OpenMRSLocationService.mapMysqlLocationRow(parentRows[0]);
+      }
+
+      // Upsert root → leaf so parent uuids exist before children reference them.
+      for (const row of chain.reverse()) {
+        const { parentLocationId: _parentId, ...payload } = row;
+        await OpenMRSLocationRepository.upsertLocationRow(payload);
+      }
+
+      console.log(
+        `ℹ️ Self-healed location code '${code}' from OpenMRS MySQL ` +
+          `(${chain.length} location(s) upserted).`
+      );
+
+      return await OpenMRSLocationRepository.getLocationByCode(code);
+    } catch (error) {
+      console.error(`❌ MySQL location fallback failed for code '${code}':`, error.message);
+      return null;
+    } finally {
+      if (connection) connection.release();
+    }
   }
 
   // Sync OpenMRS Locations.
