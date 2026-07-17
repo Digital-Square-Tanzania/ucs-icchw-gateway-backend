@@ -1,10 +1,12 @@
 import prisma from "../../config/prisma.js";
 import CustomError from "../../utils/custom-error.js";
 import ApiLogger from "../../utils/api-logger.js";
+import WebSocketService from "../../utils/websocket-service.js";
 import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repository.js";
 import OpenMRSLocationService from "../openmrs/location/openmrs-location-service.js";
 import GatewayService from "./gateway-service.js";
 import pLimit from "p-limit";
+import { randomUUID } from "crypto";
 
 const MAX_SCAN = 500;
 const MAX_RECOVER = 100;
@@ -312,8 +314,10 @@ class HrhisLocationRecoveryService {
 
   /**
    * Re-run stored /chw/register payloads for eligible location failures.
+   * @param {object} options
+   * @param {(event: object) => void} [options.onProgress] optional progress callback
    */
-  static async recoverLocationFailures({ region, district, council, logIds, days = 90 } = {}) {
+  static async recoverLocationFailures({ region, district, council, logIds, days = 90, onProgress } = {}) {
     const scan = await HrhisLocationRecoveryService.scanLocationFailures({
       region,
       district,
@@ -329,8 +333,16 @@ class HrhisLocationRecoveryService {
 
     targets = targets.slice(0, MAX_RECOVER);
 
+    const emit = (event) => {
+      try {
+        onProgress?.(event);
+      } catch (err) {
+        console.warn("⚠️ Recovery onProgress callback failed:", err.message);
+      }
+    };
+
     if (targets.length === 0) {
-      return {
+      const empty = {
         region: scan.region,
         district: scan.district,
         council: scan.council,
@@ -341,6 +353,8 @@ class HrhisLocationRecoveryService {
         stillFailed: 0,
         results: [],
       };
+      emit({ type: "complete", ...empty });
+      return empty;
     }
 
     const logs = await prisma.apiLog.findMany({
@@ -348,29 +362,72 @@ class HrhisLocationRecoveryService {
     });
     const logById = new Map(logs.map((l) => [l.id, l]));
 
-    const limit = pLimit(Number(process.env.P_LIMIT_CONCURRENCY) || 3);
+    const total = targets.length;
+    let completed = 0;
+    let recovered = 0;
+    let skipped = 0;
+    let stillFailed = 0;
+
+    emit({
+      type: "started",
+      region: scan.region,
+      district: scan.district,
+      council: scan.council,
+      total,
+      completed: 0,
+      recovered: 0,
+      skipped: 0,
+      stillFailed: 0,
+    });
+
+    // Keep recovery concurrency modest — OpenMRS + SMTP share the same host.
+    const limit = pLimit(Number(process.env.HRHIS_RECOVERY_CONCURRENCY) || 2);
     const results = await Promise.all(
       targets.map((target) =>
         limit(async () => {
           const log = logById.get(target.id);
           if (!log) {
-            return {
+            const row = {
               id: target.id,
               NIN: target.NIN,
               status: "skipped",
               message: "api_log row not found",
             };
+            skipped += 1;
+            completed += 1;
+            emit({
+              type: "progress",
+              total,
+              completed,
+              recovered,
+              skipped,
+              stillFailed,
+              current: row,
+            });
+            return row;
           }
 
           const request = log.request || {};
           const body = request.body;
           if (!body?.message?.body) {
-            return {
+            const row = {
               id: target.id,
               NIN: target.NIN,
               status: "skipped",
               message: "Stored request body is missing message.body",
             };
+            skipped += 1;
+            completed += 1;
+            emit({
+              type: "progress",
+              total,
+              completed,
+              recovered,
+              skipped,
+              stillFailed,
+              current: row,
+            });
+            return row;
           }
 
           const mockReq = {
@@ -382,8 +439,10 @@ class HrhisLocationRecoveryService {
             headers: {},
             signature: null,
             ip: "hrhis-location-recovery",
+            hrhisRecovery: true,
           };
 
+          let row;
           try {
             const result = await GatewayService.registerChwFromHrhis(mockReq, {}, () => {});
             const recoveryLog = await HrhisLocationRecoveryService.recordSuccessfulRecovery(
@@ -391,7 +450,7 @@ class HrhisLocationRecoveryService {
               mockReq,
               result
             );
-            return {
+            row = {
               id: target.id,
               NIN: target.NIN,
               status: "recovered",
@@ -400,23 +459,33 @@ class HrhisLocationRecoveryService {
               updated: Boolean(result?.updated),
               recoveryLogId: recoveryLog?.id ?? null,
             };
+            recovered += 1;
           } catch (error) {
-            return {
+            row = {
               id: target.id,
               NIN: target.NIN,
               status: "still_failed",
               message: error?.message || String(error),
             };
+            stillFailed += 1;
           }
+
+          completed += 1;
+          emit({
+            type: "progress",
+            total,
+            completed,
+            recovered,
+            skipped,
+            stillFailed,
+            current: row,
+          });
+          return row;
         })
       )
     );
 
-    const recovered = results.filter((r) => r.status === "recovered").length;
-    const skipped = results.filter((r) => r.status === "skipped").length;
-    const stillFailed = results.filter((r) => r.status === "still_failed").length;
-
-    return {
+    const summary = {
       region: scan.region,
       district: scan.district,
       council: scan.council,
@@ -427,6 +496,57 @@ class HrhisLocationRecoveryService {
       stillFailed,
       results,
     };
+    emit({ type: "complete", ...summary });
+    return summary;
+  }
+
+  /**
+   * Start a background recovery job and stream progress over WebSocket.
+   * Returns immediately so reverse proxies do not 504 on long batches.
+   */
+  static startRecoverLocationFailuresAsync(params) {
+    const jobId = randomUUID();
+    const broadcast = (payload) => {
+      const { type: phase, ...rest } = payload;
+      WebSocketService.broadcast({
+        ...rest,
+        jobId,
+        path: "hrhis-location-recovery",
+        timestamp: new Date().toISOString(),
+        type: phase === "complete" ? "hrhis-recovery-complete" : "hrhis-recovery-progress",
+        phase,
+      });
+    };
+
+    setImmediate(() => {
+      HrhisLocationRecoveryService.recoverLocationFailures({
+        ...params,
+        onProgress: broadcast,
+      })
+        .then((summary) => {
+          console.log(
+            `✅ HRHIS recovery job ${jobId} finished: ${summary.recovered} recovered, ` +
+              `${summary.stillFailed} still failed, ${summary.skipped} skipped.`
+          );
+        })
+        .catch((error) => {
+          console.error(`❌ HRHIS recovery job ${jobId} failed:`, error.message);
+          WebSocketService.broadcast({
+            type: "hrhis-recovery-complete",
+            jobId,
+            path: "hrhis-location-recovery",
+            timestamp: new Date().toISOString(),
+            status: "error",
+            message: error.message,
+            recovered: 0,
+            stillFailed: 0,
+            skipped: 0,
+            attempted: 0,
+          });
+        });
+    });
+
+    return { started: true, jobId };
   }
 }
 

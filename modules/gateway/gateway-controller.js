@@ -138,16 +138,37 @@ class GatewayController {
 
   /**
    * Reprocess stored location-failure register payloads for a council.
-   * Body: { region, district, council, logIds?, days? }
+   * Body: { region, district, council, logIds?, days?, async? }
+   * Bulk recoveries (more than one log, or async:true) run in the background and
+   * stream progress over WebSocket to avoid proxy 504 timeouts.
    */
   static async recoverHrhisLocationFailures(req, res, next) {
     try {
-      const { region, district, council, logIds, days } = req.body || {};
+      const { region, district, council, logIds, days, async: asyncFlag } = req.body || {};
+      const ids = Array.isArray(logIds) ? logIds : [];
+      const runAsync = asyncFlag === true || asyncFlag === "true" || ids.length !== 1;
+
+      if (runAsync) {
+        const started = HrhisLocationRecoveryService.startRecoverLocationFailuresAsync({
+          region,
+          district,
+          council,
+          logIds: ids.length ? ids : undefined,
+          days,
+        });
+        return BaseResponse.success(
+          res,
+          "HRHIS location recovery started. Progress will be sent over WebSocket.",
+          started,
+          202
+        );
+      }
+
       const data = await HrhisLocationRecoveryService.recoverLocationFailures({
         region,
         district,
         council,
-        logIds,
+        logIds: ids,
         days,
       });
       return BaseResponse.success(
