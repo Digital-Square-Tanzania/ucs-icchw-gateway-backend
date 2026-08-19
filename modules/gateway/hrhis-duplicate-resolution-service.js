@@ -5,10 +5,13 @@ import GatewayService from "./gateway-service.js";
 import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-repository.js";
 import HrhisLocationRecoveryService from "./hrhis-location-recovery-service.js";
 import openmrsApiClient from "../../utils/openmrs-api-client.js";
+import LocationResolver from "./helpers/location-resolver.js";
 
 const RECOVERY_SOURCE = "hrhis-location-recovery";
 const RESOLUTION_SOURCE = "hrhis-duplicate-resolution";
-const MERGEABLE_FIELDS = ["firstName", "middleName", "lastName", "sex", "email", "phoneNumber"];
+const DEMOGRAPHIC_MERGE_FIELDS = ["firstName", "middleName", "lastName", "sex", "email", "phoneNumber"];
+const LOCATION_MERGE_FIELDS = ["locationCode", "locationType"];
+const MERGEABLE_FIELDS = [...DEMOGRAPHIC_MERGE_FIELDS, ...LOCATION_MERGE_FIELDS];
 const LOG_PREFIX = "[HRHIS duplicate resolution]";
 
 function logResolutionEvent(level, message, meta = {}) {
@@ -75,25 +78,83 @@ function buildRegisteredSnapshot(teamMember, openMrsGender = null, locationField
     hfrCode: locationFields?.hfrCode ?? null,
     locationCode: locationFields?.locationCode ?? null,
     locationType: locationFields?.locationType ?? null,
+    assignmentLocationUuid: locationFields?.assignmentLocationUuid ?? null,
     updatedAt: teamMember.updatedAt,
   };
 }
 
 async function loadRegisteredLocationFields(teamMember) {
-  if (!teamMember?.locationUuid) return null;
-  const location = await prisma.openMRSLocation.findUnique({
-    where: { uuid: teamMember.locationUuid },
-    select: { hfrCode: true, locationCode: true, type: true },
-  });
-  if (!location) return null;
+  if (!teamMember?.openMrsUuid) return null;
+
+  let facility = null;
+  if (teamMember.locationUuid) {
+    facility = await prisma.openMRSLocation.findUnique({
+      where: { uuid: teamMember.locationUuid },
+      select: { hfrCode: true, locationCode: true, type: true },
+    });
+  }
+
+  let assignmentUuid = null;
+  try {
+    const teamMemberLive = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, {
+      v: "custom:(uuid,locations:(uuid))",
+    });
+    assignmentUuid = teamMemberLive?.locations?.[0]?.uuid || null;
+  } catch {
+    assignmentUuid = null;
+  }
+
+  let assignment = null;
+  if (assignmentUuid) {
+    assignment = await prisma.openMRSLocation.findUnique({
+      where: { uuid: assignmentUuid },
+      select: { locationCode: true, type: true },
+    });
+  }
+
+  if (!facility && !assignment) return null;
+
   return {
-    hfrCode: location.hfrCode || null,
-    locationCode: location.locationCode || null,
-    locationType: location.type || null,
+    hfrCode: facility?.hfrCode || null,
+    locationCode: assignment?.locationCode || facility?.locationCode || null,
+    locationType: assignment?.type || facility?.type || null,
+    assignmentLocationUuid: assignmentUuid,
   };
 }
 
+function sameHfrCode(registered, incoming) {
+  const reg = normalizeCompareValue(registered?.hfrCode);
+  const inc = normalizeCompareValue(incoming?.hfrCode);
+  return reg !== null && inc !== null && reg === inc;
+}
+
+function canonicalLocationType(value) {
+  const normalized = LocationResolver.normalizeLevel(value);
+  if (!normalized) return normalizeCompareValue(value);
+
+  const declaredToLevel = {
+    Ward: "Ward",
+    Village: "Village",
+    Hamlet: "Hamlet",
+    Mtaa: "Village",
+    Street: "Village",
+    Mitaa: "Village",
+  };
+
+  return declaredToLevel[normalized] || normalized;
+}
+
+function locationMergeReviewReason(sameHfr, registered, incoming) {
+  if (sameHfr) return null;
+  if (registered?.hfrCode && incoming?.hfrCode && !sameHfrCode(registered, incoming)) {
+    return "HFR differs — use HRHIS /chw/station for duty station changes.";
+  }
+  return "Location merge requires the same HFR on the submission as the registered facility.";
+}
+
 function computeFieldDiffs(registered, incoming) {
+  const sameHfr = sameHfrCode(registered, incoming);
+  const locationReviewReason = locationMergeReviewReason(sameHfr, registered, incoming);
   const rows = [
     { field: "firstName", registered: registered?.firstName, incoming: incoming?.firstName, mergeable: true },
     { field: "middleName", registered: registered?.middleName, incoming: incoming?.middleName, mergeable: true },
@@ -112,26 +173,31 @@ function computeFieldDiffs(registered, incoming) {
       field: "locationCode",
       registered: registered?.locationCode,
       incoming: incoming?.locationCode,
-      mergeable: false,
-      reviewOnlyReason: "Location is tied to HFR/duty station assignment.",
+      mergeable: sameHfr,
+      reviewOnlyReason: locationReviewReason,
     },
     {
       field: "locationType",
       registered: registered?.locationType,
       incoming: incoming?.locationType,
-      mergeable: false,
-      reviewOnlyReason: "Location type comes from the assigned OpenMRS location.",
+      mergeable: sameHfr,
+      reviewOnlyReason: locationReviewReason,
     },
   ];
 
   return rows.map((row) => {
     const reg = normalizeCompareValue(row.registered);
     const inc = normalizeCompareValue(row.incoming);
+    const differs =
+      row.field === "locationType"
+        ? canonicalLocationType(row.registered) !== canonicalLocationType(row.incoming) &&
+          (reg !== null || inc !== null)
+        : reg !== inc && (reg !== null || inc !== null);
     return {
       field: row.field,
       registered: row.registered ?? null,
       incoming: row.incoming ?? null,
-      differs: reg !== inc && (reg !== null || inc !== null),
+      differs,
       mergeable: row.mergeable,
       reviewOnlyReason: row.reviewOnlyReason || null,
     };
@@ -141,7 +207,7 @@ function computeFieldDiffs(registered, incoming) {
 function buildPartialChwPayload(nin, incoming, mergeFields = []) {
   const chw = { NIN: nin };
   for (const field of mergeFields) {
-    if (!MERGEABLE_FIELDS.includes(field)) continue;
+    if (!DEMOGRAPHIC_MERGE_FIELDS.includes(field)) continue;
     if (incoming[field] !== undefined) chw[field] = incoming[field];
   }
   return chw;
@@ -420,43 +486,75 @@ class HrhisDuplicateResolutionService {
             : submission.mergeableDiffs.map((d) => d.field);
 
         if (mergeFields.length === 0) {
-          logResolutionEvent("info", "Merge with no demographic diffs — marking resolved without OpenMRS update", {
+          logResolutionEvent("info", "Merge with no selected diffs — marking resolved without OpenMRS update", {
             logId,
             nin: nin.trim(),
             note: "Incoming mergeable fields already match registered ICCHW.",
           });
         } else {
           const incoming = submission.payload;
-          const partialChw = buildPartialChwPayload(nin.trim(), incoming, mergeFields);
+          const demographicFields = mergeFields.filter((f) => DEMOGRAPHIC_MERGE_FIELDS.includes(f));
+          const locationFields = mergeFields.filter((f) => LOCATION_MERGE_FIELDS.includes(f));
           logResolutionEvent("info", "Merge attempt", {
             logId,
             nin: nin.trim(),
             mergeFields,
-            partialChwKeys: Object.keys(partialChw),
+            demographicFields,
+            locationFields,
             openMrsUuid: teamMember?.openMrsUuid,
           });
           try {
-            mergeResult = await GatewayService.applyChwDemographicUpdate(
-              req,
-              { headersSent: false },
-              () => {},
-              partialChw,
-              teamMember,
-              { skipSideEffects: true }
-            );
-            mergedFields = mergeResult.updatedFields.filter((f) => mergeFields.includes(f));
-            logResolutionEvent("info", "Merge demographics applied", {
-              logId,
-              requestedFields: mergeFields,
-              appliedFields: mergedFields,
-              allUpdatedFields: mergeResult.updatedFields,
-            });
-            teamMember = await TeamMemberRepository.getTeamMemberByNin(nin.trim());
-            existsInOpenMrs = teamMember
-              ? await GatewayService.openMrsTeamMemberExists(teamMember.openMrsUuid)
-              : false;
+            let combinedFieldChanges = {};
+
+            if (demographicFields.length > 0) {
+              const partialChw = buildPartialChwPayload(nin.trim(), incoming, demographicFields);
+              mergeResult = await GatewayService.applyChwDemographicUpdate(
+                req,
+                { headersSent: false },
+                () => {},
+                partialChw,
+                teamMember,
+                { skipSideEffects: true }
+              );
+              mergedFields.push(...mergeResult.updatedFields.filter((f) => demographicFields.includes(f)));
+              combinedFieldChanges = { ...(mergeResult.fieldChanges || {}) };
+              logResolutionEvent("info", "Merge demographics applied", {
+                logId,
+                requestedFields: demographicFields,
+                appliedFields: mergedFields,
+                allUpdatedFields: mergeResult.updatedFields,
+              });
+              teamMember = await TeamMemberRepository.getTeamMemberByNin(nin.trim());
+              existsInOpenMrs = teamMember
+                ? await GatewayService.openMrsTeamMemberExists(teamMember.openMrsUuid)
+                : false;
+            }
+
+            if (locationFields.length > 0) {
+              const registeredLocation = await loadRegisteredLocationFields(teamMember);
+              const locResult = await GatewayService.applyChwLocationAssignmentUpdate(
+                teamMember,
+                incoming,
+                registeredLocation
+              );
+              mergedFields.push(...(locResult.updatedFields || []).filter((f) => LOCATION_MERGE_FIELDS.includes(f)));
+              combinedFieldChanges = { ...combinedFieldChanges, ...(locResult.fieldChanges || {}) };
+              mergeResult = {
+                ...(mergeResult || {}),
+                fieldChanges: combinedFieldChanges,
+                updatedFields: [...(mergeResult?.updatedFields || []), ...(locResult.updatedFields || [])],
+              };
+              logResolutionEvent("info", "Merge location assignment applied", {
+                logId,
+                requestedFields: locationFields,
+                appliedFields: locResult.updatedFields || [],
+                resolvedLocationUuid: locResult.resolvedLocationUuid || null,
+              });
+            } else if (mergeResult) {
+              mergeResult.fieldChanges = combinedFieldChanges;
+            }
           } catch (error) {
-            logResolutionEvent("error", "Merge demographic update failed", {
+            logResolutionEvent("error", "Merge update failed", {
               logId,
               nin: nin.trim(),
               message: error?.message || String(error),

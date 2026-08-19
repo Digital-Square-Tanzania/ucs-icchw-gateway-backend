@@ -13,6 +13,7 @@ import GenerateSwahiliPassword from "../../utils/generate-swahili-password.js";
 import CHWEligibilityStatuses from "./helpers/chw-eligibility-statuses.js";
 import PayloadContent from "./helpers/payload-content.js";
 import OpenmrsHelper from "./helpers/openmrs-helper.js";
+import LocationResolver from "./helpers/location-resolver.js";
 import TeamMemberService from "../openmrs/team-member/openmrs-team-member-service.js";
 import mysqlClient from "../../utils/mysql-client.js";
 import { FfarsSignature } from "../../utils/ffars-signature.js";
@@ -393,6 +394,82 @@ class GatewayService {
       updatedFields,
       fieldChanges,
       member,
+    };
+  }
+
+  /**
+   * Reassign a CHW's OpenMRS team-member location when HFR is unchanged (same facility).
+   * Used by duplicate merge — not for duty-station (HFR) changes.
+   */
+  static async applyChwLocationAssignmentUpdate(teamMember, incoming, registeredLocationFields) {
+    const registeredHfr = String(registeredLocationFields?.hfrCode || "").trim();
+    const incomingHfr = String(incoming?.hfrCode || registeredHfr || "").trim();
+
+    if (!registeredHfr) {
+      throw new ApiError("Cannot merge location: registered HFR is unknown.", 400, 8);
+    }
+    if (incomingHfr !== registeredHfr) {
+      throw new ApiError(
+        "Location merge requires the same HFR as the registered facility. Use HRHIS /chw/station for duty station changes.",
+        400,
+        9
+      );
+    }
+
+    const locationCode = String(incoming?.locationCode || "").trim();
+    if (!locationCode) {
+      throw new ApiError("Location merge requires locationCode in the incoming submission.", 400, 10);
+    }
+
+    const resolved = await LocationResolver.resolve(locationCode, incoming?.locationType);
+    const currentAssignmentUuid = registeredLocationFields?.assignmentLocationUuid || null;
+
+    if (resolved.uuid === currentAssignmentUuid) {
+      return {
+        message: "Location assignment already matches.",
+        updatedFields: [],
+        fieldChanges: {},
+        resolvedLocationUuid: resolved.uuid,
+      };
+    }
+
+    const updateResponse = await openmrsApiClient.post(`team/teammember/${teamMember.openMrsUuid}`, {
+      locations: [{ uuid: resolved.uuid }],
+    });
+    GatewayService.ensureOpenMrsResponse(
+      updateResponse,
+      `Unable to update team member location ${teamMember.openMrsUuid}`
+    );
+
+    const newLocationCode = resolved.locationCode || locationCode;
+    const newLocationType = incoming?.locationType ?? resolved.type ?? null;
+    const fieldChanges = {
+      locationCode: {
+        old: registeredLocationFields?.locationCode ?? null,
+        new: newLocationCode,
+      },
+      locationType: {
+        old: registeredLocationFields?.locationType ?? null,
+        new: newLocationType,
+      },
+    };
+
+    const openActivation = await prisma.accountActivation.findFirst({
+      where: { userUuid: teamMember.userUuid, slugType: "ACTIVATION", isUsed: false },
+      select: { id: true },
+    });
+    if (openActivation) {
+      await prisma.accountActivation.update({
+        where: { id: openActivation.id },
+        data: { locationCode: newLocationCode },
+      });
+    }
+
+    return {
+      message: "CHW location assignment updated.",
+      updatedFields: ["locationCode", "locationType"],
+      fieldChanges,
+      resolvedLocationUuid: resolved.uuid,
     };
   }
 
