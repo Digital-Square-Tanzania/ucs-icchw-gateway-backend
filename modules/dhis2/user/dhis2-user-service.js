@@ -6,7 +6,10 @@ class DHIS2UserService {
   static async syncUsers() {
     try {
       console.log("🔄 Syncing DHIS2 Users...");
-      const users = await DHIS2ApiClient.get("/users?fields=id,username,displayName,firstName,surname,email,organisationUnits,userRoles", { paging: false });
+      const users = await DHIS2ApiClient.get("/users", {
+        fields: "id,username,displayName,firstName,surname,email,organisationUnits,userRoles",
+        paging: false,
+      });
       await DHIS2UserRepository.upsertUsers(users.users);
       console.log("✅ DHIS2 Users Sync Completed.");
     } catch (error) {
