@@ -373,6 +373,10 @@ class HrhisDuplicateResolutionService {
             teamMember
           );
           mergedFields = mergeResult.updatedFields.filter((f) => mergeFields.includes(f));
+          teamMember = await TeamMemberRepository.getTeamMemberByNin(nin.trim());
+          existsInOpenMrs = teamMember
+            ? await GatewayService.openMrsTeamMemberExists(teamMember.openMrsUuid)
+            : false;
         } catch (error) {
           results.push({
             logId,
