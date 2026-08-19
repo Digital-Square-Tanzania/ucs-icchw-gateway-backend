@@ -383,59 +383,58 @@ class HrhisDuplicateResolutionService {
             : submission.mergeableDiffs.map((d) => d.field);
 
         if (mergeFields.length === 0) {
-          results.push({
-            logId,
-            status: "failed",
-            message: "Merge requires at least one differing mergeable field.",
-          });
-          continue;
-        }
-
-        const incoming = submission.payload;
-        const partialChw = buildPartialChwPayload(nin.trim(), incoming, mergeFields);
-        logResolutionEvent("info", "Merge attempt", {
-          logId,
-          nin: nin.trim(),
-          mergeFields,
-          partialChwKeys: Object.keys(partialChw),
-          openMrsUuid: teamMember?.openMrsUuid,
-        });
-        try {
-          mergeResult = await GatewayService.applyChwDemographicUpdate(
-            req,
-            { headersSent: false },
-            () => {},
-            partialChw,
-            teamMember,
-            { skipSideEffects: true }
-          );
-          mergedFields = mergeResult.updatedFields.filter((f) => mergeFields.includes(f));
-          logResolutionEvent("info", "Merge demographics applied", {
-            logId,
-            requestedFields: mergeFields,
-            appliedFields: mergedFields,
-            allUpdatedFields: mergeResult.updatedFields,
-          });
-          teamMember = await TeamMemberRepository.getTeamMemberByNin(nin.trim());
-          existsInOpenMrs = teamMember
-            ? await GatewayService.openMrsTeamMemberExists(teamMember.openMrsUuid)
-            : false;
-        } catch (error) {
-          logResolutionEvent("error", "Merge demographic update failed", {
+          logResolutionEvent("info", "Merge with no demographic diffs — marking resolved without OpenMRS update", {
             logId,
             nin: nin.trim(),
-            message: error?.message || String(error),
-            statusCode: error?.statusCode,
-            customCode: error?.customCode,
-            stack: error?.stack,
+            note: "Incoming mergeable fields already match registered ICCHW.",
           });
-          results.push({
+        } else {
+          const incoming = submission.payload;
+          const partialChw = buildPartialChwPayload(nin.trim(), incoming, mergeFields);
+          logResolutionEvent("info", "Merge attempt", {
             logId,
-            status: "failed",
-            message: error?.message || String(error),
-            errorCode: error?.customCode ?? error?.statusCode ?? null,
+            nin: nin.trim(),
+            mergeFields,
+            partialChwKeys: Object.keys(partialChw),
+            openMrsUuid: teamMember?.openMrsUuid,
           });
-          continue;
+          try {
+            mergeResult = await GatewayService.applyChwDemographicUpdate(
+              req,
+              { headersSent: false },
+              () => {},
+              partialChw,
+              teamMember,
+              { skipSideEffects: true }
+            );
+            mergedFields = mergeResult.updatedFields.filter((f) => mergeFields.includes(f));
+            logResolutionEvent("info", "Merge demographics applied", {
+              logId,
+              requestedFields: mergeFields,
+              appliedFields: mergedFields,
+              allUpdatedFields: mergeResult.updatedFields,
+            });
+            teamMember = await TeamMemberRepository.getTeamMemberByNin(nin.trim());
+            existsInOpenMrs = teamMember
+              ? await GatewayService.openMrsTeamMemberExists(teamMember.openMrsUuid)
+              : false;
+          } catch (error) {
+            logResolutionEvent("error", "Merge demographic update failed", {
+              logId,
+              nin: nin.trim(),
+              message: error?.message || String(error),
+              statusCode: error?.statusCode,
+              customCode: error?.customCode,
+              stack: error?.stack,
+            });
+            results.push({
+              logId,
+              status: "failed",
+              message: error?.message || String(error),
+              errorCode: error?.customCode ?? error?.statusCode ?? null,
+            });
+            continue;
+          }
         }
       }
 
