@@ -200,7 +200,7 @@ class GatewayService {
           `Barua pepe: ${email}\n` +
           `Namba ya simu: ${phone}\n` +
           `Jina la mtumiaji: ${username}\n\n` +
-          `Ikiwa hukuomba mabadiliko haya, wasiliana na mratibu wako wa wilaya/halmashauri.`,
+          `Ikiwa hukuomba mabadiliko haya, tafadhali wasiliana na mratibu wa afya-jamii wa halmashauri yako.`,
         html:
           `<p>Habari <strong>${name}</strong>,</p>` +
           `<p>Taarifa zako za akaunti ya UCS/WAJA zimebadilishwa.</p>` +
@@ -209,7 +209,7 @@ class GatewayService {
           `<li>Namba ya simu: <strong>${phone}</strong></li>` +
           `<li>Jina la mtumiaji: <strong>${username}</strong></li>` +
           `</ul>` +
-          `<p>Ikiwa hukuomba mabadiliko haya, wasiliana na mratibu wako wa wilaya/halmashauri.</p>`,
+          `<p>Ikiwa hukuomba mabadiliko haya, tafadhali wasiliana na mratibu wa afya-jamii wa halmashauri yako.</p>`,
       });
       console.log(`✅ Credential-change email sent to ${email} (fields: ${changed.join(", ")})`);
     } catch (emailError) {
