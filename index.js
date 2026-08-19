@@ -3,10 +3,12 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 import "express-async-errors";
+import http from "http";
 import path from "path";
 import { fileURLToPath } from "url";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import WebSocketService from "./utils/websocket-service.js";
 
 // Allow local dev & production frontend domains
 const allowedOrigins = [
@@ -110,7 +112,14 @@ class AppServer {
   }
 
   start() {
-    this.app.listen(this.port, () => {
+    const server = http.createServer(this.app);
+    WebSocketService.attachToServer(server, "/api/v1/ws");
+
+    if (process.env.WEBSOCKET_STANDALONE === "true") {
+      WebSocketService.initStandalone();
+    }
+
+    server.listen(this.port, () => {
       console.log("***** INFO: UCS User Management Backend is Listening on:" + this.port + " *****");
 
       // Start the resend activation cron job
