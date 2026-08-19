@@ -28,18 +28,9 @@ class DashboardController {
         });
       }
 
-      // Kick off async sync task (no await)
-      DashboardService.syncDashboard(path)
-        .then((result) => {
-          // Send WebSocket notification from inside service after completion
-          console.log(`✅ Sync complete for ${path}`);
-        })
-        .catch((error) => {
-          console.error(`❌ Sync failed for ${path}:`, error);
-        });
-
-      // Immediate response
-      return BaseResponse.success(res, `Sync for ${path} started`, { started: true });
+      const result = await DashboardService.syncDashboard(path);
+      console.log(`✅ Sync complete for ${path}`);
+      return BaseResponse.success(res, `Sync for ${path} completed`, { synced: true, path, ...result });
     } catch (error) {
       next(error);
     }
