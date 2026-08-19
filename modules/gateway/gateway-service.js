@@ -223,7 +223,7 @@ class GatewayService {
    * Shared by /chw/update and by /chw/register when the NIN already exists.
    * @returns {Promise<{ message: string, nin: string, personUuid: string, updatedFields: string[], fieldChanges: Object, member: Object }>}
    */
-  static async applyChwDemographicUpdate(req, res, next, chw, teamMember) {
+  static async applyChwDemographicUpdate(req, res, next, chw, teamMember, { skipSideEffects = false } = {}) {
     const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, {
       v: "custom:(uuid,person:(uuid))",
     });
@@ -374,7 +374,7 @@ class GatewayService {
 
     // Not-yet-activated CHWs: refresh activation email when credentials change.
     let sentActivationResend = false;
-    if (credentialsChanged && slug) {
+    if (!skipSideEffects && credentialsChanged && slug) {
       req.params.slug = slug.slug;
       req.params.emailChange = true;
       await UserService.handleResendEmail(req, res, next);
@@ -382,7 +382,7 @@ class GatewayService {
     }
 
     // Already-activated (or no open slug): send a change notification instead.
-    if (credentialsChanged && !sentActivationResend) {
+    if (!skipSideEffects && credentialsChanged && !sentActivationResend) {
       await GatewayService.notifyChwOfCredentialChanges(member, updatedFields);
     }
 

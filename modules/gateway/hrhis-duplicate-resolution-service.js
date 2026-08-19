@@ -20,16 +20,25 @@ function chwDisplayName(chw) {
 }
 
 function parseResolution(response) {
-  if (!response || typeof response !== "object") return null;
-  if (!response.resolvedAt) return null;
+  if (response == null) return null;
+  let parsed = response;
+  if (typeof parsed === "string") {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return null;
+    }
+  }
+  if (!parsed || typeof parsed !== "object") return null;
+  if (!parsed.resolvedAt) return null;
   return {
-    status: response.resolutionStatus || response.resolution?.action || "unknown",
-    resolvedAt: response.resolvedAt,
-    resolvedByEmail: response.resolution?.resolvedByEmail || null,
-    action: response.resolution?.action || response.resolutionStatus || null,
-    note: response.resolution?.note || null,
-    mergedFields: response.resolution?.mergedFields || [],
-    resolutionLogId: response.resolution?.resolutionLogId || null,
+    status: parsed.resolutionStatus || parsed.resolution?.action || "unknown",
+    resolvedAt: parsed.resolvedAt,
+    resolvedByEmail: parsed.resolution?.resolvedByEmail || null,
+    action: parsed.resolution?.action || parsed.resolutionStatus || null,
+    note: parsed.resolution?.note || null,
+    mergedFields: parsed.resolution?.mergedFields || [],
+    resolutionLogId: parsed.resolution?.resolutionLogId || null,
   };
 }
 
@@ -349,9 +358,13 @@ class HrhisDuplicateResolutionService {
           continue;
         }
 
-        const mergeFields = Array.isArray(item.mergeFields)
+        const requestedMergeFields = Array.isArray(item.mergeFields)
           ? item.mergeFields.filter((f) => MERGEABLE_FIELDS.includes(f))
           : submission.mergeableDiffs.map((d) => d.field);
+        const mergeFields =
+          requestedMergeFields.length > 0
+            ? requestedMergeFields
+            : submission.mergeableDiffs.map((d) => d.field);
 
         if (mergeFields.length === 0) {
           results.push({
@@ -367,10 +380,11 @@ class HrhisDuplicateResolutionService {
         try {
           mergeResult = await GatewayService.applyChwDemographicUpdate(
             req,
-            res,
-            next,
+            { headersSent: false },
+            () => {},
             partialChw,
-            teamMember
+            teamMember,
+            { skipSideEffects: true }
           );
           mergedFields = mergeResult.updatedFields.filter((f) => mergeFields.includes(f));
           teamMember = await TeamMemberRepository.getTeamMemberByNin(nin.trim());
@@ -398,7 +412,7 @@ class HrhisDuplicateResolutionService {
         note: itemNote,
       });
 
-      await ApiLogger.annotateDuplicateResolution(logId, {
+      const annotated = await ApiLogger.annotateDuplicateResolution(logId, {
         action,
         resolvedByUserId: req?.user?.id,
         resolvedByEmail: req?.user?.email,
@@ -408,6 +422,15 @@ class HrhisDuplicateResolutionService {
         resolutionLogUuid: resolutionLog?.uuid,
       });
 
+      if (!annotated) {
+        results.push({
+          logId,
+          status: "failed",
+          message: "Demographic update completed but failed to persist resolution audit on api_logs.",
+        });
+        continue;
+      }
+
       results.push({
         logId,
         status: "resolved",
@@ -416,7 +439,9 @@ class HrhisDuplicateResolutionService {
         resolutionLogId: resolutionLog?.id ?? null,
         message:
           action === "merge"
-            ? `Merged ${mergedFields.length} field(s) into ICCHW record.`
+            ? mergedFields.length > 0
+              ? `Merged ${mergedFields.length} field(s) into ICCHW record.`
+              : "Marked as merged (incoming values already matched ICCHW)."
             : action === "delete"
               ? "Duplicate submission dismissed (audit retained)."
               : "Duplicate submission marked as ignored.",
