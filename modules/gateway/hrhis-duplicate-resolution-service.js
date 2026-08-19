@@ -9,6 +9,15 @@ import openmrsApiClient from "../../utils/openmrs-api-client.js";
 const RECOVERY_SOURCE = "hrhis-location-recovery";
 const RESOLUTION_SOURCE = "hrhis-duplicate-resolution";
 const MERGEABLE_FIELDS = ["firstName", "middleName", "lastName", "sex", "email", "phoneNumber"];
+const LOG_PREFIX = "[HRHIS duplicate resolution]";
+
+function logResolutionEvent(level, message, meta = {}) {
+  const suffix = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : "";
+  const line = `${LOG_PREFIX} ${message}${suffix}`;
+  if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
+  else console.log(line);
+}
 
 function extractChwFromRequest(request) {
   const body = request?.body?.message?.body;
@@ -309,6 +318,13 @@ class HrhisDuplicateResolutionService {
 
     const results = [];
 
+    logResolutionEvent("info", "Batch started", {
+      nin: nin.trim(),
+      council,
+      itemCount: items.length,
+      actions: items.map((i) => ({ logId: i.logId, action: i.action })),
+    });
+
     for (const item of items) {
       const logId = Number(item.logId);
       const action = String(item.action || "").toLowerCase();
@@ -377,6 +393,13 @@ class HrhisDuplicateResolutionService {
 
         const incoming = submission.payload;
         const partialChw = buildPartialChwPayload(nin.trim(), incoming, mergeFields);
+        logResolutionEvent("info", "Merge attempt", {
+          logId,
+          nin: nin.trim(),
+          mergeFields,
+          partialChwKeys: Object.keys(partialChw),
+          openMrsUuid: teamMember?.openMrsUuid,
+        });
         try {
           mergeResult = await GatewayService.applyChwDemographicUpdate(
             req,
@@ -387,15 +410,30 @@ class HrhisDuplicateResolutionService {
             { skipSideEffects: true }
           );
           mergedFields = mergeResult.updatedFields.filter((f) => mergeFields.includes(f));
+          logResolutionEvent("info", "Merge demographics applied", {
+            logId,
+            requestedFields: mergeFields,
+            appliedFields: mergedFields,
+            allUpdatedFields: mergeResult.updatedFields,
+          });
           teamMember = await TeamMemberRepository.getTeamMemberByNin(nin.trim());
           existsInOpenMrs = teamMember
             ? await GatewayService.openMrsTeamMemberExists(teamMember.openMrsUuid)
             : false;
         } catch (error) {
+          logResolutionEvent("error", "Merge demographic update failed", {
+            logId,
+            nin: nin.trim(),
+            message: error?.message || String(error),
+            statusCode: error?.statusCode,
+            customCode: error?.customCode,
+            stack: error?.stack,
+          });
           results.push({
             logId,
             status: "failed",
             message: error?.message || String(error),
+            errorCode: error?.customCode ?? error?.statusCode ?? null,
           });
           continue;
         }
@@ -423,6 +461,11 @@ class HrhisDuplicateResolutionService {
       });
 
       if (!annotated) {
+        logResolutionEvent("error", "Failed to annotate api_log with resolution audit", {
+          logId,
+          action,
+          resolutionLogId: resolutionLog?.id ?? null,
+        });
         results.push({
           logId,
           status: "failed",
@@ -431,7 +474,7 @@ class HrhisDuplicateResolutionService {
         continue;
       }
 
-      results.push({
+      const resolvedRow = {
         logId,
         status: "resolved",
         action,
@@ -445,12 +488,24 @@ class HrhisDuplicateResolutionService {
             : action === "delete"
               ? "Duplicate submission dismissed (audit retained)."
               : "Duplicate submission marked as ignored.",
-      });
+      };
+      logResolutionEvent("info", "Submission resolved", resolvedRow);
+      results.push(resolvedRow);
     }
 
     const resolved = results.filter((r) => r.status === "resolved").length;
     const failed = results.filter((r) => r.status === "failed").length;
     const skipped = results.filter((r) => r.status === "skipped").length;
+
+    for (const row of results) {
+      if (row.status === "failed") {
+        logResolutionEvent("error", "Item failed", row);
+      } else if (row.status === "skipped") {
+        logResolutionEvent("warn", "Item skipped", row);
+      }
+    }
+
+    logResolutionEvent(failed > 0 ? "warn" : "info", "Batch finished", { resolved, failed, skipped });
 
     return {
       nin: nin.trim(),

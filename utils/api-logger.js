@@ -115,6 +115,7 @@ class ApiLogger {
       });
     } catch (err) {
       console.error(`❌ Failed to annotate duplicate resolution on api_log ${logId}:`, err.message);
+      if (err?.stack) console.error(err.stack);
       return null;
     }
   }
