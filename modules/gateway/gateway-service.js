@@ -28,6 +28,19 @@ class GatewayService {
       : (firstName.substring(0, 2) + lastName.substring(0, 2)).toLowerCase();
   }
 
+  static genderToSexLabel(gender) {
+    if (gender === "M") return "MALE";
+    if (gender === "F") return "FEMALE";
+    return gender || null;
+  }
+
+  static recordFieldChange(fieldChanges, field, oldValue, newValue) {
+    const oldNorm = oldValue === undefined || oldValue === "" ? null : oldValue;
+    const newNorm = newValue === undefined || newValue === "" ? null : newValue;
+    if (oldNorm === newNorm) return;
+    fieldChanges[field] = { old: oldNorm, new: newNorm };
+  }
+
   static ensureOpenMrsResponse(response, action) {
     if (!response || response.isAxiosError || response.response) {
       const message = response?.response?.data?.error?.message || response?.message || "Unknown OpenMRS error";
@@ -208,7 +221,7 @@ class GatewayService {
   /**
    * Apply demographic updates for a single existing CHW (by NIN).
    * Shared by /chw/update and by /chw/register when the NIN already exists.
-   * @returns {Promise<{ message: string, nin: string, personUuid: string, updatedFields: string[], member: Object }>}
+   * @returns {Promise<{ message: string, nin: string, personUuid: string, updatedFields: string[], fieldChanges: Object, member: Object }>}
    */
   static async applyChwDemographicUpdate(req, res, next, chw, teamMember) {
     const teamMemberDetails = await openmrsApiClient.get(`team/teammember/${teamMember.openMrsUuid}`, {
@@ -228,6 +241,7 @@ class GatewayService {
 
     const personUpdatePayload = {};
     const updatedFields = [];
+    const fieldChanges = {};
     const emailAttributeTypeUuid = process.env.EMAIL_ATTRIBUTE_TYPE_UUID || "c60b17ba-1c41-454b-89a1-6c329c75417e";
     const phoneNumberAttributeTypeUuid = process.env.PHONE_NUMBER_ATTRIBUTE_TYPE_UUID || "c1aa993d-251b-4295-9e58-4c5d8a73397e";
     let currentUsername = teamMember.username;
@@ -237,6 +251,12 @@ class GatewayService {
       if (gender !== existingPerson.gender) {
         personUpdatePayload.gender = gender;
         updatedFields.push("sex");
+        GatewayService.recordFieldChange(
+          fieldChanges,
+          "sex",
+          GatewayService.genderToSexLabel(existingPerson.gender),
+          chw.sex.toUpperCase()
+        );
       }
     }
 
@@ -248,16 +268,19 @@ class GatewayService {
       nameUpdate.givenName = chw.firstName;
       updatedFields.push("firstName");
       nameChanged = true;
+      GatewayService.recordFieldChange(fieldChanges, "firstName", existingName.givenName || null, chw.firstName);
     }
     if (chw.middleName !== undefined && chw.middleName !== existingName.middleName) {
       nameUpdate.middleName = chw.middleName;
       updatedFields.push("middleName");
       nameChanged = true;
+      GatewayService.recordFieldChange(fieldChanges, "middleName", existingName.middleName ?? null, chw.middleName);
     }
     if (chw.lastName && chw.lastName !== existingName.familyName) {
       nameUpdate.familyName = chw.lastName;
       updatedFields.push("lastName");
       nameChanged = true;
+      GatewayService.recordFieldChange(fieldChanges, "lastName", existingName.familyName || null, chw.lastName);
     }
 
     if (nameChanged) {
@@ -269,9 +292,14 @@ class GatewayService {
 
     if (chw.email) {
       const newEmail = chw.email.trim();
+      const existingEmailAttr = (existingPerson.attributes || []).find(
+        (attr) => attr.attributeType?.uuid === emailAttributeTypeUuid && !attr.voided
+      );
+      const oldEmail = teamMember.email?.trim() || existingEmailAttr?.value?.trim() || null;
       const emailChanged = await GatewayService.upsertPersonAttribute(personUuid, existingPerson, emailAttributeTypeUuid, newEmail, "Email");
       if (emailChanged || newEmail !== teamMember.email?.trim()) {
         updatedFields.push("email");
+        GatewayService.recordFieldChange(fieldChanges, "email", oldEmail, newEmail);
       }
     }
 
@@ -293,11 +321,18 @@ class GatewayService {
         await GatewayService.updateOpenMrsUserUsername(teamMember.userUuid, newUsername);
         currentUsername = newUsername;
         updatedFields.push("username");
+        GatewayService.recordFieldChange(fieldChanges, "username", teamMember.username || null, newUsername);
       }
 
       if (phoneNumberChanged) {
         await GatewayService.upsertPersonAttribute(personUuid, existingPerson, phoneNumberAttributeTypeUuid, newPhoneNumber, "Phone number");
         updatedFields.push("phoneNumber");
+        GatewayService.recordFieldChange(
+          fieldChanges,
+          "phoneNumber",
+          existingLocalPhoneNumber || existingOpenMrsPhoneNumber || null,
+          newPhoneNumber
+        );
       }
     }
 
@@ -356,6 +391,7 @@ class GatewayService {
       nin: chw.NIN,
       personUuid,
       updatedFields,
+      fieldChanges,
       member,
     };
   }
@@ -379,7 +415,12 @@ class GatewayService {
         if (existsInOpenMrs) {
           console.log(`ℹ️ CHW NIN ${chw.NIN} already exists in OpenMRS — applying as update.`);
           const result = await GatewayService.applyChwDemographicUpdate(req, res, next, chw, existingMember);
-          await ApiLogger.log(req, { action: "REGISTER_AS_UPDATE", nin: chw.NIN, updatedFields: result.updatedFields });
+          await ApiLogger.log(req, {
+            action: "REGISTER_AS_UPDATE",
+            nin: chw.NIN,
+            updatedFields: result.updatedFields,
+            fieldChanges: result.fieldChanges,
+          });
           return {
             created: false,
             updated: true,
@@ -576,11 +617,18 @@ class GatewayService {
         }
 
         const result = await GatewayService.applyChwDemographicUpdate(req, res, next, chw, teamMember);
+        await ApiLogger.log(req, {
+          action: "UPDATE_DEMOGRAPHICS",
+          nin: result.nin,
+          updatedFields: result.updatedFields,
+          fieldChanges: result.fieldChanges,
+        });
         results.push({
           message: result.message,
           nin: result.nin,
           personUuid: result.personUuid,
           updatedFields: result.updatedFields,
+          fieldChanges: result.fieldChanges,
         });
       }
 

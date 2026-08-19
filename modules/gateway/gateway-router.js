@@ -30,6 +30,13 @@ router.post("/signature/verify-ucs", BasicAuthMiddleware.authenticate, AuthMiddl
 // Sign Message
 router.post("/signature/sign", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.signMessage);
 
+router.get(
+  "/admin/hrhis-council-analytics",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  GatewayController.getHrhisCouncilAnalytics
+);
+
 // Admin: scan / recover location-related HRHIS register failures from api_logs
 router.get(
   "/admin/hrhis-location-failures",
