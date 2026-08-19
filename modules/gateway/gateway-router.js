@@ -31,6 +31,20 @@ router.post("/signature/verify-ucs", BasicAuthMiddleware.authenticate, AuthMiddl
 router.post("/signature/sign", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.signMessage);
 
 router.get(
+  "/admin/hrhis-duplicate-detail",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  GatewayController.getHrhisDuplicateDetail
+);
+
+router.post(
+  "/admin/hrhis-duplicate-resolve",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  GatewayController.resolveHrhisDuplicates
+);
+
+router.get(
   "/admin/hrhis-council-analytics",
   AuthMiddleware.authenticate,
   AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),

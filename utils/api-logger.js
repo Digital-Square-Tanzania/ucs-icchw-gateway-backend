@@ -41,10 +41,6 @@ class ApiLogger {
     }
   }
 
-  /**
-   * Merge recovery metadata onto an existing failure log without changing its
-   * fail status — preserves audit history while marking the row as resolved.
-   */
   static async annotateRecovered(logId, { recoveredByLogId, recoveredByLogUuid } = {}) {
     try {
       const id = Number(logId);
@@ -69,6 +65,56 @@ class ApiLogger {
       });
     } catch (err) {
       console.error(`❌ Failed to annotate recovered api_log ${logId}:`, err.message);
+      return null;
+    }
+  }
+
+  /**
+   * Mark an api_log row as administratively resolved for duplicate handling.
+   * Preserves the original envelope for audit; does not delete rows.
+   */
+  static async annotateDuplicateResolution(
+    logId,
+    {
+      action,
+      resolvedByUserId,
+      resolvedByEmail,
+      note,
+      mergedFields,
+      resolutionLogId,
+      resolutionLogUuid,
+    } = {}
+  ) {
+    try {
+      const id = Number(logId);
+      if (!Number.isFinite(id)) return null;
+
+      const existing = await prisma.apiLog.findUnique({ where: { id } });
+      if (!existing) return null;
+
+      const response =
+        existing.response && typeof existing.response === "object" && !Array.isArray(existing.response)
+          ? { ...existing.response }
+          : { previous: existing.response };
+
+      response.resolvedAt = new Date().toISOString();
+      response.resolutionStatus = action;
+      response.resolution = {
+        action,
+        resolvedByUserId: resolvedByUserId ?? null,
+        resolvedByEmail: resolvedByEmail ?? null,
+        note: note ?? null,
+        mergedFields: Array.isArray(mergedFields) ? mergedFields : [],
+        resolutionLogId: resolutionLogId ?? null,
+        resolutionLogUuid: resolutionLogUuid ?? null,
+      };
+
+      return await prisma.apiLog.update({
+        where: { id },
+        data: { response },
+      });
+    } catch (err) {
+      console.error(`❌ Failed to annotate duplicate resolution on api_log ${logId}:`, err.message);
       return null;
     }
   }

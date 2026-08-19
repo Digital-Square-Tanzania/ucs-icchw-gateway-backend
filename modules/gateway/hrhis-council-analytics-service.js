@@ -82,6 +82,7 @@ class HrhisCouncilAnalyticsService {
           COALESCE(NULLIF(response->>'status', '')::int, 0) AS http_status,
           COALESCE(response->'body'->'recovery'->>'source', '') AS recovery_source,
           response->>'recoveredAt' AS recovered_at,
+          response->>'resolvedAt' AS resolved_at,
           COALESCE(
             response->'body'->'message'->'body'->>'message',
             CASE WHEN jsonb_typeof(response->'body') = 'string' THEN response->>'body' ELSE NULL END,
@@ -239,9 +240,13 @@ class HrhisCouncilAnalyticsService {
         const rows = liveRows
           .filter((r) => String(r.nin || "").trim() === nin)
           .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        const openCount = rows.filter((r) => !r.resolved_at).length;
+        const resolvedCount = rows.length - openCount;
         return {
           nin,
           submissionCount,
+          openCount,
+          resolvedCount,
           firstAt: rows[0]?.createdAt || null,
           lastAt: rows[rows.length - 1]?.createdAt || null,
         };

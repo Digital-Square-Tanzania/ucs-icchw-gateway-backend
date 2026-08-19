@@ -1,6 +1,7 @@
 import GatewayService from "./gateway-service.js";
 import HrhisLocationRecoveryService from "./hrhis-location-recovery-service.js";
 import HrhisCouncilAnalyticsService from "./hrhis-council-analytics-service.js";
+import HrhisDuplicateResolutionService from "./hrhis-duplicate-resolution-service.js";
 import GatewayResponder from "../../responders/gateway-responder.js";
 import FfarsResponder from "../../responders/ffars-responder.js";
 import CustomError from "../../utils/custom-error.js";
@@ -128,6 +129,54 @@ class GatewayController {
         days,
       });
       return BaseResponse.success(res, "HRHIS council analytics retrieved successfully.", data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Detail view for duplicate NIN submissions (all envelope payloads + ICCHW diff).
+   */
+  static async getHrhisDuplicateDetail(req, res, next) {
+    try {
+      const { region, district, council, nin, days } = req.query;
+      const data = await HrhisDuplicateResolutionService.getDuplicateDetail({
+        region,
+        district,
+        council,
+        nin,
+        days,
+      });
+      return BaseResponse.success(res, "Duplicate submission detail retrieved successfully.", data);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * Resolve duplicate submissions: ignore, merge selected fields, or dismiss (delete).
+   * Body: { region, district, council, nin, days?, note?, items: [{ logId, action, mergeFields?, note? }] }
+   */
+  static async resolveHrhisDuplicates(req, res, next) {
+    try {
+      const { region, district, council, nin, days, note, items } = req.body || {};
+      const data = await HrhisDuplicateResolutionService.resolveDuplicateSubmissions({
+        region,
+        district,
+        council,
+        nin,
+        days,
+        note,
+        items,
+        req,
+        res,
+        next,
+      });
+      return BaseResponse.success(
+        res,
+        `Duplicate resolution finished: ${data.resolved} resolved, ${data.failed} failed, ${data.skipped} skipped.`,
+        data
+      );
     } catch (error) {
       next(error);
     }
