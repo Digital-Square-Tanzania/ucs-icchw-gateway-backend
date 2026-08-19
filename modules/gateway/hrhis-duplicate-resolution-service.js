@@ -56,7 +56,7 @@ function normalizeCompareValue(value) {
   return String(value).trim();
 }
 
-function buildRegisteredSnapshot(teamMember, openMrsGender = null) {
+function buildRegisteredSnapshot(teamMember, openMrsGender = null, locationFields = null) {
   if (!teamMember) return null;
   return {
     identifier: teamMember.identifier,
@@ -72,7 +72,24 @@ function buildRegisteredSnapshot(teamMember, openMrsGender = null) {
     teamName: teamMember.teamName,
     locationName: teamMember.locationName,
     locationDescription: teamMember.locationDescription,
+    hfrCode: locationFields?.hfrCode ?? null,
+    locationCode: locationFields?.locationCode ?? null,
+    locationType: locationFields?.locationType ?? null,
     updatedAt: teamMember.updatedAt,
+  };
+}
+
+async function loadRegisteredLocationFields(teamMember) {
+  if (!teamMember?.locationUuid) return null;
+  const location = await prisma.openMRSLocation.findUnique({
+    where: { uuid: teamMember.locationUuid },
+    select: { hfrCode: true, locationCode: true, type: true },
+  });
+  if (!location) return null;
+  return {
+    hfrCode: location.hfrCode || null,
+    locationCode: location.locationCode || null,
+    locationType: location.type || null,
   };
 }
 
@@ -84,9 +101,27 @@ function computeFieldDiffs(registered, incoming) {
     { field: "sex", registered: registered?.sex, incoming: incoming?.sex?.toUpperCase?.() || incoming?.sex, mergeable: true },
     { field: "email", registered: registered?.email, incoming: incoming?.email, mergeable: true },
     { field: "phoneNumber", registered: registered?.phoneNumber, incoming: incoming?.phoneNumber, mergeable: true },
-    { field: "hfrCode", registered: null, incoming: incoming?.hfrCode, mergeable: false },
-    { field: "locationCode", registered: null, incoming: incoming?.locationCode, mergeable: false },
-    { field: "locationType", registered: null, incoming: incoming?.locationType, mergeable: false },
+    {
+      field: "hfrCode",
+      registered: registered?.hfrCode,
+      incoming: incoming?.hfrCode,
+      mergeable: false,
+      reviewOnlyReason: "Duty station changes use HRHIS /chw/station, not duplicate merge.",
+    },
+    {
+      field: "locationCode",
+      registered: registered?.locationCode,
+      incoming: incoming?.locationCode,
+      mergeable: false,
+      reviewOnlyReason: "Location is tied to HFR/duty station assignment.",
+    },
+    {
+      field: "locationType",
+      registered: registered?.locationType,
+      incoming: incoming?.locationType,
+      mergeable: false,
+      reviewOnlyReason: "Location type comes from the assigned OpenMRS location.",
+    },
   ];
 
   return rows.map((row) => {
@@ -96,8 +131,9 @@ function computeFieldDiffs(registered, incoming) {
       field: row.field,
       registered: row.registered ?? null,
       incoming: row.incoming ?? null,
-      differs: reg !== inc && inc !== null,
+      differs: reg !== inc && (reg !== null || inc !== null),
       mergeable: row.mergeable,
+      reviewOnlyReason: row.reviewOnlyReason || null,
     };
   });
 }
@@ -212,7 +248,8 @@ class HrhisDuplicateResolutionService {
     const existsInOpenMrs = teamMember
       ? await GatewayService.openMrsTeamMemberExists(teamMember.openMrsUuid)
       : false;
-    const registered = buildRegisteredSnapshot(teamMember, openMrsGender);
+    const locationFields = teamMember ? await loadRegisteredLocationFields(teamMember) : null;
+    const registered = buildRegisteredSnapshot(teamMember, openMrsGender, locationFields);
 
     const submissions = rows.map((row, index) => {
       const chw = extractChwFromRequest(row.request);
