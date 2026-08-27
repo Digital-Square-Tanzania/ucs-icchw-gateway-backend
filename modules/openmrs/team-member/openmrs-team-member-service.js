@@ -10,6 +10,7 @@ import { CsvProcessor } from "../../../utils/csv-processor.js";
 import EmailService from "../../../utils/email-service.js";
 import ApiLogger from "../../../utils/api-logger.js";
 import OpenmrsHelper from "../../gateway/helpers/openmrs-helper.js";
+import prisma from "../../../config/prisma.js";
 
 dotenv.config();
 
@@ -154,7 +155,99 @@ class TeamMemberService {
     if (!teamMember) {
       throw new CustomError("Team member not found.", 404);
     }
-    return teamMember;
+
+    let facility = null;
+    if (teamMember.locationUuid) {
+      facility = await prisma.openMRSLocation.findUnique({
+        where: { uuid: teamMember.locationUuid },
+        select: { hfrCode: true, locationCode: true, type: true, name: true },
+      });
+    }
+
+    let assignmentUuid = null;
+    let assignment = null;
+    try {
+      const liveMember = await openmrsApiClient.get(`team/teammember/${uuid}`, {
+        v: "custom:(uuid,locations:(uuid))",
+      });
+      assignmentUuid = liveMember?.locations?.[0]?.uuid || null;
+    } catch {
+      assignmentUuid = null;
+    }
+
+    if (assignmentUuid) {
+      assignment = await prisma.openMRSLocation.findUnique({
+        where: { uuid: assignmentUuid },
+        select: { locationCode: true, type: true, name: true },
+      });
+    }
+
+    let accountStatus = "Unknown";
+    if (teamMember.userUuid) {
+      const activation = await prisma.accountActivation.findFirst({
+        where: { userUuid: teamMember.userUuid, slugType: "ACTIVATION" },
+        orderBy: { createdAt: "desc" },
+        select: { isUsed: true, expiryDate: true, usedAt: true },
+      });
+      if (!activation) {
+        accountStatus = "No activation record";
+      } else if (activation.isUsed) {
+        accountStatus = "Activated";
+      } else if (new Date(activation.expiryDate) < new Date()) {
+        accountStatus = "Activation expired";
+      } else {
+        accountStatus = "Pending activation";
+      }
+    } else {
+      accountStatus = "No OpenMRS user linked";
+    }
+
+    let sex = null;
+    if (teamMember.personUuid) {
+      try {
+        const person = await openmrsApiClient.get(`person/${teamMember.personUuid}`, {
+          v: "custom:(gender)",
+        });
+        if (person?.gender === "M") sex = "MALE";
+        else if (person?.gender === "F") sex = "FEMALE";
+        else sex = person?.gender || null;
+      } catch {
+        sex = null;
+      }
+    }
+
+    return {
+      uuid: teamMember.openMrsUuid,
+      openMrsUuid: teamMember.openMrsUuid,
+      identifier: teamMember.identifier,
+      username: teamMember.username,
+      firstName: teamMember.firstName,
+      middleName: teamMember.middleName,
+      lastName: teamMember.lastName,
+      NIN: teamMember.NIN,
+      email: teamMember.email,
+      phoneNumber: teamMember.phoneNumber,
+      sex,
+      roleName: teamMember.roleName,
+      roleUuid: teamMember.roleUuid,
+      teamName: teamMember.teamName,
+      teamUuid: teamMember.teamUuid,
+      teamIdentifier: teamMember.teamIdentifier,
+      facilityName: facility?.name || teamMember.locationName,
+      facilityHfrCode: facility?.hfrCode || null,
+      facilityLocationUuid: teamMember.locationUuid,
+      locationName: teamMember.locationName,
+      locationDescription: teamMember.locationDescription,
+      assignmentLocationUuid: assignmentUuid,
+      assignmentLocationName: assignment?.name || null,
+      assignmentLocationCode: assignment?.locationCode || null,
+      assignmentLocationType: assignment?.type || null,
+      personUuid: teamMember.personUuid,
+      userUuid: teamMember.userUuid,
+      accountStatus,
+      createdAt: teamMember.createdAt,
+      updatedAt: teamMember.updatedAt,
+    };
   }
 
   // Create a new team member in OpenMRS and in Postgres
