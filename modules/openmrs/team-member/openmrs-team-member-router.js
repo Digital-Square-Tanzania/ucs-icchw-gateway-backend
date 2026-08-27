@@ -27,6 +27,12 @@ router.post(
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
   TeamMemberController.purgeOrphanedLocalRecords
 );
+router.post(
+  "/sync-local",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  TeamMemberController.syncLocalTeamMembersAsync
+);
 router.put("/:uuid", AuthMiddleware.authenticate, TeamMemberController.updateTeamMember);
 router.get("/:uuid", AuthMiddleware.authenticate, TeamMemberController.getTeamMemberByUuid);
 router.delete("/person/:maxPersonId", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), TeamMemberController.deletePerson);

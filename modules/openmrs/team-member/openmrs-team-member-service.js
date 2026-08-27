@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import { randomUUID } from "crypto";
 import pLimit from "p-limit";
 import CustomError from "../../../utils/custom-error.js";
 import openmrsApiClient from "../../../utils/openmrs-api-client.js";
@@ -11,8 +12,16 @@ import EmailService from "../../../utils/email-service.js";
 import ApiLogger from "../../../utils/api-logger.js";
 import OpenmrsHelper from "../../gateway/helpers/openmrs-helper.js";
 import prisma from "../../../config/prisma.js";
+import WebSocketService from "../../../utils/websocket-service.js";
+import {
+  extractPersonContactAttributes,
+  genderToSexLabel,
+} from "../../../utils/person-attribute-helper.js";
 
 dotenv.config();
+
+const TEAM_MEMBER_REPRESENTATION =
+  "custom:(uuid,identifier,dateCreated,teamRole:(uuid,name),person:(id,uuid,gender,attributes:(uuid,display,value,voided,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)),locations:(uuid))";
 
 class TeamMemberService {
   constructor() {
@@ -28,126 +37,233 @@ class TeamMemberService {
   }
 
   static async syncTeamMembers(pageSize = 500) {
+    const stats = await TeamMemberService.syncTeamMembersFromOpenMrs({ pageSize });
+    return stats;
+  }
+
+  static formatOpenMrsTeamMember(member) {
+    if (!member?.identifier || !member?.uuid || !member?.person) {
+      throw new Error("Missing identifier or person data");
+    }
+
+    const userDetailsPromise = mysqlClient.query(
+      "SELECT user_id, uuid, username, person_id FROM users WHERE person_id = ?",
+      [member.person.id]
+    );
+
+    return userDetailsPromise.then((userDetails) => {
+      if (userDetails.length === 0) {
+        throw new Error(`Missing OpenMRS user for team member ${member.uuid}`);
+      }
+
+      const { nin, email, phoneNumber } = extractPersonContactAttributes(member.person?.attributes);
+
+      return {
+        identifier: member.identifier,
+        firstName: member.person?.preferredName?.givenName || "",
+        middleName: member.person?.preferredName?.middleName || null,
+        lastName: member.person?.preferredName?.familyName || "",
+        personUuid: member.person?.uuid,
+        openMrsUuid: member.uuid,
+        teamUuid: member.team?.uuid || null,
+        teamName: member.team?.teamName || null,
+        teamIdentifier: member.team?.teamIdentifier || null,
+        locationUuid: member.team?.location?.uuid || null,
+        locationName: member.team?.location?.name || null,
+        locationDescription: member.team?.location?.description || null,
+        roleUuid: member.teamRole?.uuid || null,
+        roleName: member.teamRole?.name || null,
+        NIN: nin,
+        email,
+        phoneNumber,
+        username: userDetails[0].username,
+        userUuid: userDetails[0].uuid,
+        createdAt: member.dateCreated ? new Date(member.dateCreated) : new Date(),
+      };
+    });
+  }
+
+  static async syncTeamMembersFromOpenMrs({ pageSize = 500, onProgress } = {}) {
     try {
       console.log("🔄 Syncing Team Members from OpenMRS in batches...");
 
       let fetchedRecords = 0;
-      let totalFetched = 0;
-      const concurrency = 10;
+      let totalEstimated = 0;
+      const stats = {
+        fetched: 0,
+        upserted: 0,
+        skipped: 0,
+        errors: 0,
+      };
+      const concurrency = Math.max(1, parseInt(process.env.P_LIMIT_CONCURRENCY || "10", 10) || 10);
       const limit = pLimit(concurrency);
 
-      while (true) {
-        console.log(`📥 Fetching records starting at index ${fetchedRecords}...`);
+      const emit = (extra = {}) => {
+        onProgress?.({
+          phase: "syncing",
+          processed: fetchedRecords,
+          total: totalEstimated,
+          ...stats,
+          ...extra,
+        });
+      };
 
+      emit();
+
+      while (true) {
         const response = await openmrsApiClient.get("team/teammember", {
-          v: "custom:(uuid,identifier,dateCreated,teamRole,person:(id,uuid,attributes:(uuid,display,value,attributeType:(uuid,display)),preferredName:(givenName,middleName,familyName)),team:(uuid,teamName,teamIdentifier,location:(uuid,name,description)))",
+          v: TEAM_MEMBER_REPRESENTATION,
           startIndex: fetchedRecords,
           limit: pageSize,
         });
 
         const teamMembers = response.results || [];
-        const fetchedCount = teamMembers.length;
+        if (typeof response.totalCount === "number") {
+          totalEstimated = response.totalCount;
+        } else if (totalEstimated === 0 && teamMembers.length > 0) {
+          totalEstimated = fetchedRecords + teamMembers.length;
+        }
 
-        if (fetchedCount === 0) {
-          console.log(`✅ No more team members to fetch. Total synced: ${totalFetched}`);
+        if (teamMembers.length === 0) {
           break;
         }
 
         const formattedMembers = [];
-
         for (const member of teamMembers) {
           try {
-            if (!member.identifier || !member.uuid || !member.person) {
-              throw new Error("Missing identifier or person data");
-            }
-
-            // Get user details from MySQL
-            const userDetails = await mysqlClient.query("SELECT user_id, uuid, username, person_id FROM users WHERE person_id = ?", [member.person.id]);
-            if (userDetails.length === 0) {
-              console.warn(` > ⚠️ Skipping team member with UUID ${member.uuid} due to missing user details.`);
-              continue;
-            }
-
-            let nin = null;
-            let email = null;
-            let phoneNumber = null;
-
-            if (member.person.attributes?.length) {
-              for (const attr of member.person.attributes) {
-                if (attr.attributeType?.display === "NIN") nin = attr.value;
-                if (attr.attributeType?.display === "email") email = attr.value;
-                if (attr.attributeType?.display === "phoneNumber") phoneNumber = attr.value;
-              }
-            }
-
-            formattedMembers.push({
-              identifier: member.identifier,
-              firstName: member.person?.preferredName?.givenName || "",
-              middleName: member.person?.preferredName?.middleName || null,
-              lastName: member.person?.preferredName?.familyName || "",
-              personUuid: member.person?.uuid,
-              openMrsUuid: member.uuid,
-              teamUuid: member.team?.uuid || null,
-              teamName: member.team?.teamName || null,
-              teamIdentifier: member.team?.teamIdentifier || null,
-              locationUuid: member.team?.location?.uuid || null,
-              locationName: member.team?.location?.name || null,
-              locationDescription: member.team?.location?.description || null,
-              roleUuid: member.teamRole?.uuid || null,
-              roleName: member.teamRole?.name || null,
-              NIN: nin,
-              email,
-              phoneNumber,
-              username: userDetails[0].username,
-              userUuid: userDetails[0].uuid,
-              createdAt: new Date(member.dateCreated),
-            });
+            formattedMembers.push(await TeamMemberService.formatOpenMrsTeamMember(member));
           } catch (err) {
+            stats.skipped += 1;
             console.warn(` > ⚠️ Skipping team member due to error: ${err.message} (UUID: ${member?.uuid || "N/A"})`);
+            emit({
+              current: {
+                openMrsUuid: member?.uuid || null,
+                action: "skip",
+                message: err.message,
+              },
+            });
           }
         }
 
         const uniqueMembers = [];
         const seenIdentifiers = new Set();
-
         for (const member of formattedMembers) {
           if (!seenIdentifiers.has(member.identifier)) {
             seenIdentifiers.add(member.identifier);
             uniqueMembers.push(member);
           } else {
-            console.warn(` > ⚠️ Duplicate identifier in batch: ${member.identifier}, skipping...`);
+            stats.skipped += 1;
           }
         }
 
-        // Process team members concurrently
-        const upsertTasks = uniqueMembers.map((member) =>
-          limit(async () => {
-            try {
-              await TeamMemberRepository.upsertTeamMember(member);
-            } catch (err) {
-              if (err.code === "P2002") {
-                console.warn(` > ⚠️ Skipping duplicate identifier: ${member.identifier}`);
-                return;
+        await Promise.allSettled(
+          uniqueMembers.map((member) =>
+            limit(async () => {
+              try {
+                await TeamMemberRepository.upsertTeamMember(member);
+                stats.upserted += 1;
+                emit({
+                  current: {
+                    openMrsUuid: member.openMrsUuid,
+                    username: member.username,
+                    name: [member.firstName, member.lastName].filter(Boolean).join(" ") || null,
+                    action: "upsert",
+                  },
+                });
+              } catch (err) {
+                if (err.code === "P2002") {
+                  stats.skipped += 1;
+                  return;
+                }
+                stats.errors += 1;
+                console.error(`❌ Error upserting member ${member.identifier}:`, err.message);
+                emit({
+                  current: {
+                    openMrsUuid: member.openMrsUuid,
+                    username: member.username,
+                    action: "error",
+                    message: err.message,
+                  },
+                });
               }
-              console.error(`❌ Error upserting member ${member.identifier}:`, err.message);
-              throw err;
-            }
-          }),
+            })
+          )
         );
 
-        // Run concurrently with safe option to avoid crashing on single upsert failure
-        await Promise.allSettled(upsertTasks);
-
-        totalFetched += fetchedCount;
-        fetchedRecords += fetchedCount;
-
-        console.log(`✅ Synced ${formattedMembers.length} valid team members (Fetched: ${fetchedCount})`);
+        stats.fetched += teamMembers.length;
+        fetchedRecords += teamMembers.length;
+        emit();
       }
 
-      console.log("✅ OpenMRS Team Members Sync Completed.");
+      console.log(
+        `✅ OpenMRS Team Members Sync Completed. fetched=${stats.fetched} upserted=${stats.upserted} skipped=${stats.skipped} errors=${stats.errors}`
+      );
+      return stats;
     } catch (error) {
       throw new CustomError("❌ OpenMRS Team Members Sync Error: " + error);
     }
+  }
+
+  static async syncLocalTeamMembersFromOpenMrs({ pageSize = 500, onProgress } = {}) {
+    const syncStats = await TeamMemberService.syncTeamMembersFromOpenMrs({ pageSize, onProgress });
+    const purgeStats = await TeamMemberService.purgeOrphanedLocalRecords({ onProgress });
+    return { sync: syncStats, purge: purgeStats };
+  }
+
+  static startSyncLocalTeamMembersAsync({ pageSize = 500 } = {}) {
+    const jobId = randomUUID();
+    const broadcast = (payload) => {
+      const phase = payload.phase === "complete" || payload.phase === "error" ? payload.phase : payload.phase || "syncing";
+      WebSocketService.broadcast({
+        ...payload,
+        jobId,
+        path: "teammember-sync",
+        timestamp: new Date().toISOString(),
+        type:
+          phase === "complete" || phase === "error"
+            ? "teammember-sync-complete"
+            : "teammember-sync-progress",
+      });
+    };
+
+    setImmediate(() => {
+      TeamMemberService.syncLocalTeamMembersFromOpenMrs({
+        pageSize,
+        onProgress: (progress) => broadcast({ ...progress }),
+      })
+        .then((summary) => {
+          broadcast({
+            phase: "complete",
+            status: "complete",
+            sync: summary.sync,
+            purge: summary.purge,
+            processed:
+              (summary.sync?.fetched || 0) + (summary.purge?.scanned || 0),
+            total: (summary.sync?.fetched || 0) + (summary.purge?.scanned || 0),
+            upserted: summary.sync?.upserted || 0,
+            skipped: (summary.sync?.skipped || 0) + (summary.purge?.skipped || 0),
+            purged: summary.purge?.purged || 0,
+            kept: summary.purge?.kept || 0,
+            errors: (summary.sync?.errors || 0) + (summary.purge?.errors || 0),
+            message: `Sync complete: upserted ${summary.sync?.upserted || 0}, purged ${summary.purge?.purged || 0} orphan(s).`,
+          });
+          console.log(`✅ Team member sync job ${jobId} finished.`);
+        })
+        .catch((error) => {
+          console.error(`❌ Team member sync job ${jobId} failed:`, error.message);
+          broadcast({
+            phase: "error",
+            status: "error",
+            message: error.message,
+            upserted: 0,
+            purged: 0,
+            kept: 0,
+            errors: 1,
+          });
+        });
+    });
+
+    return { started: true, jobId };
   }
 
   static async getTeamMemberByUuid(uuid) {
@@ -156,25 +272,45 @@ class TeamMemberService {
       throw new CustomError("Team member not found.", 404);
     }
 
+    let liveMember = null;
+    try {
+      liveMember = await openmrsApiClient.get(`team/teammember/${uuid}`, {
+        v: TEAM_MEMBER_REPRESENTATION,
+      });
+    } catch (error) {
+      console.warn(`⚠️ Could not load live OpenMRS team member ${uuid}:`, error.message);
+    }
+
+    const liveContacts = extractPersonContactAttributes(liveMember?.person?.attributes);
+    let username = teamMember.username;
+    let userUuid = teamMember.userUuid;
+
+    if (liveMember?.person?.id) {
+      try {
+        const userDetails = await mysqlClient.query(
+          "SELECT uuid, username FROM users WHERE person_id = ?",
+          [liveMember.person.id]
+        );
+        if (userDetails[0]) {
+          username = userDetails[0].username;
+          userUuid = userDetails[0].uuid;
+        }
+      } catch {
+        // keep local username
+      }
+    }
+
+    const facilityUuid = liveMember?.team?.location?.uuid || teamMember.locationUuid;
     let facility = null;
-    if (teamMember.locationUuid) {
+    if (facilityUuid) {
       facility = await prisma.openMRSLocation.findUnique({
-        where: { uuid: teamMember.locationUuid },
+        where: { uuid: facilityUuid },
         select: { hfrCode: true, locationCode: true, type: true, name: true },
       });
     }
 
-    let assignmentUuid = null;
+    const assignmentUuid = liveMember?.locations?.[0]?.uuid || null;
     let assignment = null;
-    try {
-      const liveMember = await openmrsApiClient.get(`team/teammember/${uuid}`, {
-        v: "custom:(uuid,locations:(uuid))",
-      });
-      assignmentUuid = liveMember?.locations?.[0]?.uuid || null;
-    } catch {
-      assignmentUuid = null;
-    }
-
     if (assignmentUuid) {
       assignment = await prisma.openMRSLocation.findUnique({
         where: { uuid: assignmentUuid },
@@ -183,12 +319,25 @@ class TeamMemberService {
     }
 
     let accountStatus = "Unknown";
-    if (teamMember.userUuid) {
+    let activationEmail = null;
+    let activationPhone = null;
+    let activationUsedAt = null;
+    if (userUuid) {
       const activation = await prisma.accountActivation.findFirst({
-        where: { userUuid: teamMember.userUuid, slugType: "ACTIVATION" },
+        where: { userUuid, slugType: "ACTIVATION" },
         orderBy: { createdAt: "desc" },
-        select: { isUsed: true, expiryDate: true, usedAt: true },
+        select: {
+          isUsed: true,
+          expiryDate: true,
+          usedAt: true,
+          email: true,
+          phoneNumber: true,
+        },
       });
+      activationEmail = activation?.email || null;
+      activationPhone = activation?.phoneNumber || null;
+      activationUsedAt = activation?.usedAt || null;
+
       if (!activation) {
         accountStatus = "No activation record";
       } else if (activation.isUsed) {
@@ -202,49 +351,47 @@ class TeamMemberService {
       accountStatus = "No OpenMRS user linked";
     }
 
-    let sex = null;
-    if (teamMember.personUuid) {
-      try {
-        const person = await openmrsApiClient.get(`person/${teamMember.personUuid}`, {
-          v: "custom:(gender)",
-        });
-        if (person?.gender === "M") sex = "MALE";
-        else if (person?.gender === "F") sex = "FEMALE";
-        else sex = person?.gender || null;
-      } catch {
-        sex = null;
-      }
-    }
+    const sex = liveMember?.person?.gender
+      ? genderToSexLabel(liveMember.person.gender)
+      : null;
+
+    const firstName = liveMember?.person?.preferredName?.givenName ?? teamMember.firstName;
+    const middleName = liveMember?.person?.preferredName?.middleName ?? teamMember.middleName;
+    const lastName = liveMember?.person?.preferredName?.familyName ?? teamMember.lastName;
 
     return {
       uuid: teamMember.openMrsUuid,
       openMrsUuid: teamMember.openMrsUuid,
-      identifier: teamMember.identifier,
-      username: teamMember.username,
-      firstName: teamMember.firstName,
-      middleName: teamMember.middleName,
-      lastName: teamMember.lastName,
-      NIN: teamMember.NIN,
-      email: teamMember.email,
-      phoneNumber: teamMember.phoneNumber,
+      identifier: liveMember?.identifier || teamMember.identifier,
+      username,
+      firstName,
+      middleName,
+      lastName,
+      NIN: liveContacts.nin || teamMember.NIN,
+      email: liveContacts.email || activationEmail || teamMember.email,
+      phoneNumber: liveContacts.phoneNumber || activationPhone || teamMember.phoneNumber,
+      activationEmail,
+      activationPhone,
+      activationUsedAt,
       sex,
-      roleName: teamMember.roleName,
-      roleUuid: teamMember.roleUuid,
-      teamName: teamMember.teamName,
-      teamUuid: teamMember.teamUuid,
-      teamIdentifier: teamMember.teamIdentifier,
-      facilityName: facility?.name || teamMember.locationName,
+      roleName: liveMember?.teamRole?.name || teamMember.roleName,
+      roleUuid: liveMember?.teamRole?.uuid || teamMember.roleUuid,
+      teamName: liveMember?.team?.teamName || teamMember.teamName,
+      teamUuid: liveMember?.team?.uuid || teamMember.teamUuid,
+      teamIdentifier: liveMember?.team?.teamIdentifier || teamMember.teamIdentifier,
+      facilityName: facility?.name || liveMember?.team?.location?.name || teamMember.locationName,
       facilityHfrCode: facility?.hfrCode || null,
-      facilityLocationUuid: teamMember.locationUuid,
-      locationName: teamMember.locationName,
-      locationDescription: teamMember.locationDescription,
+      facilityLocationUuid: facilityUuid,
+      locationName: liveMember?.team?.location?.name || teamMember.locationName,
+      locationDescription: liveMember?.team?.location?.description || teamMember.locationDescription,
       assignmentLocationUuid: assignmentUuid,
       assignmentLocationName: assignment?.name || null,
       assignmentLocationCode: assignment?.locationCode || null,
       assignmentLocationType: assignment?.type || null,
-      personUuid: teamMember.personUuid,
-      userUuid: teamMember.userUuid,
+      personUuid: liveMember?.person?.uuid || teamMember.personUuid,
+      userUuid,
       accountStatus,
+      dataSource: liveMember ? "openmrs-live" : "local-cache",
       createdAt: teamMember.createdAt,
       updatedAt: teamMember.updatedAt,
     };
@@ -312,15 +459,10 @@ class TeamMemberService {
       let phoneNumber = null;
 
       if (newTeamMemberDetails.person?.attributes?.length) {
-        for (const attr of newTeamMemberDetails.person.attributes) {
-          if (attr.attributeType?.display === "NIN") {
-            nin = attr.value;
-          } else if (attr.attributeType?.display === "email") {
-            email = attr.value;
-          } else if (attr.attributeType?.display === "phoneNumber") {
-            phoneNumber = attr.value;
-          }
-        }
+        const contacts = extractPersonContactAttributes(newTeamMemberDetails.person.attributes);
+        nin = contacts.nin;
+        email = contacts.email;
+        phoneNumber = contacts.phoneNumber;
       }
 
       // Format team member data
@@ -723,29 +865,50 @@ class TeamMemberService {
    * Scan all local openmrs_team_members and purge those whose OpenMRS
    * team-member UUID no longer exists (orphans after failed registration + delete_person).
    */
-  static async purgeOrphanedLocalRecords() {
+  static async purgeOrphanedLocalRecords({ onProgress } = {}) {
     const members = await TeamMemberRepository.getAllMembersForOrphanScan();
     const concurrency = Math.max(1, parseInt(process.env.P_LIMIT_CONCURRENCY || "10", 10) || 10);
     const limit = pLimit(concurrency);
 
     const stats = {
-      scanned: members.length,
+      scanned: 0,
       kept: 0,
       purged: 0,
+      skipped: 0,
       errors: 0,
       purgedSamples: [],
       errorSamples: [],
     };
 
+    const emit = (extra = {}) => {
+      onProgress?.({
+        phase: "purging",
+        processed: stats.scanned,
+        total: members.length,
+        ...stats,
+        ...extra,
+      });
+    };
+
     console.log(`🧹 Scanning ${members.length} local team member(s) for OpenMRS orphans (concurrency=${concurrency})...`);
+    emit();
 
     await Promise.all(
       members.map((member) =>
         limit(async () => {
           try {
+            stats.scanned += 1;
             const exists = await TeamMemberRepository.openMrsTeamMemberExists(member.openMrsUuid);
             if (exists) {
               stats.kept += 1;
+              emit({
+                current: {
+                  openMrsUuid: member.openMrsUuid,
+                  username: member.username,
+                  name: [member.firstName, member.lastName].filter(Boolean).join(" ") || null,
+                  action: "keep",
+                },
+              });
               return;
             }
 
@@ -759,6 +922,14 @@ class TeamMemberService {
                 name: [member.firstName, member.lastName].filter(Boolean).join(" ") || null,
               });
             }
+            emit({
+              current: {
+                openMrsUuid: member.openMrsUuid,
+                username: member.username,
+                name: [member.firstName, member.lastName].filter(Boolean).join(" ") || null,
+                action: "purge",
+              },
+            });
           } catch (error) {
             stats.errors += 1;
             if (stats.errorSamples.length < 20) {
@@ -769,6 +940,14 @@ class TeamMemberService {
               });
             }
             console.error(`❌ Orphan purge failed for NIN=${member.NIN}:`, error.message);
+            emit({
+              current: {
+                openMrsUuid: member.openMrsUuid,
+                username: member.username,
+                action: "error",
+                message: error.message,
+              },
+            });
           }
         })
       )

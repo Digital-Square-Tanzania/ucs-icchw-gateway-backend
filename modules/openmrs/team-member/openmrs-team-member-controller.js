@@ -130,6 +130,22 @@ class TeamMemberController {
       next(error);
     }
   }
+
+  // Sync local openmrs_team_members from OpenMRS, then purge orphans (async + WebSocket progress)
+  static async syncLocalTeamMembersAsync(req, res, next) {
+    try {
+      const pageSize = parseInt(req.body?.pageSize || req.query?.pageSize || "500", 10);
+      const started = TeamMemberService.startSyncLocalTeamMembersAsync({ pageSize });
+      return BaseResponse.success(
+        res,
+        "Team member sync started. Progress will be sent over WebSocket.",
+        started,
+        202
+      );
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export default TeamMemberController;
