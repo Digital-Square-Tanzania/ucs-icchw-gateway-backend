@@ -8,8 +8,12 @@ class TeamMemberController {
   // Get all team members
   static async getTeamMembers(req, res, next) {
     try {
-      const { page = 1, pageSize = 10 } = req.query;
-      const teamMembers = await TeamMemberService.getTeamMembers(parseInt(page), parseInt(pageSize));
+      const { page = 1, pageSize = 10, search } = req.query;
+      const teamMembers = await TeamMemberService.getTeamMembers(
+        parseInt(page, 10),
+        parseInt(pageSize, 10),
+        search
+      );
       return BaseResponse.success(res, "Team members retrieved successfully", teamMembers);
     } catch (error) {
       next(error);

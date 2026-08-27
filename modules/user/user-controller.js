@@ -22,9 +22,10 @@ class UserController {
   static async getAllUsers(req, res, next) {
     try {
       const page = parseInt(req.query.page, 10) || 1;
-      const limit = parseInt(req.query.limit, 10) || 10;
+      const limit = parseInt(req.query.limit, 10) || parseInt(req.query.pageSize, 10) || 10;
+      const { search } = req.query;
 
-      const usersData = await UserService.getAllUsers(page, limit);
+      const usersData = await UserService.getAllUsers(page, limit, search);
       return BaseResponse.success(res, "Users retrieved successfully", usersData);
     } catch (error) {
       next(new CustomError(error.message, 500));

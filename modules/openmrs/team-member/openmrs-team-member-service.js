@@ -22,8 +22,8 @@ class TeamMemberService {
     };
   }
 
-  static async getTeamMembers(page = 1, limit = 10) {
-    return await TeamMemberRepository.getTeamMembers(page, limit);
+  static async getTeamMembers(page = 1, limit = 10, search = null) {
+    return await TeamMemberRepository.getTeamMembers(page, limit, search);
   }
 
   static async syncTeamMembers(pageSize = 500) {

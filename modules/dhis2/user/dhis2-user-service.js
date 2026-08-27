@@ -18,13 +18,13 @@ class DHIS2UserService {
     }
   }
 
-  static async getUsers({ page, pageSize }) {
+  static async getUsers({ page, pageSize, search }) {
     try {
       const pageNum = Number(page) || 1;
       const pageSizeNum = Number(pageSize) || 10;
 
       const offset = (pageNum - 1) * pageSizeNum;
-      const users = await DHIS2UserRepository.getUsers(offset, pageSizeNum);
+      const users = await DHIS2UserRepository.getUsers(offset, pageSizeNum, search);
       return users;
     } catch (error) {
       console.error("❌ Failed to get DHIS2 users:", error.message);

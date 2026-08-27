@@ -1,4 +1,5 @@
 import prisma from "../../../config/prisma.js";
+import { buildUsernameAndNameSearchWhere } from "../../../utils/user-search.js";
 
 class DHIS2UserRepository {
   static async upsertUsers(users) {
@@ -23,11 +24,13 @@ class DHIS2UserRepository {
     return await prisma.dHIS2User.create({ data: user });
   }
 
-  static async getUsers(offset, pageSize) {
+  static async getUsers(offset, pageSize, search = null) {
     try {
-      const dhis2UserCount = await prisma.dHIS2User.count();
+      const where = buildUsernameAndNameSearchWhere(search, { includeMiddleName: false }) || undefined;
+      const dhis2UserCount = await prisma.dHIS2User.count({ where });
 
       const users = await prisma.dHIS2User.findMany({
+        where,
         skip: offset,
         take: pageSize,
         select: {

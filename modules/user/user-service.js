@@ -127,8 +127,8 @@ class UserService {
   }
 
   // 🔹 Pass pagination params
-  static async getAllUsers(page, limit) {
-    return UserRepository.getAllUsers(page, limit);
+  static async getAllUsers(page, limit, search = null) {
+    return UserRepository.getAllUsers(page, limit, search);
   }
 
   static async getUserById(userId) {

@@ -1,4 +1,5 @@
 import prisma from "../../config/prisma.js";
+import { buildUsernameAndNameSearchWhere } from "../../utils/user-search.js";
 
 class UserRepository {
   // Create a new user
@@ -21,12 +22,17 @@ class UserRepository {
   }
 
   // 🔹 Get all users with pagination
-  static async getAllUsers(page = 1, limit = 10) {
+  static async getAllUsers(page = 1, limit = 10, search = null) {
     const offset = (page - 1) * limit;
+    const nameSearch = buildUsernameAndNameSearchWhere(search, { includeUsername: false });
+    const where = {
+      isDeleted: false,
+      ...(nameSearch || {}),
+    };
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
-        where: { isDeleted: false },
+        where,
         skip: offset,
         take: limit,
         select: {
@@ -46,7 +52,7 @@ class UserRepository {
           createdAt: "desc",
         },
       }),
-      prisma.user.count({ where: { isDeleted: false } }),
+      prisma.user.count({ where }),
     ]);
 
     return {
