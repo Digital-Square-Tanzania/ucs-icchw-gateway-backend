@@ -12,14 +12,11 @@ router.get("/", AuthMiddleware.authenticate, ValidationMiddleware.validate(OpenM
 // Sync Locations
 router.get("/sync", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), OpenMRSLocationController.syncLocations);
 
-// Get Location by ID
-router.get("/:uuid", AuthMiddleware.authenticate, OpenMRSLocationController.getLocationByUuid);
-
 // All Location Tags
 router.get("/tags/all", AuthMiddleware.authenticate, OpenMRSLocationController.getAllLocationTags);
 
 // Sync Location Tags
-router.get("/tags/sync", AuthMiddleware.authenticate, OpenMRSLocationController.syncLocationTags);
+router.get("/tags/sync", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), OpenMRSLocationController.syncLocationTags);
 
 // Location Tags - Get locations filtered by active status with pagination
 router.get("/tags/:tag", AuthMiddleware.authenticate, OpenMRSLocationController.getLocationsByTag);
@@ -28,7 +25,7 @@ router.get("/tags/:tag", AuthMiddleware.authenticate, OpenMRSLocationController.
 router.get("/attributetypes/all", AuthMiddleware.authenticate, OpenMRSLocationController.getAllLocationAttributeTypes);
 
 // Sync Location Attributes
-router.get("/attributetypes/sync", AuthMiddleware.authenticate, OpenMRSLocationController.syncLocationAttributeTypes);
+router.get("/attributetypes/sync", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), OpenMRSLocationController.syncLocationAttributeTypes);
 
 // Materialized View Endpoints
 router.get("/hierarchy/all", AuthMiddleware.authenticate, OpenMRSLocationController.getLocationHierarchy);
@@ -39,5 +36,8 @@ router.post("/hierarchy/refresh", AuthMiddleware.authenticate, AuthMiddleware.au
 router.get("/facilities/search", AuthMiddleware.authenticate, OpenMRSLocationController.searchFacilities);
 router.get("/hamlets/search", AuthMiddleware.authenticate, OpenMRSLocationController.searchHamlets);
 router.get("/facilities/hamlets/search", AuthMiddleware.authenticate, OpenMRSLocationController.searchFacilityHamlets);
+
+// Get Location by UUID — must stay after all other static path segments
+router.get("/:uuid", AuthMiddleware.authenticate, OpenMRSLocationController.getLocationByUuid);
 
 export default router;

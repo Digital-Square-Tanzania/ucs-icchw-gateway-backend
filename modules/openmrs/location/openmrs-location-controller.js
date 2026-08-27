@@ -131,9 +131,9 @@ class OpenMRSLocationController {
   // Sync locations from OpenMRS in batches
   static async syncLocations(req, res, next) {
     try {
-      const { pageSize } = req.query.pageSize;
-      await OpenMRSLocationService.syncLocations(parseInt(pageSize) || 1000);
-      BaseResponse.success(res, "OpenMRS locations synced successfully.");
+      const pageSize = parseInt(req.query.pageSize, 10) || 1000;
+      const result = await OpenMRSLocationService.syncLocations(pageSize);
+      return BaseResponse.success(res, "OpenMRS locations synced successfully.", result);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -142,8 +142,8 @@ class OpenMRSLocationController {
   // Sync location tags
   static async syncLocationTags(req, res, next) {
     try {
-      await OpenMRSLocationService.syncLocationTags();
-      BaseResponse.success(res, "OpenMRS location tags synced successfully.");
+      const result = await OpenMRSLocationService.syncLocationTags();
+      return BaseResponse.success(res, "OpenMRS location tags synced successfully.", result);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }
@@ -152,8 +152,8 @@ class OpenMRSLocationController {
   // Sync location attribute types
   static async syncLocationAttributeTypes(req, res, next) {
     try {
-      await OpenMRSLocationService.syncLocationAttributeTypes();
-      BaseResponse.success(res, "OpenMRS location attribute types synced successfully.");
+      const result = await OpenMRSLocationService.syncLocationAttributeTypes();
+      return BaseResponse.success(res, "OpenMRS location attribute types synced successfully.", result);
     } catch (error) {
       next(new CustomError(error.message, 500));
     }

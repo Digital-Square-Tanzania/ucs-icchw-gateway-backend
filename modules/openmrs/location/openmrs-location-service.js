@@ -548,19 +548,39 @@ class OpenMRSLocationService {
   }
 
   static async syncLocationTags() {
+    return await OpenMRSLocationService.syncLocationTagsFromDb();
+  }
+
+  // Fast path: read location_tag rows directly from OpenMRS MySQL.
+  static async syncLocationTagsFromDb() {
+    let connection;
     try {
-      console.log("🔄 Syncing OpenMRS Location Tags...");
+      console.log("🚀 Fast-syncing OpenMRS location tags directly from MySQL...");
 
-      // Fetch all location tags from OpenMRS
-      const response = await OpenMRSApiClient.get("locationtag", { v: "full" });
-      const tags = response.results || [];
+      connection = await mysqlClient.getConnection();
+      await connection.query("USE openmrs");
 
-      // Store the tags in the database
-      await OpenMRSLocationRepository.upsertLocationTags(tags);
+      const [rows] = await connection.query(`
+        SELECT location_tag_id, uuid, name, description, date_created, retired
+        FROM location_tag
+        WHERE COALESCE(retired, 0) = 0
+        ORDER BY name
+      `);
 
-      console.log("✅ OpenMRS Location Tags Sync Completed.");
+      const tags = (rows || []).map((row) => ({
+        name: row.name,
+        description: row.description || null,
+        uuid: row.uuid,
+        auditInfo: { dateCreated: row.date_created ? new Date(row.date_created) : new Date() },
+      }));
+
+      const result = await OpenMRSLocationRepository.upsertLocationTags(tags);
+      console.log(`✅ OpenMRS Location Tags Sync Completed (${tags.length} tag(s)).`);
+      return { synced: tags.length, inserted: result?.count ?? 0 };
     } catch (error) {
       throw new CustomError("❌ OpenMRS Location Tags Sync Error: " + error.message);
+    } finally {
+      if (connection) connection.release();
     }
   }
 
