@@ -20,6 +20,7 @@ import resendActivationCron from "../../utils/resend-activation-cron.js";
 
 const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
 const COUNCIL_CODE_SEGMENTS = 5;
+const ACTIVATION_VALIDITY_MS = 1000 * 60 * 60 * 24 * 10;
 
 class UserService {
   /**
@@ -249,6 +250,122 @@ class UserService {
     }
   }
 
+  static buildPendingActivationEmail(member, slug) {
+    const activationUrl = `${backendUrl}/api/v1/user/chw/activate/${slug}`;
+    const username = member.username || "";
+    return {
+      to: member.email,
+      subject: "Kufungua Akaunti ya UCS/WAJA",
+      text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${username}).`,
+      html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
+             <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
+             <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${username})</strong>.</p><br>`,
+    };
+  }
+
+  /**
+   * Keep one pending ACTIVATION row in sync with OpenMRS/local credentials, drop stale open slugs, resend mail.
+   * Used when HRHIS updates email/phone/username before the CHW has activated.
+   */
+  static async refreshPendingActivationAfterCredentialChange(member, { req } = {}) {
+    const userUuid = member?.userUuid;
+    const email = member?.email?.trim();
+    if (!userUuid || !email) {
+      return { sent: false, reason: "missing_user_or_email" };
+    }
+
+    const keep = await prisma.accountActivation.findFirst({
+      where: { userUuid, slugType: "ACTIVATION", isUsed: false },
+      orderBy: { createdAt: "desc" },
+    });
+    if (!keep) {
+      return { sent: false, reason: "no_open_activation" };
+    }
+
+    const fullName =
+      [member.firstName, member.lastName].filter(Boolean).join(" ").trim() || keep.fullName || null;
+    const expiryDate = new Date(Date.now() + ACTIVATION_VALIDITY_MS);
+
+    const updated = await prisma.accountActivation.update({
+      where: { id: keep.id },
+      data: {
+        email,
+        phoneNumber: member.phoneNumber?.trim() || keep.phoneNumber,
+        nin: member.NIN || keep.nin,
+        fullName,
+        expiryDate,
+        facility: member.locationName || keep.facility,
+        isResent: true,
+      },
+    });
+
+    let invalidatedCount = 0;
+    await prisma.$transaction(async (tx) => {
+      const stale = await tx.accountActivation.findMany({
+        where: {
+          userUuid,
+          slugType: "ACTIVATION",
+          isUsed: false,
+          id: { not: keep.id },
+        },
+        select: { id: true },
+      });
+      const staleIds = stale.map((row) => row.id);
+      invalidatedCount = staleIds.length;
+      if (staleIds.length > 0) {
+        await tx.openMRSTeamMember.updateMany({
+          where: { accountActivationId: { in: staleIds } },
+          data: { accountActivationId: null },
+        });
+        await tx.accountActivation.deleteMany({
+          where: { id: { in: staleIds } },
+        });
+      }
+      await tx.openMRSTeamMember.updateMany({
+        where: { userUuid },
+        data: { accountActivationId: keep.id },
+      });
+    });
+
+    try {
+      await EmailService.sendEmail(UserService.buildPendingActivationEmail(member, updated.slug));
+    } catch (emailError) {
+      console.error(
+        `⚠️ Pending activation refreshed for ${userUuid} but email to ${email} failed:`,
+        emailError.message
+      );
+      if (req) {
+        await ApiLogger.log(req, {
+          statusCode: 500,
+          body: {
+            action: "REFRESH_PENDING_ACTIVATION",
+            slug: updated.slug,
+            email,
+            invalidatedCount,
+            emailError: emailError.message,
+          },
+        });
+      }
+      return { sent: false, reason: "email_failed", slug: updated.slug, invalidatedCount };
+    }
+
+    console.log(
+      `✅ Refreshed pending activation for ${userUuid} (slug ${updated.slug}, invalidated ${invalidatedCount} stale slug(s)).`
+    );
+    if (req) {
+      await ApiLogger.log(req, {
+        statusCode: 200,
+        body: {
+          action: "REFRESH_PENDING_ACTIVATION",
+          slug: updated.slug,
+          email,
+          invalidatedCount,
+        },
+      });
+    }
+    return { sent: true, slug: updated.slug, activationId: keep.id, invalidatedCount };
+  }
+
   /**
    * Handle email resend route
    * @param {Request} req
@@ -265,15 +382,31 @@ class UserService {
         },
       });
 
+      if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
+
       const member = await prisma.openMRSTeamMember.findUnique({
         where: { userUuid: activation.userUuid },
       });
 
       if (!member) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
 
-      if (!activation) return { alert: true, message: "Kiungo ulichotumia sio sahihi.", slug, login: false };
       if (activation.isUsed) return { alert: true, message: "Akaunti hii tayari inatumika.", slug, login: false };
-      if (Date.now() < activation.expiryDate) return { alert: true, message: "Linki uliyotumiwa awali ipo sawa, itumie.", slug, login: true, resend: false };
+
+      if (req.params.emailChange) {
+        const refreshed = await UserService.refreshPendingActivationAfterCredentialChange(member, { req });
+        if (refreshed.sent) {
+          return {
+            alert: false,
+            message: "Umetumiwa email mpya ya kuunda akaunti ya UCS.",
+            slug: refreshed.slug,
+            login: false,
+          };
+        }
+      }
+
+      if (Date.now() < activation.expiryDate) {
+        return { alert: true, message: "Linki uliyotumiwa awali ipo sawa, itumie.", slug, login: true, resend: false };
+      }
       const openSlugs = await prisma.accountActivation.findMany({
         where: {
           userUuid: activation.userUuid,
@@ -300,17 +433,8 @@ class UserService {
 
       // Generate an activation slug and record
       const newSlug = await GenerateActivationSlug.generate(activation.userUuid, payload, member, "ACTIVATION", 64);
-      const activationUrl = `${backendUrl}/api/v1/user/chw/activate/${newSlug}`;
 
-      // Send email to the CHW with their login credentials
-      await EmailService.sendEmail({
-        to: member.email,
-        subject: "Kufungua Akaunti ya UCS/WAJA",
-        text: `Hongera, umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kufungua akaunti yako ili uweze kutumia kishkwambi(Tablet) cha kazi: ${activationUrl}. Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji (${member.username}).`,
-        html: `<h1><strong>Hongera!</strong></h1> <p>Umeandikishwa katika mfumo wa UCS. Tafadhali fuata linki hii kuweza kuhuisha akaunti yako ili uweze kutumia kishkwambi(Tablet) chako.</p>
-                 <p><a href="${activationUrl}" style="color:#2596be; text-decoration:underline; font-size:1.1rem;">Fungua Akaunti</a></p>
-                 <p>Upatapo kishkwambi chako, tumia namba yako ya simu kama jina la mtumiaji: <strong>(${member.username})</strong>.</p><br>`,
-      });
+      await EmailService.sendEmail(UserService.buildPendingActivationEmail(member, newSlug));
 
       await ApiLogger.log(req, { statusCode: 200, body: { slug: newSlug, email: member.email, slugType: "Reactivation" } });
       console.log("🔄 Activation email resent successfully for slug: ", newSlug);

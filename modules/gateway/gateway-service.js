@@ -365,21 +365,16 @@ class GatewayService {
 
     await TeamMemberRepository.upsertTeamMembers([member]);
 
-    const slug = await prisma.accountActivation.findFirst({
-      where: { userUuid: teamMember.userUuid, slugType: "ACTIVATION", isUsed: false },
-      select: { slug: true },
-    });
-
     const credentialsChanged =
       updatedFields.includes("email") || updatedFields.includes("phoneNumber") || updatedFields.includes("username");
 
-    // Not-yet-activated CHWs: refresh activation email when credentials change.
+    // Not-yet-activated CHWs: sync pending activation row, invalidate duplicate slugs, resend email.
     let sentActivationResend = false;
-    if (!skipSideEffects && credentialsChanged && slug) {
-      req.params.slug = slug.slug;
-      req.params.emailChange = true;
-      await UserService.handleResendEmail(req, res, next);
-      sentActivationResend = true;
+    if (!skipSideEffects && credentialsChanged) {
+      const refreshed = await UserService.refreshPendingActivationAfterCredentialChange(member, { req });
+      if (refreshed.sent) {
+        sentActivationResend = true;
+      }
     }
 
     // Already-activated (or no open slug): send a change notification instead.
