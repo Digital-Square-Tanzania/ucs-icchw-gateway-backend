@@ -167,58 +167,150 @@ class OpenMRSLocationService {
     };
   }
 
-  // Get grouped location hierarchy with separated facilities and villages
-  static async getGroupedLocationHierarchy() {
-    const flatLocations = await OpenMRSLocationRepository.getFullLocationHierarchy();
+  static normalizeHierarchyLabel(value, fallback = "Unknown") {
+    const label = String(value ?? "").trim();
+    return label || fallback;
+  }
 
+  static countGroupedRegions(groupedHierarchy) {
+    let count = 0;
+    for (const country of Object.values(groupedHierarchy || {})) {
+      for (const zone of Object.values(country?.zones || {})) {
+        for (const region of Object.values(zone?.regions || {})) {
+          const name = String(region?.name ?? "").trim();
+          if (name && name !== "Unknown") count += 1;
+        }
+      }
+    }
+    return count;
+  }
+
+  static ensureGroupedHierarchyBranch(groupedHierarchy, labels, wardPayload = null) {
+    const country = OpenMRSLocationService.normalizeHierarchyLabel(labels.country, "Tanzania");
+    const zone = OpenMRSLocationService.normalizeHierarchyLabel(labels.zone, "Mainland");
+    const region = OpenMRSLocationService.normalizeHierarchyLabel(labels.region);
+    const district = OpenMRSLocationService.normalizeHierarchyLabel(labels.district);
+    const council = OpenMRSLocationService.normalizeHierarchyLabel(labels.council);
+    const ward = OpenMRSLocationService.normalizeHierarchyLabel(labels.ward, "—");
+
+    if (!region || region === "Unknown" || !district || district === "Unknown" || !council || council === "Unknown") {
+      return false;
+    }
+
+    if (!groupedHierarchy[country]) groupedHierarchy[country] = { name: country, zones: {} };
+    if (!groupedHierarchy[country].zones[zone]) groupedHierarchy[country].zones[zone] = { name: zone, regions: {} };
+    if (!groupedHierarchy[country].zones[zone].regions[region]) {
+      groupedHierarchy[country].zones[zone].regions[region] = { name: region, districts: {} };
+    }
+    if (!groupedHierarchy[country].zones[zone].regions[region].districts[district]) {
+      groupedHierarchy[country].zones[zone].regions[region].districts[district] = { name: district, councils: {} };
+    }
+    if (!groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council]) {
+      groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council] = {
+        name: council,
+        wards: {},
+      };
+    }
+    if (wardPayload) {
+      const wardNode =
+        groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council].wards[ward];
+      if (!wardNode) {
+        groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council].wards[ward] = {
+          name: ward,
+          facilities: [],
+          villages: [],
+        };
+      }
+      const target =
+        groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council].wards[ward];
+      if (wardPayload.type === "Village") target.villages.push(wardPayload.facilityObj);
+      else target.facilities.push(wardPayload.facilityObj);
+    }
+    return true;
+  }
+
+  static buildGroupedHierarchyFromViewRows(flatLocations) {
     const groupedHierarchy = {};
 
     flatLocations.forEach((location) => {
-      const { country, zone, region, district, council, ward, name, type, uuid } = location;
+      const country = OpenMRSLocationService.normalizeHierarchyLabel(location.country, "Tanzania");
+      const zone = OpenMRSLocationService.normalizeHierarchyLabel(location.zone, "Mainland");
+      const region = OpenMRSLocationService.normalizeHierarchyLabel(location.region);
+      const district = OpenMRSLocationService.normalizeHierarchyLabel(location.district);
+      const council = OpenMRSLocationService.normalizeHierarchyLabel(location.council);
+      const ward = OpenMRSLocationService.normalizeHierarchyLabel(location.ward, "—");
+      const { name, type, uuid } = location;
 
-      // Initialize country
-      if (!groupedHierarchy[country]) {
-        groupedHierarchy[country] = { name: country, zones: {} };
-      }
-
-      // Initialize zone
-      if (!groupedHierarchy[country].zones[zone]) {
-        groupedHierarchy[country].zones[zone] = { name: zone, regions: {} };
-      }
-
-      // Initialize region
-      if (!groupedHierarchy[country].zones[zone].regions[region]) {
-        groupedHierarchy[country].zones[zone].regions[region] = { name: region, districts: {} };
-      }
-
-      // Initialize district
-      if (!groupedHierarchy[country].zones[zone].regions[region].districts[district]) {
-        groupedHierarchy[country].zones[zone].regions[region].districts[district] = { name: district, councils: {} };
-      }
-
-      // Initialize council
-      if (!groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council]) {
-        groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council] = { name: council, wards: {} };
-      }
-
-      // Initialize ward
-      if (!groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council].wards[ward]) {
-        groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council].wards[ward] = {
-          name: ward,
-          facilities: [], // For Facility types
-          villages: [], // For Village types
-        };
-      }
-
-      // Add to either facilities or villages based on type
       const facilityObj = { name, type, uuid };
-
-      if (type === "Village") {
-        groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council].wards[ward].villages.push(facilityObj);
-      } else {
-        groupedHierarchy[country].zones[zone].regions[region].districts[district].councils[council].wards[ward].facilities.push(facilityObj);
-      }
+      OpenMRSLocationService.ensureGroupedHierarchyBranch(
+        groupedHierarchy,
+        { country, zone, region, district, council, ward },
+        { type, facilityObj }
+      );
     });
+
+    return groupedHierarchy;
+  }
+
+  static async buildGroupedCouncilScopeFromLocationTable() {
+    const locations = await OpenMRSLocationRepository.getAllActiveLocationsForHierarchyWalk();
+    const byUuid = new Map(locations.filter((row) => row.uuid).map((row) => [row.uuid, row]));
+    const groupedHierarchy = {};
+
+    for (const row of locations) {
+      const rowType = String(row.type || "").trim().toLowerCase();
+      if (rowType !== "council") continue;
+
+      const ancestors = OpenMRSLocationService.collectAncestorTypes(row.uuid, byUuid);
+      OpenMRSLocationService.ensureGroupedHierarchyBranch(groupedHierarchy, {
+        country: ancestors.country || "Tanzania",
+        zone: ancestors.zone || "Mainland",
+        region: ancestors.region,
+        district: ancestors.district,
+        council: row.name,
+        ward: "—",
+      });
+    }
+
+    return groupedHierarchy;
+  }
+
+  static collectAncestorTypes(startUuid, byUuid) {
+    const types = {};
+    const seen = new Set();
+    let current = startUuid ? byUuid.get(startUuid) : null;
+
+    while (current?.uuid && !seen.has(current.uuid)) {
+      seen.add(current.uuid);
+      const key = String(current.type || "").trim().toLowerCase();
+      if (key && current.name) types[key] = String(current.name).trim();
+      current = current.parent ? byUuid.get(current.parent) : null;
+    }
+
+    return types;
+  }
+
+  // Get grouped location hierarchy with separated facilities and villages
+  static async getGroupedLocationHierarchy() {
+    let flatLocations = await OpenMRSLocationRepository.getFullLocationHierarchy();
+
+    if (flatLocations.length === 0) {
+      try {
+        await OpenMRSLocationRepository.refreshLocationHierarchyView();
+        flatLocations = await OpenMRSLocationRepository.getFullLocationHierarchy();
+      } catch (refreshError) {
+        console.warn("⚠️ Could not refresh openmrs_location_hierarchy_view:", refreshError.message);
+      }
+    }
+
+    let groupedHierarchy = OpenMRSLocationService.buildGroupedHierarchyFromViewRows(flatLocations);
+
+    if (OpenMRSLocationService.countGroupedRegions(groupedHierarchy) === 0) {
+      console.warn(
+        "⚠️ Grouped hierarchy from materialized view has no regions; falling back to openmrs_location parent walk."
+      );
+      groupedHierarchy = await OpenMRSLocationService.buildGroupedCouncilScopeFromLocationTable();
+    }
 
     return groupedHierarchy;
   }

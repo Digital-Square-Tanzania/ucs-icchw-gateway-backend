@@ -112,6 +112,14 @@ class OpenMRSLocationRepository {
     return prisma.openMRSLocationHierarchyView.findMany();
   }
 
+  /** Active flat locations for council-scope fallback when the materialized view is empty or stale. */
+  static async getAllActiveLocationsForHierarchyWalk() {
+    return prisma.openMRSLocation.findMany({
+      where: { retired: false },
+      select: { uuid: true, name: true, parent: true, type: true },
+    });
+  }
+
   /**
    * Get location codes for a given council (optionally scoped by region and district).
    * Used to filter activation stats by council. Returns empty array if no match.
