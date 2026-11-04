@@ -188,6 +188,11 @@ class HrhisLocationRecoveryService {
   /**
    * Scan api_logs for failed /chw/register attempts caused by location resolution,
    * scoped to the selected council. Excludes NINs that later registered successfully.
+   *
+   * Uses the same GatewayResponder envelope rows as council Analytics (one canonical
+   * row per HRHIS HTTP attempt). Ignores duplicate internal ApiLogger rows written
+   * inside registerChwFromHrhis and failed Settings recovery retries that bypass
+   * GatewayResponder.
    */
   static async scanLocationFailures({ region, district, council, days = 90 } = {}) {
     const prefixes = await HrhisLocationRecoveryService.resolveCouncilPrefixes(region, district, council);
@@ -226,6 +231,7 @@ class HrhisLocationRecoveryService {
         FROM api_logs
         WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
           AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
+          AND response->'body'->'message'->'body' IS NOT NULL
       ),
       succeeded_nins AS (
         -- Only real HRHIS success envelopes (or Settings recovery retries).
