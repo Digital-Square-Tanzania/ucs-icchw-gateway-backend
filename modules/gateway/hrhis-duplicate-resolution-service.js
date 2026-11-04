@@ -6,6 +6,10 @@ import TeamMemberRepository from "../openmrs/team-member/openmrs-team-member-rep
 import HrhisLocationRecoveryService from "./hrhis-location-recovery-service.js";
 import openmrsApiClient from "../../utils/openmrs-api-client.js";
 import LocationResolver from "./helpers/location-resolver.js";
+import {
+  hrhisApiLogCreatedAtFilter,
+  parseHrhisAnalyticsLookback,
+} from "../../utils/hrhis-analytics-lookback.js";
 
 const RECOVERY_SOURCE = "hrhis-location-recovery";
 const RESOLUTION_SOURCE = "hrhis-duplicate-resolution";
@@ -229,7 +233,8 @@ function envelopeOutcome(row) {
 
 class HrhisDuplicateResolutionService {
   static async fetchEnvelopeRowsForCouncil({ prefixes, days, nin = null }) {
-    const dayCount = Math.min(365, Math.max(1, Number.parseInt(String(days), 10) || 90));
+    const { dayCount } = parseHrhisAnalyticsLookback(days);
+    const createdAtFilter = hrhisApiLogCreatedAtFilter(dayCount);
     const ninFilter = nin?.trim() || null;
 
     const rows = await prisma.$queryRaw`
@@ -260,8 +265,8 @@ class HrhisDuplicateResolutionService {
           ''
         ) AS err_msg
       FROM api_logs
-      WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
-        AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
+      WHERE ${createdAtFilter}
+        COALESCE(request->>'url', '') ILIKE '%/chw/register%'
         AND response->'body'->'message'->'body' IS NOT NULL
         AND (
           ${ninFilter}::text IS NULL
@@ -364,12 +369,14 @@ class HrhisDuplicateResolutionService {
     const openCount = submissions.filter((s) => s.isOpen).length;
     const resolvedCount = submissions.length - openCount;
 
+    const { scopeDays } = parseHrhisAnalyticsLookback(days);
+
     return {
       scope: {
         region: region?.trim(),
         district: district?.trim(),
         council: council?.trim(),
-        days: Math.min(365, Math.max(1, Number.parseInt(String(days), 10) || 90)),
+        days: scopeDays,
         councilPrefixes: prefixes,
       },
       nin: nin.trim(),

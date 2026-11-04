@@ -1,6 +1,10 @@
 import prisma from "../../config/prisma.js";
 import CustomError from "../../utils/custom-error.js";
 import HrhisLocationRecoveryService from "./hrhis-location-recovery-service.js";
+import {
+  hrhisApiLogCreatedAtFilter,
+  parseHrhisAnalyticsLookback,
+} from "../../utils/hrhis-analytics-lookback.js";
 
 const RECOVERY_SOURCE = "hrhis-location-recovery";
 const MAX_TABLE_ROWS = 500;
@@ -59,7 +63,8 @@ class HrhisCouncilAnalyticsService {
    */
   static async getCouncilAnalytics({ region, district, council, days = 90 } = {}) {
     const prefixes = await HrhisLocationRecoveryService.resolveCouncilPrefixes(region, district, council);
-    const dayCount = Math.min(365, Math.max(1, Number.parseInt(String(days), 10) || 90));
+    const { dayCount, scopeDays } = parseHrhisAnalyticsLookback(days);
+    const createdAtFilter = hrhisApiLogCreatedAtFilter(dayCount);
 
     const [envelopeRows, internalRows] = await Promise.all([
       prisma.$queryRaw`
@@ -90,8 +95,8 @@ class HrhisCouncilAnalyticsService {
             ''
           ) AS err_msg
         FROM api_logs
-        WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
-          AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
+        WHERE ${createdAtFilter}
+          COALESCE(request->>'url', '') ILIKE '%/chw/register%'
           AND response->'body'->'message'->'body' IS NOT NULL
         ORDER BY "createdAt" DESC
         LIMIT 10000
@@ -116,8 +121,8 @@ class HrhisCouncilAnalyticsService {
           response->'body'->'updatedFields' AS updated_fields,
           response->'body'->'fieldChanges' AS field_changes
         FROM api_logs
-        WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
-          AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
+        WHERE ${createdAtFilter}
+          COALESCE(request->>'url', '') ILIKE '%/chw/register%'
           AND COALESCE(response->'body'->>'action', '') IN (
             'REGISTER_AS_UPDATE',
             'REGISTER_PURGE_ORPHAN_AND_RECREATE',
@@ -259,7 +264,7 @@ class HrhisCouncilAnalyticsService {
         region: region?.trim(),
         district: district?.trim(),
         council: council?.trim(),
-        days: dayCount,
+        days: scopeDays,
         councilPrefixes: prefixes,
       },
       summary: {
