@@ -1,5 +1,19 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../config/prisma.js";
 import mysqlClient from "../../utils/mysql-client.js";
+
+function councilPrefixWhereSql(councilPrefixes) {
+  if (councilPrefixes === null) {
+    return Prisma.sql`TRUE`;
+  }
+  if (!Array.isArray(councilPrefixes) || councilPrefixes.length === 0) {
+    return Prisma.sql`FALSE`;
+  }
+  const conditions = councilPrefixes.map(
+    (prefix) => Prisma.sql`(location_code = ${prefix} OR location_code ILIKE ${`${prefix}.%`})`
+  );
+  return Prisma.sql`(${Prisma.join(conditions, " OR ")})`;
+}
 
 class DashboardRepository {
   constructor() {}
@@ -213,9 +227,14 @@ class DashboardRepository {
    * - failed: open failures (excludes rows later annotated as recovered)
    * - recovered: Settings location-recovery success retries
    */
-  static async getHrhisRegisterTimeseries(days = 30) {
+  /**
+   * @param {number} days
+   * @param {string[] | null} councilPrefixes - null = all councils; [] = none match
+   */
+  static async getHrhisRegisterTimeseries(days = 30, councilPrefixes = null) {
     const dayCount = Math.min(90, Math.max(7, Number.parseInt(String(days), 10) || 30));
     const recoverySource = "hrhis-location-recovery";
+    const councilWhere = councilPrefixWhereSql(councilPrefixes);
 
     const rows = await prisma.$queryRaw`
       WITH days AS (
@@ -231,11 +250,18 @@ class DashboardRepository {
           LOWER(COALESCE(response->'body'->'message'->'body'->>'status', '')) AS outcome,
           COALESCE(NULLIF(response->>'status', '')::int, 0) AS http_status,
           COALESCE(response->'body'->'recovery'->>'source', '') AS recovery_source,
-          response->>'recoveredAt' AS recovered_at
+          response->>'recoveredAt' AS recovered_at,
+          COALESCE(
+            request->'body'->'message'->'body'->0->>'locationCode',
+            request->'body'->'message'->'body'->>'locationCode'
+          ) AS location_code
         FROM api_logs
         WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
           AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
           AND response->'body'->'message'->'body' IS NOT NULL
+      ),
+      scoped_logs AS (
+        SELECT * FROM register_logs WHERE ${councilWhere}
       ),
       daily AS (
         SELECT
@@ -259,7 +285,7 @@ class DashboardRepository {
             WHERE recovery_source = ${recoverySource}
               AND outcome = 'success'
           )::int AS recovered
-        FROM register_logs
+        FROM scoped_logs
         GROUP BY day
       )
       SELECT

@@ -3,6 +3,7 @@ import CustomError from "../../utils/custom-error.js";
 import WebSocketService from "../../utils/websocket-service.js";
 import DHIS2UserService from "../dhis2/user/dhis2-user-service.js";
 import OpenMRSLocationService from "../openmrs/location/openmrs-location-service.js";
+import HrhisLocationRecoveryService from "../gateway/hrhis-location-recovery-service.js";
 
 class DashboardService {
   // Get all dashboard statistics
@@ -91,9 +92,17 @@ class DashboardService {
     return { synced: true };
   }
 
-  static async getHrhisRegisterTimeseries(days) {
+  static async getHrhisRegisterTimeseries(days, scope = {}) {
     try {
-      return await DashboardRepository.getHrhisRegisterTimeseries(days);
+      let councilPrefixes = null;
+      if (scope?.council) {
+        councilPrefixes = await HrhisLocationRecoveryService.resolveCouncilPrefixes(
+          scope.region,
+          scope.district,
+          scope.council
+        );
+      }
+      return await DashboardRepository.getHrhisRegisterTimeseries(days, councilPrefixes);
     } catch (error) {
       console.error("❌ Error fetching HRHIS register timeseries:", error.message);
       throw new CustomError("Failed to fetch HRHIS register timeseries. " + error.message, 400);

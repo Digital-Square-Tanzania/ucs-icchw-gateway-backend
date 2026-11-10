@@ -14,7 +14,7 @@ router.get("/stats", AuthMiddleware.authenticate, DashboardController.getDashboa
 router.get(
   "/hrhis-register-timeseries",
   AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER", "COUNCIL_COORDINATOR"),
   DashboardController.getHrhisRegisterTimeseries
 );
 

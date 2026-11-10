@@ -1,5 +1,7 @@
 import DashboardService from "./dashboard-service.js";
 import BaseResponse from "../../responders/base-responder.js";
+import { resolveCouncilScopeForRequest } from "../../utils/manager-council-scope.js";
+import CustomError from "../../utils/custom-error.js";
 
 class DashboardController {
   /**
@@ -41,8 +43,15 @@ class DashboardController {
    */
   static async getHrhisRegisterTimeseries(req, res, next) {
     try {
-      const data = await DashboardService.getHrhisRegisterTimeseries(req.query.days);
-      return BaseResponse.success(res, "HRHIS register timeseries retrieved successfully", data);
+      const scope = await resolveCouncilScopeForRequest(req);
+      if (req.user?.role === "COUNCIL_COORDINATOR" && !scope.council) {
+        throw new CustomError("Council coordinator has no assigned council.", 403);
+      }
+      const data = await DashboardService.getHrhisRegisterTimeseries(req.query?.days, scope);
+      return BaseResponse.success(res, "HRHIS register timeseries retrieved successfully", {
+        ...data,
+        scope: scope.council ? scope : null,
+      });
     } catch (error) {
       next(error);
     }
