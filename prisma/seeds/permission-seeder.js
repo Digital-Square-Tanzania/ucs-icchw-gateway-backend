@@ -21,8 +21,8 @@ const PERMISSION_META = {
 const DEFAULT_MENUS = [
   { label: "Dashboard", path: "/dashboard", icon: "dashboard", order: 10 },
   { label: "Users", path: "/users", icon: "users", order: 20 },
-  { label: "Settings", path: "/settings", icon: "settings", order: 30 },
-  { label: "Analytics", path: "/analytics", icon: "chart", order: 40 },
+  { label: "Analytics", path: "/analytics", icon: "chart", order: 30 },
+  { label: "Settings", path: "/settings", icon: "settings", order: 40 },
 ];
 
 async function upsertPermission(code) {
@@ -64,6 +64,11 @@ class PermissionSeeder {
       if (!existing) {
         await prisma.menu.create({
           data: { id: randomUUID(), ...m },
+        });
+      } else if (existing.order !== m.order || existing.label !== m.label) {
+        await prisma.menu.update({
+          where: { path: m.path },
+          data: { order: m.order, label: m.label, icon: m.icon },
         });
       }
     }
