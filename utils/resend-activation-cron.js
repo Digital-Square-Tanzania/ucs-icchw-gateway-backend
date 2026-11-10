@@ -88,6 +88,7 @@ class ResendActivationCron {
           batchSize: existing.batchSize,
           maxIterations: existing.maxIterations,
           delayMsBetweenIterations: existing.delayMsBetweenIterations,
+          maxOpenResendsPerSlug: existing.maxOpenResendsPerSlug ?? 3,
         };
         console.log("🔁 Loaded activation resend schedule config from DB:", this.scheduleConfig);
       } else {
@@ -123,12 +124,14 @@ class ResendActivationCron {
           batchSize: cfg.batchSize,
           maxIterations: cfg.maxIterations,
           delayMsBetweenIterations: cfg.delayMsBetweenIterations,
+          maxOpenResendsPerSlug: cfg.maxOpenResendsPerSlug ?? 3,
         },
         update: {
           enabled: cfg.enabled,
           batchSize: cfg.batchSize,
           maxIterations: cfg.maxIterations,
           delayMsBetweenIterations: cfg.delayMsBetweenIterations,
+          maxOpenResendsPerSlug: cfg.maxOpenResendsPerSlug ?? 3,
         },
       });
       console.log("💾 Saved activation resend schedule config to DB:", cfg);
@@ -285,7 +288,7 @@ class ResendActivationCron {
       // Mark the original activation as resent
       await prisma.accountActivation.update({
         where: { id: activation.id },
-        data: { isResent: true },
+        data: { isResent: true, resendCount: { increment: 1 } },
       });
 
       // Log the resend action

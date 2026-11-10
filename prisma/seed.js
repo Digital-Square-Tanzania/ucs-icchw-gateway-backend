@@ -1,4 +1,5 @@
 import RoleSeeder from "./seeds/role-seeder.js";
+import PermissionSeeder from "./seeds/permission-seeder.js";
 import UserSeeder from "./seeds/user-seeder.js";
 import RawFileSeeder from "./seeds/raw-file-seeder.js";
 import MaterializedViewSeeder from "./seeds/materialized-view-seeder.js";
@@ -9,6 +10,8 @@ async function main() {
 
   // Run Role Seeder
   await RoleSeeder.seed();
+
+  await PermissionSeeder.seed();
 
   // Run User Seeder
   await UserSeeder.seed();

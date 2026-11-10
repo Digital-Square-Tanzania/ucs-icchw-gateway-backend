@@ -25,6 +25,7 @@ import OpenMrsRouter from "./modules/openmrs/openmrs-router.js";
 import DHIS2Router from "./modules/dhis2/dhis2-router.js";
 import DashboardRouter from "./modules/dashboard/dashboard-router.js";
 import GatewayRouter from "./modules/gateway/gateway-router.js";
+import RbacRouter from "./modules/rbac/rbac-router.js";
 import SecurityMiddleware from "./middlewares/security-middleware.js";
 import resendActivationCron from "./utils/resend-activation-cron.js";
 
@@ -91,6 +92,7 @@ class AppServer {
     this.app.use("/api/v1/dhis2", DHIS2Router);
     this.app.use("/api/v1/dashboard", DashboardRouter);
     this.app.use("/api/v1/gateway", GatewayRouter);
+    this.app.use("/api/v1/rbac", RbacRouter);
 
     // default route for the API
     this.app.get("/", (req, res, next) => {

@@ -145,10 +145,47 @@ class UserService {
       userData.assignedCouncil = null;
     }
 
+    userData.email = trimOrNull(userData.email);
+    if (!userData.email) {
+      throw new CustomError("Email is required.", 400);
+    }
+    userData.phoneNumber = trimOrNull(userData.phoneNumber);
+
+    const existingEmail = await prisma.user.findFirst({
+      where: { email: userData.email, isDeleted: false },
+      select: { email: true },
+    });
+    if (existingEmail) {
+      throw new CustomError("A user with this email already exists.", 409);
+    }
+
+    if (userData.phoneNumber) {
+      const existingPhone = await prisma.user.findFirst({
+        where: { phoneNumber: userData.phoneNumber, isDeleted: false },
+        select: { email: true, firstName: true, lastName: true },
+      });
+      if (existingPhone) {
+        throw new CustomError(
+          `This phone number is already used by ${existingPhone.firstName} ${existingPhone.lastName} (${existingPhone.email}). Use another number or leave phone blank.`,
+          409,
+        );
+      }
+    }
+
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     userData.password = hashedPassword;
 
-    const newUser = await UserRepository.createUser(userData);
+    let newUser;
+    try {
+      newUser = await UserRepository.createUser(userData);
+    } catch (err) {
+      if (err?.code === "P2002") {
+        const target = Array.isArray(err.meta?.target) ? err.meta.target.join(", ") : "";
+        const field = /phone/i.test(target) ? "phone number" : /email/i.test(target) ? "email" : "field";
+        throw new CustomError(`A user with this ${field} already exists.`, 409);
+      }
+      throw err;
+    }
     const { password, ...safeUserData } = newUser;
     return safeUserData;
   }
@@ -902,6 +939,105 @@ class UserService {
    * Build a day-level activation matrix (GitHub-style) for the last N days.
    * Counts ACTIVATION slugs created per day.
    */
+  /**
+   * Paginated activation rows for admin/coordinator UI by category.
+   * @param {'open' | 'expired' | 'expired_resent' | 'activated' | 'all'} category
+   */
+  static async listActivationsByCategory(category, locationFilter = {}, page = 1, limit = 25) {
+    const now = new Date();
+    const pageNum = Math.max(1, Number(page) || 1);
+    const take = Math.min(100, Math.max(1, Number(limit) || 25));
+    const skip = (pageNum - 1) * take;
+
+    let councilFilter = {};
+    if (locationFilter?.council) {
+      councilFilter = await UserService.buildCouncilActivationFilter(locationFilter);
+      if (councilFilter.userUuid === "__NO_MATCH__") {
+        return { rows: [], total: 0, page: pageNum, limit: take };
+      }
+    }
+
+    const baseWhere = { slugType: "ACTIVATION", ...councilFilter };
+    let categoryWhere = {};
+    switch (category) {
+      case "open":
+        categoryWhere = { isUsed: false, expiryDate: { gte: now } };
+        break;
+      case "expired":
+        categoryWhere = { isUsed: false, isResent: false, expiryDate: { lt: now } };
+        break;
+      case "expired_resent":
+        categoryWhere = { isUsed: false, isResent: true, expiryDate: { lt: now } };
+        break;
+      case "activated":
+        categoryWhere = { isUsed: true };
+        break;
+      default:
+        categoryWhere = {};
+    }
+
+    const where = { ...baseWhere, ...categoryWhere };
+
+    const [rows, total] = await Promise.all([
+      prisma.accountActivation.findMany({
+        where,
+        skip,
+        take,
+        orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          slug: true,
+          email: true,
+          fullName: true,
+          phoneNumber: true,
+          locationCode: true,
+          isUsed: true,
+          isResent: true,
+          resendCount: true,
+          expiryDate: true,
+          createdAt: true,
+        },
+      }),
+      prisma.accountActivation.count({ where }),
+    ]);
+
+    return { rows, total, page: pageNum, limit: take };
+  }
+
+  static async activationInCouncilScope(activationId, locationFilter) {
+    if (!locationFilter?.council) return true;
+    const councilFilter = await UserService.buildCouncilActivationFilter(locationFilter);
+    if (councilFilter.userUuid === "__NO_MATCH__") return false;
+    const count = await prisma.accountActivation.count({
+      where: { id: Number(activationId), ...councilFilter },
+    });
+    return count > 0;
+  }
+
+  static async resendSingleActivation(activationId, { confirmOpen = false } = {}) {
+    const activation = await prisma.accountActivation.findUnique({ where: { id: Number(activationId) } });
+    if (!activation) throw new CustomError("Activation not found.", 404);
+    if (activation.isUsed) throw new CustomError("Account is already activated.", 400);
+    if (!activation.email) throw new CustomError("Activation has no email address.", 400);
+
+    const now = new Date();
+    const open = activation.expiryDate >= now;
+
+    if (open) {
+      if (!confirmOpen) throw new CustomError("Confirm resend for an open (still valid) activation slug.", 400);
+      const config = await prisma.activationResendConfig.findFirst({ where: { id: 1 } });
+      const maxOpen = config?.maxOpenResendsPerSlug ?? 3;
+      if (activation.resendCount >= maxOpen) {
+        throw new CustomError(`Open slug resend limit (${maxOpen}) reached for this account.`, 429);
+      }
+    } else if (activation.isResent) {
+      throw new CustomError("Expired activation was already resent once.", 400);
+    }
+
+    await resendActivationCron.resendActivationEmail(activation);
+    return { success: true, activationId: activation.id };
+  }
+
   static async getActivationMatrix(days = 90) {
     const windowDays = Number(days) > 0 ? Number(days) : 90;
 

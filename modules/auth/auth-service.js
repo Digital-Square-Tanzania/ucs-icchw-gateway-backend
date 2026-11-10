@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import AuthRepository from "./auth-repository.js";
 import ApiLogger from "../../utils/api-logger.js";
+import RbacService from "../rbac/rbac-service.js";
 
 class AuthService {
   static async login(req, email, password) {
@@ -69,6 +70,9 @@ class AuthService {
     const user = await AuthRepository.findUserById(userId);
     if (!user) throw new Error("Wrong username or password.");
 
+    const permissions = await RbacService.getPermissionCodesForRoleId(user.roleId);
+    const menus = await RbacService.getMenusForRoleId(user.roleId);
+
     return {
       id: user.id,
       firstName: user.firstName,
@@ -80,6 +84,8 @@ class AuthService {
       assignedCouncil: user.assignedCouncil ?? null,
       joinDate: user.joinDate,
       lastLogin: user.lastLogin,
+      permissions,
+      menus,
     };
   }
 

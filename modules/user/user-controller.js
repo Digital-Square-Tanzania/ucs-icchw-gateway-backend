@@ -3,6 +3,28 @@ import BaseResponse from "../../responders/base-responder.js";
 import CustomError from "../../utils/custom-error.js";
 import resendActivationCron from "../../utils/resend-activation-cron.js";
 
+function resolveActivationLocationFilter(req) {
+  const mgr = req.managerUser;
+  if (mgr?.roleName === "COUNCIL_COORDINATOR") {
+    if (!mgr.assignedCouncil) {
+      throw new CustomError("Council coordinator has no assigned council.", 403);
+    }
+    return {
+      region: mgr.assignedRegion || "",
+      district: mgr.assignedDistrict || "",
+      council: mgr.assignedCouncil,
+    };
+  }
+  const q = req.query || {};
+  const body = req.body || {};
+  const lf = body.locationFilter || {};
+  return {
+    region: lf.region || q.region || "",
+    district: lf.district || q.district || "",
+    council: lf.council || q.council || "",
+  };
+}
+
 class UserController {
   /**
    * Create a new backend user
@@ -12,6 +34,9 @@ class UserController {
       const newUser = await UserService.createUser(req.body);
       return BaseResponse.success(res, "User created successfully", newUser);
     } catch (error) {
+      if (error instanceof CustomError) {
+        return next(error);
+      }
       next(new CustomError(error.message, 500));
     }
   }
@@ -177,14 +202,45 @@ class UserController {
    */
   static async getActivationEmailStats(req, res, next) {
     try {
-      const region = req.query?.region ?? "";
-      const district = req.query?.district ?? "";
-      const council = req.query?.council ?? "";
-      const opts = council ? { region, district, council } : {};
+      const scope = resolveActivationLocationFilter(req);
+      const opts = scope.council ? scope : {};
       const stats = await UserService.getActivationEmailStats(opts);
       const schedule = resendActivationCron.getScheduleConfig();
-      return BaseResponse.success(res, "Activation email stats loaded", { stats, schedule }, 200);
+      return BaseResponse.success(res, "Activation email stats loaded", { stats, schedule, scope }, 200);
     } catch (error) {
+      if (error instanceof CustomError) return next(error);
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  static async getActivationList(req, res, next) {
+    try {
+      const category = String(req.query?.category || "open");
+      const page = Number(req.query?.page) || 1;
+      const limit = Number(req.query?.limit) || 25;
+      const scope = resolveActivationLocationFilter(req);
+      const data = await UserService.listActivationsByCategory(category, scope.council ? scope : {}, page, limit);
+      return BaseResponse.success(res, "Activation list loaded", { ...data, scope, category }, 200);
+    } catch (error) {
+      if (error instanceof CustomError) return next(error);
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  static async resendSingleActivation(req, res, next) {
+    try {
+      const id = Number(req.params.id);
+      if (!Number.isFinite(id)) throw new CustomError("Invalid activation id.", 400);
+      const scope = resolveActivationLocationFilter(req);
+      if (scope.council) {
+        const inScope = await UserService.activationInCouncilScope(id, scope);
+        if (!inScope) throw new CustomError("Activation is outside your council scope.", 403);
+      }
+      const confirmOpen = req.body?.confirmOpen === true;
+      const result = await UserService.resendSingleActivation(id, { confirmOpen });
+      return BaseResponse.success(res, "Activation email resent", result, 200);
+    } catch (error) {
+      if (error instanceof CustomError) return next(error);
       next(new CustomError(error.message, 500));
     }
   }
@@ -209,7 +265,8 @@ class UserController {
   static async resendExpiredActivationsBatch(req, res, next) {
     try {
       const limit = Number(req.body?.limit) > 0 ? Number(req.body.limit) : 100;
-      const locationFilter = req.body?.locationFilter || null;
+      const scope = resolveActivationLocationFilter(req);
+      const locationFilter = scope.council ? scope : req.body?.locationFilter || null;
       const summary = await UserService.resendExpiredActivationsBatch(limit, locationFilter);
       return BaseResponse.success(res, "Expired activation resend batch completed", summary, 200);
     } catch (error) {
@@ -224,7 +281,8 @@ class UserController {
   static async resendOpenActivationsBatch(req, res, next) {
     try {
       const limit = Number(req.body?.limit) > 0 ? Number(req.body.limit) : 100;
-      const locationFilter = req.body?.locationFilter || null;
+      const scope = resolveActivationLocationFilter(req);
+      const locationFilter = scope.council ? scope : req.body?.locationFilter || null;
       const summary = await UserService.resendOpenActivationsBatch(limit, locationFilter);
       return BaseResponse.success(res, "Open activation resend batch completed", summary, 200);
     } catch (error) {
@@ -270,6 +328,7 @@ class UserController {
       if (body.batchSize !== undefined) partial.batchSize = Number(body.batchSize);
       if (body.maxIterations !== undefined) partial.maxIterations = Number(body.maxIterations);
       if (body.delayMsBetweenIterations !== undefined) partial.delayMsBetweenIterations = Number(body.delayMsBetweenIterations);
+      if (body.maxOpenResendsPerSlug !== undefined) partial.maxOpenResendsPerSlug = Number(body.maxOpenResendsPerSlug);
 
       resendActivationCron.setScheduleConfig(partial);
       const updated = resendActivationCron.getScheduleConfig();

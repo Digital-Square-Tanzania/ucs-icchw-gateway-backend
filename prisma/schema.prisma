@@ -38,12 +38,60 @@ model User {
 }
 
 model Role {
-  id          Int      @id @default(autoincrement())
-  name        RoleType @unique
-  description String
-  users       User[]
+  id              Int              @id @default(autoincrement())
+  name            RoleType         @unique
+  description     String
+  users           User[]
+  rolePermissions RolePermission[]
+  roleMenus       RoleMenu[]
 
   @@map("roles")
+}
+
+model Permission {
+  id              String           @id @default(uuid())
+  code            String           @unique
+  name            String?
+  description     String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       Int
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model Menu {
+  id        String     @id @default(uuid())
+  label     String
+  path      String     @unique
+  icon      String?
+  order     Int        @default(0)
+  parentId  String?    @map("parent_id")
+  createdAt DateTime   @default(now()) @map("created_at")
+  parent    Menu?      @relation("MenuHierarchy", fields: [parentId], references: [id])
+  children  Menu[]     @relation("MenuHierarchy")
+  roleMenus RoleMenu[]
+
+  @@map("menus")
+}
+
+model RoleMenu {
+  roleId Int
+  menuId String
+  menu   Menu @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  role   Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, menuId])
+  @@map("role_menus")
 }
 
 model UserToken {
@@ -320,6 +368,7 @@ model ActivationResendConfig {
   batchSize                Int      @default(500)
   maxIterations            Int      @default(1)
   delayMsBetweenIterations Int      @default(0)
+  maxOpenResendsPerSlug    Int      @default(3) @map("max_open_resends_per_slug")
   updatedAt                DateTime @updatedAt @default(now()) @map("updated_at")
 
   @@map("activation_resend_config")
@@ -339,6 +388,7 @@ model AccountActivation {
   slugType     slugType
   isUsed       Boolean             @default(false)
   isResent     Boolean             @default(false)
+  resendCount  Int                 @default(0) @map("resend_count")
   usedAt       DateTime?
   expiryDate   DateTime
   createdAt    DateTime            @default(now())
