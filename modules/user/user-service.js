@@ -127,9 +127,26 @@ class UserService {
     return safeUserData;
   }
 
+  static formatManagerUsersForClient(usersData) {
+    if (!usersData?.users?.length) return usersData;
+    return {
+      ...usersData,
+      users: usersData.users.map((row) => {
+        const roleObj = row.role && typeof row.role === "object" ? row.role : null;
+        return {
+          ...row,
+          roleId: roleObj?.id ?? null,
+          roleName: roleObj?.name ?? (typeof row.role === "string" ? row.role : null),
+          role: roleObj?.name ?? (typeof row.role === "string" ? row.role : null),
+        };
+      }),
+    };
+  }
+
   // 🔹 Pass pagination params
   static async getAllUsers(page, limit, search = null) {
-    return UserRepository.getAllUsers(page, limit, search);
+    const usersData = await UserRepository.getAllUsers(page, limit, search);
+    return UserService.formatManagerUsersForClient(usersData);
   }
 
   static async getManagerRoles() {
