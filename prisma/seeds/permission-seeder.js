@@ -102,7 +102,6 @@ class PermissionSeeder {
 
     if (councilCoord) {
       const codes = [
-        "settings:tab:hrhis-reg",
         "settings:tab:activations",
         "activations:resend",
         "menu:analytics",

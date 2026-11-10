@@ -1,7 +1,6 @@
 /** Granular Settings page tab permissions. `settings:manage` grants all tabs. */
 export const SETTINGS_TAB_PERMISSIONS = [
   "settings:manage",
-  "settings:tab:hrhis-reg",
   "settings:tab:activations",
   "settings:tab:location-recovery",
   "settings:tab:maintenance",
@@ -14,11 +13,10 @@ export const SETTINGS_TAB_PERMISSIONS = [
   "menu:analytics",
 ];
 
-/** @typedef {'hrhis-reg' | 'activations' | 'location-recovery' | 'maintenance' | 'rbac'} SettingsTabId */
+/** @typedef {'activations' | 'location-recovery' | 'maintenance' | 'rbac'} SettingsTabId */
 
 /** @type {Record<string, SettingsTabId>} */
 const TAB_ID_BY_PERMISSION = {
-  "settings:tab:hrhis-reg": "hrhis-reg",
   "settings:tab:activations": "activations",
   "settings:tab:location-recovery": "location-recovery",
   "settings:tab:maintenance": "maintenance",
@@ -63,7 +61,6 @@ export function defaultPermissionsForRole(roleName) {
       return [...SETTINGS_TAB_PERMISSIONS];
     case "COUNCIL_COORDINATOR":
       return [
-        "settings:tab:hrhis-reg",
         "settings:tab:activations",
         "activations:resend",
         "menu:analytics",
