@@ -14,6 +14,9 @@ class UserValidation {
         .pattern(/^\+?[0-9]{10,15}$/)
         .optional(),
       roleId: Joi.number().integer().required(),
+      assignedRegion: Joi.string().trim().max(120).optional().allow(""),
+      assignedDistrict: Joi.string().trim().max(120).optional().allow(""),
+      assignedCouncil: Joi.string().trim().max(120).optional().allow(""),
     });
   }
 

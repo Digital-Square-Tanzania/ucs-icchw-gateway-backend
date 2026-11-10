@@ -75,6 +75,9 @@ class AuthService {
       lastName: user.lastName,
       email: user.email,
       role: user.role.name,
+      assignedRegion: user.assignedRegion ?? null,
+      assignedDistrict: user.assignedDistrict ?? null,
+      assignedCouncil: user.assignedCouncil ?? null,
       joinDate: user.joinDate,
       lastLogin: user.lastLogin,
     };

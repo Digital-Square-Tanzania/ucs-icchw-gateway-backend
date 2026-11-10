@@ -119,6 +119,32 @@ class UserService {
     return [...prefixes];
   }
   static async createUser(userData) {
+    const role = await prisma.role.findUnique({ where: { id: userData.roleId } });
+    if (!role) {
+      throw new CustomError("Invalid role.", 400);
+    }
+
+    const trimOrNull = (v) => {
+      const s = typeof v === "string" ? v.trim() : "";
+      return s || null;
+    };
+
+    if (role.name === "COUNCIL_COORDINATOR") {
+      const assignedRegion = trimOrNull(userData.assignedRegion);
+      const assignedDistrict = trimOrNull(userData.assignedDistrict);
+      const assignedCouncil = trimOrNull(userData.assignedCouncil);
+      if (!assignedRegion || !assignedDistrict || !assignedCouncil) {
+        throw new CustomError("Region, district, and council are required for council coordinators.", 400);
+      }
+      userData.assignedRegion = assignedRegion;
+      userData.assignedDistrict = assignedDistrict;
+      userData.assignedCouncil = assignedCouncil;
+    } else {
+      userData.assignedRegion = null;
+      userData.assignedDistrict = null;
+      userData.assignedCouncil = null;
+    }
+
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     userData.password = hashedPassword;
 

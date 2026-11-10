@@ -24,6 +24,9 @@ model User {
   isDeleted        Boolean            @default(false) @map("is_deleted")
   joinDate         DateTime           @default(now()) @map("join_date")
   roleId           Int                @map("role_id")
+  assignedRegion   String?            @map("assigned_region")
+  assignedDistrict String?            @map("assigned_district")
+  assignedCouncil  String?            @map("assigned_council")
   updatedAt        DateTime           @updatedAt @map("updated_at")
   lastLogin        DateTime?          @map("last_login")
   BlacklistedToken BlacklistedToken[]
