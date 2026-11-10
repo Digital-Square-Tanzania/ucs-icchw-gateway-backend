@@ -824,7 +824,6 @@ class UserService {
     const [unsentExpired, activated, expiredResent, openNotUsed, total, resentCount] = await Promise.all([
       UserService.countDistinctActivationUsers({
         ...baseWhere,
-        ...UserService.actionableActivationEmailWhere(),
         isUsed: false,
         isResent: false,
         expiryDate: { lt: now },
@@ -1027,9 +1026,6 @@ class UserService {
     }
 
     const where = { ...baseWhere, ...categoryWhere };
-    if (category === "expired" || category === "open" || category === "expired_resent") {
-      Object.assign(where, UserService.actionableActivationEmailWhere());
-    }
 
     const select = {
       id: true,
