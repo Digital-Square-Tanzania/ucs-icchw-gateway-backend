@@ -180,26 +180,34 @@ class ResendActivationCron {
       const effectiveBatchSize = Number(batchSize) > 0 ? Number(batchSize) : 500;
 
       // Find the first N AccountActivation records that meet the criteria
-      const expiredActivations = await prisma.accountActivation.findMany({
+      const rawExpired = await prisma.accountActivation.findMany({
         where: {
           slugType: "ACTIVATION",
           isUsed: false,
           isResent: false,
           expiryDate: {
-            lt: new Date(), // expiryDate is before current time
+            lt: new Date(),
           },
           email: {
             not: null,
-            not: "",
+            notIn: ["", "unknown@example.com"],
           },
         },
-        take: effectiveBatchSize,
+        take: effectiveBatchSize * 5,
         orderBy: {
-          createdAt: "asc", // Process oldest first
+          createdAt: "asc",
         },
       });
 
-      console.log(`📧 Found ${expiredActivations.length} expired activation records to resend`);
+      const byUser = new Map();
+      for (const row of rawExpired) {
+        if (!row.userUuid) continue;
+        const prev = byUser.get(row.userUuid);
+        if (!prev || row.createdAt < prev.createdAt) byUser.set(row.userUuid, row);
+      }
+      const expiredActivations = [...byUser.values()].slice(0, effectiveBatchSize);
+
+      console.log(`📧 Found ${expiredActivations.length} expired account(s) to resend (${rawExpired.length} slug rows scanned)`);
 
       if (expiredActivations.length === 0) {
         console.log("✅ No expired activation records found to resend.");

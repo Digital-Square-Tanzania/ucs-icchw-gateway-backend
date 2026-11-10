@@ -21,8 +21,66 @@ import resendActivationCron from "../../utils/resend-activation-cron.js";
 const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
 const COUNCIL_CODE_SEGMENTS = 5;
 const ACTIVATION_VALIDITY_MS = 1000 * 60 * 60 * 24 * 10;
+/** Legacy migration placeholder — not a real inbox; exclude from resend batches. */
+const PLACEHOLDER_ACTIVATION_EMAILS = ["unknown@example.com"];
 
 class UserService {
+  static actionableActivationEmailWhere() {
+    return {
+      email: {
+        not: null,
+        notIn: ["", ...PLACEHOLDER_ACTIVATION_EMAILS],
+      },
+    };
+  }
+
+  /** One row per CHW (`userUuid`), not per historical slug. */
+  static async countDistinctActivationUsers(where) {
+    const groups = await prisma.accountActivation.groupBy({
+      by: ["userUuid"],
+      where,
+    });
+    return groups.length;
+  }
+
+  static async sumResendCountsForUsers(userUuids, scopeWhere = {}) {
+    if (!userUuids?.length) return new Map();
+    const groups = await prisma.accountActivation.groupBy({
+      by: ["userUuid"],
+      where: {
+        slugType: "ACTIVATION",
+        userUuid: { in: userUuids },
+        ...scopeWhere,
+      },
+      _sum: { resendCount: true },
+    });
+    return new Map(groups.map((g) => [g.userUuid, Number(g._sum.resendCount) || 0]));
+  }
+
+  static dedupeActivationsByUser(rows) {
+    const seen = new Set();
+    const out = [];
+    for (const row of rows) {
+      const key = row.userUuid;
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      out.push(row);
+    }
+    return out;
+  }
+
+  static pickOneActivationPerUserForBatch(rows) {
+    const byUser = new Map();
+    for (const row of rows) {
+      const key = row.userUuid;
+      if (!key) continue;
+      const prev = byUser.get(key);
+      if (!prev || row.createdAt < prev.createdAt) {
+        byUser.set(key, row);
+      }
+    }
+    return [...byUser.values()];
+  }
   /**
    * Build a Prisma where-clause fragment that scopes activations to a council.
    * Combines:
@@ -764,42 +822,34 @@ class UserService {
     const baseWhere = { slugType: "ACTIVATION", ...councilFilter };
 
     const [unsentExpired, activated, expiredResent, openNotUsed, total, resentCount] = await Promise.all([
-      prisma.accountActivation.count({
-        where: {
-          ...baseWhere,
-          isUsed: false,
-          isResent: false,
-          expiryDate: { lt: now },
-        },
+      UserService.countDistinctActivationUsers({
+        ...baseWhere,
+        ...UserService.actionableActivationEmailWhere(),
+        isUsed: false,
+        isResent: false,
+        expiryDate: { lt: now },
       }),
-      prisma.accountActivation.count({
-        where: {
-          ...baseWhere,
-          isUsed: true,
-        },
+      UserService.countDistinctActivationUsers({
+        ...baseWhere,
+        isUsed: true,
       }),
-      prisma.accountActivation.count({
-        where: {
-          ...baseWhere,
-          isResent: true,
-          expiryDate: { lt: now },
-        },
+      UserService.countDistinctActivationUsers({
+        ...baseWhere,
+        isUsed: false,
+        isResent: true,
+        expiryDate: { lt: now },
       }),
-      prisma.accountActivation.count({
-        where: {
-          ...baseWhere,
-          isUsed: false,
-          expiryDate: { gte: now },
-        },
+      UserService.countDistinctActivationUsers({
+        ...baseWhere,
+        isUsed: false,
+        expiryDate: { gte: now },
       }),
       prisma.accountActivation.count({
         where: baseWhere,
       }),
-      prisma.accountActivation.count({
-        where: {
-          ...baseWhere,
-          isResent: true,
-        },
+      UserService.countDistinctActivationUsers({
+        ...baseWhere,
+        isResent: true,
       }),
     ]);
 
@@ -830,25 +880,25 @@ class UserService {
       }
     }
 
-    const toResend = await prisma.accountActivation.findMany({
+    const rawExpired = await prisma.accountActivation.findMany({
       where: {
         slugType: "ACTIVATION",
         isUsed: false,
         isResent: false,
         expiryDate: { lt: now },
-        email: {
-          not: null,
-          not: "",
-        },
+        ...UserService.actionableActivationEmailWhere(),
         ...councilFilter,
       },
-      take: batchSize,
+      take: batchSize * 5,
       orderBy: {
         createdAt: "asc",
       },
     });
+    const toResend = UserService.pickOneActivationPerUserForBatch(rawExpired).slice(0, batchSize);
 
-    console.log(`🔄 Manual expired-activation resend batch: found ${toResend.length} records to process (limit=${batchSize})`);
+    console.log(
+      `🔄 Manual expired-activation resend batch: found ${toResend.length} account(s) to process (${rawExpired.length} slug row(s) scanned, limit=${batchSize})`
+    );
 
     let success = 0;
     let failed = 0;
@@ -886,24 +936,24 @@ class UserService {
       }
     }
 
-    const toResend = await prisma.accountActivation.findMany({
+    const rawOpen = await prisma.accountActivation.findMany({
       where: {
         slugType: "ACTIVATION",
         isUsed: false,
         expiryDate: { gte: now },
-        email: {
-          not: null,
-          not: "",
-        },
+        ...UserService.actionableActivationEmailWhere(),
         ...councilFilter,
       },
-      take: batchSize,
+      take: batchSize * 5,
       orderBy: {
         createdAt: "asc",
       },
     });
+    const toResend = UserService.pickOneActivationPerUserForBatch(rawOpen).slice(0, batchSize);
 
-    console.log(`🔄 Manual open-activation resend batch: found ${toResend.length} records to process (limit=${batchSize})`);
+    console.log(
+      `🔄 Manual open-activation resend batch: found ${toResend.length} account(s) to process (${rawOpen.length} slug row(s) scanned, limit=${batchSize})`
+    );
 
     let success = 0;
     let failed = 0;
@@ -977,29 +1027,43 @@ class UserService {
     }
 
     const where = { ...baseWhere, ...categoryWhere };
+    if (category === "expired" || category === "open" || category === "expired_resent") {
+      Object.assign(where, UserService.actionableActivationEmailWhere());
+    }
 
-    const [rows, total] = await Promise.all([
-      prisma.accountActivation.findMany({
-        where,
-        skip,
-        take,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          slug: true,
-          email: true,
-          fullName: true,
-          phoneNumber: true,
-          locationCode: true,
-          isUsed: true,
-          isResent: true,
-          resendCount: true,
-          expiryDate: true,
-          createdAt: true,
-        },
-      }),
-      prisma.accountActivation.count({ where }),
-    ]);
+    const select = {
+      id: true,
+      userUuid: true,
+      slug: true,
+      email: true,
+      fullName: true,
+      phoneNumber: true,
+      locationCode: true,
+      isUsed: true,
+      isResent: true,
+      resendCount: true,
+      expiryDate: true,
+      createdAt: true,
+    };
+
+    const candidates = await prisma.accountActivation.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      select,
+      take: 5000,
+    });
+
+    const deduped = UserService.dedupeActivationsByUser(candidates);
+    const total = deduped.length;
+    const pageRows = deduped.slice(skip, skip + take);
+    const resendByUser = await UserService.sumResendCountsForUsers(
+      pageRows.map((r) => r.userUuid),
+      councilFilter
+    );
+    const rows = pageRows.map((row) => ({
+      ...row,
+      resendCount: resendByUser.get(row.userUuid) ?? row.resendCount ?? 0,
+    }));
 
     return { rows, total, page: pageNum, limit: take };
   }
@@ -1019,6 +1083,10 @@ class UserService {
     if (!activation) throw new CustomError("Activation not found.", 404);
     if (activation.isUsed) throw new CustomError("Account is already activated.", 400);
     if (!activation.email) throw new CustomError("Activation has no email address.", 400);
+    const emailLower = activation.email.trim().toLowerCase();
+    if (PLACEHOLDER_ACTIVATION_EMAILS.includes(emailLower)) {
+      throw new CustomError("Activation has no valid email on file. Update the CHW email in HRHIS/OpenMRS first.", 400);
+    }
 
     const now = new Date();
     const open = activation.expiryDate >= now;
