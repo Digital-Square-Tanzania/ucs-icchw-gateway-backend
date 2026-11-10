@@ -677,17 +677,62 @@ class OpenMRSLocationService {
   }
 
   static async syncLocationAttributeTypes() {
-    try {
-      console.log("🔄 Syncing OpenMRS Location Attribute Types...");
+    return await OpenMRSLocationService.syncLocationAttributeTypesFromDb();
+  }
 
-      // Fetch all location attribute types from OpenMRS
+  static async syncLocationAttributeTypesFromDb() {
+    let connection;
+    try {
+      console.log("🚀 Fast-syncing OpenMRS location attribute types directly from MySQL...");
+
+      connection = await mysqlClient.getConnection();
+      await connection.query("USE openmrs");
+
+      const [rows] = await connection.query(`
+        SELECT
+          uuid,
+          name,
+          description,
+          datatype,
+          date_created,
+          date_changed
+        FROM location_attribute_type
+        WHERE COALESCE(retired, 0) = 0
+        ORDER BY location_attribute_type_id
+      `);
+
+      const attributeTypes = (rows || []).map((row) => ({
+        uuid: row.uuid,
+        name: row.name,
+        description: row.description || null,
+        datatypeClassname: row.datatype || null,
+        auditInfo: {
+          dateCreated: row.date_created ? new Date(row.date_created).toISOString() : new Date().toISOString(),
+          dateChanged: row.date_changed
+            ? new Date(row.date_changed).toISOString()
+            : row.date_created
+              ? new Date(row.date_created).toISOString()
+              : new Date().toISOString(),
+        },
+      }));
+
+      await OpenMRSLocationRepository.upsertLocationAttributeTypes(attributeTypes);
+      console.log(`✅ OpenMRS Location Attribute Types Sync Completed (${attributeTypes.length} type(s)).`);
+      return { synced: attributeTypes.length };
+    } catch (error) {
+      throw new CustomError("❌ OpenMRS Location Attribute Types Sync Error: " + error.message);
+    } finally {
+      if (connection) connection.release();
+    }
+  }
+
+  /** Legacy REST sync; prefer {@link syncLocationAttributeTypesFromDb}. */
+  static async syncLocationAttributeTypesViaApi() {
+    try {
       const response = await OpenMRSApiClient.get("locationattributetype", { v: "full" });
       const attributeTypes = response.results || [];
-
-      // Store the attribute types in the database
       await OpenMRSLocationRepository.upsertLocationAttributeTypes(attributeTypes);
-
-      console.log("✅ OpenMRS Location Attribute Types Sync Completed.");
+      return { synced: attributeTypes.length };
     } catch (error) {
       throw new CustomError("❌ OpenMRS Location Attribute Types Sync Error: " + error.message);
     }

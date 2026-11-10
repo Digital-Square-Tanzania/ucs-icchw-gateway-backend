@@ -11,7 +11,7 @@ dotenv.config();
 
 class URLSyncSeeder {
   static async seedAll() {
-    console.log("🌍 Syncing data from OpenMRS...");
+    console.log("🌍 Fast-syncing OpenMRS reference data from MySQL (not REST)...");
 
     try {
       console.log("🔄 Syncing Team Roles...");
@@ -59,12 +59,16 @@ class URLSyncSeeder {
     } catch (error) {
       console.error("❌ Error syncing OpenMRS location attribute types:", error.message);
     }
-    try {
-      console.log("🔄 Syncing DHIS2 Org Units...");
-      await DHIS2OrgUnitService.syncOrgUnits(1000);
-      console.log("✅ DHIS2 Org Units sync completed.");
-    } catch (error) {
-      console.error("❌ Error syncing DHIS2 Org Units:", error.message);
+    if (process.env.SEED_SKIP_DHIS2 === "true" || process.env.SEED_SKIP_DHIS2 === "1") {
+      console.log("⏭️  Skipping DHIS2 org unit sync (SEED_SKIP_DHIS2).");
+    } else {
+      try {
+        console.log("🔄 Syncing DHIS2 Org Units...");
+        await DHIS2OrgUnitService.syncOrgUnits(1000);
+        console.log("✅ DHIS2 Org Units sync completed.");
+      } catch (error) {
+        console.error("❌ Error syncing DHIS2 Org Units:", error.message);
+      }
     }
 
     console.log("✅ OpenMRS sync completed.");
