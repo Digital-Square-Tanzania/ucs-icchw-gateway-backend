@@ -16,6 +16,15 @@ class UserController {
     }
   }
 
+  static async getManagerRoles(req, res, next) {
+    try {
+      const roles = await UserService.getManagerRoles();
+      return BaseResponse.success(res, "Roles retrieved successfully", roles);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
   /**
    * List all users with pagination
    */

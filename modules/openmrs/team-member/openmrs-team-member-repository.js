@@ -11,8 +11,16 @@ class TeamMemberRepository {
    * @param {string|null} search - Optional username/name search
    * @returns {Promise<Object>} - Team members and total count
    */
-  static async getTeamMembers(page = 1, pageSize = 10, search = null) {
-    const where = buildUsernameAndNameSearchWhere(search) || undefined;
+  static async getTeamMembers(page = 1, pageSize = 10, search = null, roleName = null) {
+    const searchWhere = buildUsernameAndNameSearchWhere(search);
+    const roleWhere =
+      roleName && String(roleName).trim()
+        ? { roleName: { equals: String(roleName).trim(), mode: "insensitive" } }
+        : null;
+    const where =
+      searchWhere && roleWhere
+        ? { AND: [searchWhere, roleWhere] }
+        : searchWhere || roleWhere || undefined;
     const openmrsTeamMembersCount = await prisma.openMRSTeamMember.count({ where });
     const skip = (page - 1) * pageSize;
     const teamMembers = await prisma.openMRSTeamMember.findMany({

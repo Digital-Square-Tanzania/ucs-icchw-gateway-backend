@@ -107,6 +107,13 @@ class UserRepository {
       data: { isDeleted: true },
     });
   }
+
+  static async getAllRoles() {
+    return prisma.role.findMany({
+      select: { id: true, name: true, description: true },
+      orderBy: { name: "asc" },
+    });
+  }
 }
 
 export default UserRepository;

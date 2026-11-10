@@ -132,6 +132,10 @@ class UserService {
     return UserRepository.getAllUsers(page, limit, search);
   }
 
+  static async getManagerRoles() {
+    return UserRepository.getAllRoles();
+  }
+
   static async getUserById(userId) {
     const user = await UserRepository.getUserById(userId);
     if (!user) throw new Error("User not found.");

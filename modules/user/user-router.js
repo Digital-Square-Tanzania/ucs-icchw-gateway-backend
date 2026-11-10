@@ -16,6 +16,13 @@ router.get(
   UserController.getAllUsers,
 );
 
+router.get(
+  "/roles",
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
+  UserController.getManagerRoles,
+);
+
 router.get("/:id", AuthMiddleware.authenticate, UserController.getUserById);
 
 // Create CHW Route: UCS_DEVELOPER, MOH_ADMIN, and COUNCIL_COORDINATOR can create CHW users
