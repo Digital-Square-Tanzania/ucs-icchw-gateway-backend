@@ -10,7 +10,10 @@
     "start:dev": "nodemon index.js --verbose",
     "dev": "nodemon index.js --verbose",
     "migrate": "npx prisma migrate dev",
+    "migrate:deploy": "npx prisma migrate deploy",
     "generate": "npx prisma generate",
+    "postinstall": "prisma generate",
+    "deploy:db": "npx prisma migrate deploy && npx prisma generate",
     "seed": "node prisma/seed.js"
   },
   "repository": {
