@@ -33,7 +33,7 @@ router.post("/signature/sign", BasicAuthMiddleware.authenticate, AuthMiddleware.
 router.get(
   "/admin/hrhis-duplicate-detail",
   AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER", "COUNCIL_COORDINATOR"),
   GatewayController.getHrhisDuplicateDetail
 );
 
@@ -47,7 +47,7 @@ router.post(
 router.get(
   "/admin/hrhis-council-analytics",
   AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER", "COUNCIL_COORDINATOR"),
   GatewayController.getHrhisCouncilAnalytics
 );
 

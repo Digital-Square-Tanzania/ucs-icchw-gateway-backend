@@ -6,6 +6,7 @@ import GatewayResponder from "../../responders/gateway-responder.js";
 import FfarsResponder from "../../responders/ffars-responder.js";
 import CustomError from "../../utils/custom-error.js";
 import BaseResponse from "../../responders/base-responder.js";
+import { resolveCouncilScopeForRequest } from "../../utils/manager-council-scope.js";
 
 class GatewayController {
   // Fetch CHW monthly activity statistics
@@ -121,11 +122,13 @@ class GatewayController {
    */
   static async getHrhisCouncilAnalytics(req, res, next) {
     try {
-      const { region, district, council, days } = req.query;
+      const scope = await resolveCouncilScopeForRequest(req);
+      const days = req.query?.days;
+      if (!scope.council) {
+        throw new CustomError("Council is required for analytics.", 400);
+      }
       const data = await HrhisCouncilAnalyticsService.getCouncilAnalytics({
-        region,
-        district,
-        council,
+        ...scope,
         days,
       });
       return BaseResponse.success(res, "HRHIS council analytics retrieved successfully.", data);
@@ -139,11 +142,13 @@ class GatewayController {
    */
   static async getHrhisDuplicateDetail(req, res, next) {
     try {
-      const { region, district, council, nin, days } = req.query;
+      const scope = await resolveCouncilScopeForRequest(req);
+      const { nin, days } = req.query;
+      if (!scope.council) {
+        throw new CustomError("Council is required.", 400);
+      }
       const data = await HrhisDuplicateResolutionService.getDuplicateDetail({
-        region,
-        district,
-        council,
+        ...scope,
         nin,
         days,
       });
