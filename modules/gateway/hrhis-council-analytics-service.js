@@ -61,7 +61,7 @@ class HrhisCouncilAnalyticsService {
    * Uses GatewayResponder envelope rows for HTTP outcomes (one row per attempt)
    * and internal action rows for field-level update detail.
    */
-  static async getCouncilAnalytics({ region, district, council, days = 90 } = {}) {
+  static async getCouncilAnalytics({ region, district, council, days = 0 } = {}) {
     const prefixes = await HrhisLocationRecoveryService.resolveCouncilPrefixes(region, district, council);
     const { dayCount, scopeDays } = parseHrhisAnalyticsLookback(days);
     const createdAtFilter = hrhisApiLogCreatedAtFilter(dayCount);

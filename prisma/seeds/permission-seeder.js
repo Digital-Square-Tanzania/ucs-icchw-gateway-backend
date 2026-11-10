@@ -108,14 +108,14 @@ class PermissionSeeder {
     if (councilCoord) {
       const codes = [
         "settings:tab:activations",
+        "settings:tab:location-recovery",
         "activations:resend",
         "menu:analytics",
-        "menu:users",
         "menu:settings",
       ];
       const coordPermIds = permissions.filter((p) => codes.includes(p.code)).map((p) => p.id);
       await assignAllPermissions(councilCoord.id, coordPermIds);
-      const coordMenus = menus.filter((m) => ["/analytics", "/users", "/settings"].includes(m.path));
+      const coordMenus = menus.filter((m) => ["/analytics", "/settings"].includes(m.path));
       for (const menu of coordMenus) {
         await prisma.roleMenu.upsert({
           where: { roleId_menuId: { roleId: councilCoord.id, menuId: menu.id } },

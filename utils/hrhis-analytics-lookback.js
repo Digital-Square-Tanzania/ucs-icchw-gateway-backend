@@ -2,11 +2,14 @@ import { Prisma } from "@prisma/client";
 
 /** @returns {{ dayCount: number | null, scopeDays: number }} */
 export function parseHrhisAnalyticsLookback(days) {
+  if (days === undefined || days === null || String(days).trim() === "") {
+    return { dayCount: null, scopeDays: 0 };
+  }
   const parsed = Number.parseInt(String(days), 10);
   if (!Number.isNaN(parsed) && parsed === 0) {
     return { dayCount: null, scopeDays: 0 };
   }
-  const dayCount = Math.min(365, Math.max(1, parsed || 90));
+  const dayCount = Math.min(365, Math.max(1, Number.isNaN(parsed) ? 90 : parsed));
   return { dayCount, scopeDays: dayCount };
 }
 

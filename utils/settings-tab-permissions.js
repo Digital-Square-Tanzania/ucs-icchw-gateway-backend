@@ -62,9 +62,9 @@ export function defaultPermissionsForRole(roleName) {
     case "COUNCIL_COORDINATOR":
       return [
         "settings:tab:activations",
+        "settings:tab:location-recovery",
         "activations:resend",
         "menu:analytics",
-        "menu:users",
         "menu:settings",
       ];
     default:

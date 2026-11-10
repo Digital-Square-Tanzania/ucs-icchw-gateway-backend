@@ -1,6 +1,10 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../config/prisma.js";
 import mysqlClient from "../../utils/mysql-client.js";
+import {
+  hrhisApiLogCreatedAtFilter,
+  parseHrhisAnalyticsLookback,
+} from "../../utils/hrhis-analytics-lookback.js";
 
 function councilPrefixWhereSql(councilPrefixes) {
   if (councilPrefixes === null) {
@@ -231,19 +235,43 @@ class DashboardRepository {
    * @param {number} days
    * @param {string[] | null} councilPrefixes - null = all councils; [] = none match
    */
-  static async getHrhisRegisterTimeseries(days = 30, councilPrefixes = null) {
-    const dayCount = Math.min(90, Math.max(7, Number.parseInt(String(days), 10) || 30));
+  static async getHrhisRegisterTimeseries(days = 0, councilPrefixes = null) {
+    const { dayCount, scopeDays } = parseHrhisAnalyticsLookback(days);
     const recoverySource = "hrhis-location-recovery";
     const councilWhere = councilPrefixWhereSql(councilPrefixes);
+    const createdAtFilter = hrhisApiLogCreatedAtFilter(dayCount);
 
-    const rows = await prisma.$queryRaw`
-      WITH days AS (
+    const daysCTE =
+      dayCount == null
+        ? Prisma.sql`
+      bounds AS (
+        SELECT
+          COALESCE(
+            (
+              SELECT MIN(("createdAt")::date)
+              FROM api_logs
+              WHERE COALESCE(request->>'url', '') ILIKE '%/chw/register%'
+                AND response->'body'->'message'->'body' IS NOT NULL
+            ),
+            CURRENT_DATE
+          ) AS start_day,
+          CURRENT_DATE AS end_day
+      ),
+      days AS (
+        SELECT generate_series(bounds.start_day, bounds.end_day, INTERVAL '1 day')::date AS day
+        FROM bounds
+      ),`
+        : Prisma.sql`
+      days AS (
         SELECT generate_series(
           (CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day'))::date,
           CURRENT_DATE,
           INTERVAL '1 day'
         )::date AS day
-      ),
+      ),`;
+
+    const rows = await prisma.$queryRaw`
+      WITH ${daysCTE}
       register_logs AS (
         SELECT
           ("createdAt")::date AS day,
@@ -256,8 +284,8 @@ class DashboardRepository {
             request->'body'->'message'->'body'->>'locationCode'
           ) AS location_code
         FROM api_logs
-        WHERE "createdAt" >= CURRENT_DATE - ((${dayCount}::int - 1) * INTERVAL '1 day')
-          AND COALESCE(request->>'url', '') ILIKE '%/chw/register%'
+        WHERE ${createdAtFilter}
+          COALESCE(request->>'url', '') ILIKE '%/chw/register%'
           AND response->'body'->'message'->'body' IS NOT NULL
       ),
       scoped_logs AS (
@@ -318,7 +346,7 @@ class DashboardRepository {
       { incoming: 0, succeeded: 0, failed: 0, recovered: 0 }
     );
 
-    return { days: dayCount, buckets, totals };
+    return { days: scopeDays, buckets, totals };
   }
 }
 
