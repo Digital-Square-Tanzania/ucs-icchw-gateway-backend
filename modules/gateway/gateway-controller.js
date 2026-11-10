@@ -193,11 +193,13 @@ class GatewayController {
    */
   static async scanHrhisLocationFailures(req, res, next) {
     try {
-      const { region, district, council, days } = req.query;
+      const scope = await resolveCouncilScopeForRequest(req);
+      const days = req.query?.days;
+      if (!scope.council) {
+        throw new CustomError("Council is required for location failure scan.", 400);
+      }
       const data = await HrhisLocationRecoveryService.scanLocationFailures({
-        region,
-        district,
-        council,
+        ...scope,
         days,
       });
       return BaseResponse.success(
@@ -218,15 +220,17 @@ class GatewayController {
    */
   static async recoverHrhisLocationFailures(req, res, next) {
     try {
-      const { region, district, council, logIds, days, async: asyncFlag } = req.body || {};
+      const scope = await resolveCouncilScopeForRequest(req);
+      const { logIds, days, async: asyncFlag } = req.body || {};
+      if (!scope.council) {
+        throw new CustomError("Council is required for location failure recovery.", 400);
+      }
       const ids = Array.isArray(logIds) ? logIds : [];
       const runAsync = asyncFlag === true || asyncFlag === "true" || ids.length !== 1;
 
       if (runAsync) {
         const started = HrhisLocationRecoveryService.startRecoverLocationFailuresAsync({
-          region,
-          district,
-          council,
+          ...scope,
           logIds: ids.length ? ids : undefined,
           days,
         });
@@ -239,9 +243,7 @@ class GatewayController {
       }
 
       const data = await HrhisLocationRecoveryService.recoverLocationFailures({
-        region,
-        district,
-        council,
+        ...scope,
         logIds: ids,
         days,
       });

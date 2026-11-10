@@ -1,5 +1,6 @@
 import { Router } from "express";
 import AuthMiddleware from "../../middlewares/authentication-middleware.js";
+import PermissionMiddleware from "../../middlewares/permission-middleware.js";
 import BasicAuthMiddleware from "../../middlewares/basic-auth-middleware.js";
 import GatewayController from "./gateway-controller.js";
 import { checkChwMonthlyStatusRateLimiter, registerChwFromHrhisRateLimiter, updateChwDemographicsRateLimiter, changeChwDutyStationRateLimiter } from "../../middlewares/ratelimiter-middleware.js";
@@ -51,17 +52,21 @@ router.get(
   GatewayController.getHrhisCouncilAnalytics
 );
 
+const locationRecoveryAdmin = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireSettingsTab("location-recovery"),
+];
+
 // Admin: scan / recover location-related HRHIS register failures from api_logs
 router.get(
   "/admin/hrhis-location-failures",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  ...locationRecoveryAdmin,
   GatewayController.scanHrhisLocationFailures
 );
 router.post(
   "/admin/hrhis-location-failures/recover",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  ...locationRecoveryAdmin,
   GatewayController.recoverHrhisLocationFailures
 );
 
