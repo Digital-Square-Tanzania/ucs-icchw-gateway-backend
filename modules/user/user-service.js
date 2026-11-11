@@ -57,6 +57,35 @@ class UserService {
     return new Map(groups.map((g) => [g.userUuid, Number(g._sum.resendCount) || 0]));
   }
 
+  /**
+   * First send, that slug's expiry, and the latest send for each CHW.
+   * Ordered by createdAt so the first row is the original email.
+   */
+  static async activationTimelinesForUsers(userUuids) {
+    if (!userUuids?.length) return new Map();
+    const slugs = await prisma.accountActivation.findMany({
+      where: { slugType: "ACTIVATION", userUuid: { in: userUuids } },
+      select: { userUuid: true, createdAt: true, expiryDate: true, usedAt: true, isUsed: true },
+      orderBy: { createdAt: "asc" },
+    });
+    const byUser = new Map();
+    for (const slug of slugs) {
+      const prev = byUser.get(slug.userUuid);
+      if (!prev) {
+        byUser.set(slug.userUuid, {
+          firstSentAt: slug.createdAt,
+          firstExpiredAt: slug.expiryDate,
+          lastSentAt: slug.createdAt,
+          activatedAt: slug.isUsed ? slug.usedAt : null,
+        });
+        continue;
+      }
+      prev.lastSentAt = slug.createdAt;
+      if (slug.isUsed && slug.usedAt) prev.activatedAt = slug.usedAt;
+    }
+    return byUser;
+  }
+
   static dedupeActivationsByUser(rows) {
     const seen = new Set();
     const out = [];
@@ -438,6 +467,7 @@ class UserService {
         expiryDate,
         facility: member.locationName || keep.facility,
         isResent: true,
+        resendCount: { increment: 1 },
       },
     });
 
@@ -577,6 +607,11 @@ class UserService {
       const newSlug = await GenerateActivationSlug.generate(activation.userUuid, payload, member, "ACTIVATION", 64);
 
       await EmailService.sendEmail(UserService.buildPendingActivationEmail(member, newSlug));
+
+      await prisma.accountActivation.update({
+        where: { id: activation.id },
+        data: { isResent: true, resendCount: { increment: 1 } },
+      });
 
       await ApiLogger.log(req, { statusCode: 200, body: { slug: newSlug, email: member.email, slugType: "Reactivation" } });
       console.log("🔄 Activation email resent successfully for slug: ", newSlug);
@@ -1039,6 +1074,7 @@ class UserService {
       isResent: true,
       resendCount: true,
       expiryDate: true,
+      usedAt: true,
       createdAt: true,
     };
 
@@ -1052,14 +1088,24 @@ class UserService {
     const deduped = UserService.dedupeActivationsByUser(candidates);
     const total = deduped.length;
     const pageRows = deduped.slice(skip, skip + take);
-    const resendByUser = await UserService.sumResendCountsForUsers(
-      pageRows.map((r) => r.userUuid),
-      councilFilter
-    );
-    const rows = pageRows.map((row) => ({
-      ...row,
-      resendCount: resendByUser.get(row.userUuid) ?? row.resendCount ?? 0,
-    }));
+    const userUuids = pageRows.map((r) => r.userUuid);
+    const [resendByUser, timelines] = await Promise.all([
+      UserService.sumResendCountsForUsers(userUuids, councilFilter),
+      UserService.activationTimelinesForUsers(userUuids),
+    ]);
+    const rows = pageRows.map((row) => {
+      const summed = resendByUser.get(row.userUuid) ?? row.resendCount ?? 0;
+      const timeline = timelines.get(row.userUuid);
+      return {
+        ...row,
+        // A flagged slug was resent even when the counter was never written.
+        resendCount: row.isResent && summed < 1 ? 1 : summed,
+        firstSentAt: timeline?.firstSentAt ?? row.createdAt,
+        lastSentAt: timeline?.lastSentAt ?? row.createdAt,
+        firstExpiredAt: timeline?.firstExpiredAt ?? row.expiryDate,
+        activatedAt: row.usedAt ?? timeline?.activatedAt ?? null,
+      };
+    });
 
     return { rows, total, page: pageNum, limit: take };
   }
