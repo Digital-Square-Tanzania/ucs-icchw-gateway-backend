@@ -2,6 +2,14 @@ import jwt from "jsonwebtoken";
 import AuthService from "./auth-service.js";
 import BaseResponse from "../../responders/base-responder.js";
 
+function accessExpiryToMs(expiresIn) {
+  const match = /^(\d+)([smhd])$/.exec(String(expiresIn || "1h"));
+  if (!match) return 60 * 60 * 1000;
+  const amount = Number(match[1]);
+  const unitMs = { s: 1000, m: 60 * 1000, h: 60 * 60 * 1000, d: 24 * 60 * 60 * 1000 }[match[2]];
+  return amount * unitMs;
+}
+
 class AuthController {
   static async login(req, res) {
     try {
@@ -13,7 +21,7 @@ class AuthController {
         httpOnly: true,
         secure: false,
         sameSite: "lax",
-        maxAge: 60 * 60 * 1000, // 1 hour
+        maxAge: accessExpiryToMs(process.env.JWT_ACCESS_EXPIRY || "1h"),
       };
       try {
         res.cookie("accessToken", accessToken, cookieOptions);
@@ -92,7 +100,14 @@ class AuthController {
         return BaseResponse.error(res, "Refresh token is required.", 400);
       }
 
-      const { accessToken } = await AuthService.refreshAccessToken(refreshToken);
+      const { accessToken, expiresIn } = await AuthService.refreshAccessToken(refreshToken);
+
+      res.cookie("accessToken", accessToken, {
+        httpOnly: true,
+        secure: false,
+        sameSite: "lax",
+        maxAge: accessExpiryToMs(expiresIn),
+      });
 
       return BaseResponse.success(res, "New access token issued.", { accessToken });
     } catch (error) {

@@ -82,11 +82,11 @@ class AuthMiddleware {
         return BaseResponse.error(res, "Refresh token is blacklisted.", 401);
       }
 
-      // Issue new Access Token
+      const expiresIn = process.env.JWT_ACCESS_EXPIRY || "1h";
       const newAccessToken = jwt.sign(
         { id: decoded.id, email: decoded.email, role: decoded.role },
         process.env.JWT_ACCESS_SECRET,
-        { expiresIn: "15m" } // Short-lived access token
+        { expiresIn }
       );
 
       return BaseResponse.success(res, "New access token issued.", {

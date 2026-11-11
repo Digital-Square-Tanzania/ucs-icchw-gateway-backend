@@ -102,14 +102,25 @@ class AuthService {
         throw new Error("Refresh token is blacklisted.");
       }
 
-      // Issue new Access Token
+      const user = await AuthRepository.findUserById(decoded.id);
+      if (!user || user.isDeleted) {
+        throw new Error("Invalid or expired refresh token.");
+      }
+
+      const expiresIn = process.env.JWT_ACCESS_EXPIRY || "1h";
       const newAccessToken = jwt.sign(
-        { id: decoded.id, email: decoded.email, role: decoded.role },
+        {
+          id: user.id,
+          email: user.email,
+          role: user.role.name,
+          firstName: user.firstName,
+          lastName: user.lastName,
+        },
         process.env.JWT_ACCESS_SECRET,
-        { expiresIn: "15m" } // New Access Token valid for 15 minutes
+        { expiresIn }
       );
 
-      return { accessToken: newAccessToken };
+      return { accessToken: newAccessToken, expiresIn };
     } catch (error) {
       throw new Error("Invalid or expired refresh token.");
     }
