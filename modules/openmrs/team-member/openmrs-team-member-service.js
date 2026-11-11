@@ -398,11 +398,13 @@ class TeamMemberService {
   }
 
   // Create a new team member in OpenMRS and in Postgres
-  static async createTeamMember(newUser, payload, validatedContent, newPerson) {
+  static async createTeamMember(newUser, payload, validatedContent, newPerson, teamRoleUuid = null) {
     let personId = newPerson.id;
     try {
       console.log(" > Creating team member in OpenMRS...");
-      const identifierRole = await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.DEFAULT_ICCHW_TEAM_ROLE_IDENTIFIER);
+      const identifierRole = teamRoleUuid
+        ? { uuid: teamRoleUuid }
+        : await TeamRoleRepository.getTeamRoleUuidByIdentifier(process.env.DEFAULT_ICCHW_TEAM_ROLE_IDENTIFIER);
       const teamMemberObject = {
         identifier: newUser.username + payload.message.body[0].hfrCode.replace("-", ""),
         locations: [

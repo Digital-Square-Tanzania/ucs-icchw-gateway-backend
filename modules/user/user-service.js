@@ -14,9 +14,11 @@ import OpenMRSLocationRepository from "../openmrs/location/openmrs-location-repo
 import OpenMRSLocationService from "../openmrs/location/openmrs-location-service.js";
 import { getCouncilUserUuids, getCouncilMembersPaginated } from "./council-members-repository.js";
 import TeamRepository from "../openmrs/team/openmrs-team-repository.js";
+import TeamRoleRepository from "../openmrs/team-role/openmrs-team-role-repository.js";
 import TeamService from "../openmrs/team/openmrs-team-service.js";
 import PayloadContent from "../gateway/helpers/payload-content.js";
 import resendActivationCron from "../../utils/resend-activation-cron.js";
+import { isExternallyManagedOpenMrsRole } from "../../utils/openmrs-managed-roles.js";
 
 const backendUrl = process.env.BACKEND_URL || "https://ucs.moh.go.tz";
 const COUNCIL_CODE_SEGMENTS = 5;
@@ -726,8 +728,16 @@ class UserService {
       // Get the payload from the request body
       const payload = req.body;
 
-      // Validate incoming CHW deployment payload
-      // FrontendValidator.validateCreateChwPayload(payload);
+      const role = await TeamRoleRepository.getTeamRoleByUUID(payload.selectedRole);
+      if (!role) {
+        throw new CustomError("Unknown OpenMRS team role.", 400);
+      }
+      if (isExternallyManagedOpenMrsRole(role)) {
+        throw new CustomError(
+          "iCCHW and Peer Educator accounts are not created here. iCCHW is registered from HRHIS, and Peer Educators from the peers app.",
+          400
+        );
+      }
 
       // Check if the CHW exists in team members by NIN
       const teamMember = await TeamMemberRepository.getTeamMemberByNin(payload.NIN);
@@ -788,7 +798,13 @@ class UserService {
       validatedContent.team = team;
 
       // Create a new team member in OpenMRS and in local Repo
-      const newTeamMember = await TeamMemberService.createTeamMember(newUser, newPayload, validatedContent, newPerson);
+      const newTeamMember = await TeamMemberService.createTeamMember(
+        newUser,
+        newPayload,
+        validatedContent,
+        newPerson,
+        role.uuid
+      );
       console.log("✅ CHW registered successfuly.");
 
       // Generate an activation slug and record

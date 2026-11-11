@@ -57,6 +57,7 @@ class UserValidation {
         .pattern(/^\d{6}-\d$/)
         .required(),
       locationCode: Joi.string().required(),
+      selectedRole: Joi.string().trim().required(),
     }).required();
   }
 }
