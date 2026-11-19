@@ -1,15 +1,30 @@
 import { WebSocketServer } from "ws";
 
 let wss = null;
+let heartbeat = null;
+
+function startHeartbeat() {
+  if (heartbeat) return;
+
+  // Protocol pings keep the socket alive through reverse proxies during long syncs.
+  heartbeat = setInterval(() => {
+    if (!wss) return;
+    wss.clients.forEach((client) => {
+      if (client.readyState === 1) client.ping();
+    });
+  }, 25000);
+  heartbeat.unref?.();
+}
 
 function attachConnectionHandlers() {
   wss.on("connection", (ws) => {
-    console.log("🔗 New client connected to WebSocket");
+    console.log(`🔗 New client connected to WebSocket (${wss.clients.size} connected)`);
 
     ws.on("close", () => {
-      console.log("❌ Client disconnected");
+      console.log(`❌ Client disconnected (${wss.clients.size} connected)`);
     });
   });
+  startHeartbeat();
 }
 
 export default {

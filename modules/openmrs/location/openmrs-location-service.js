@@ -483,17 +483,29 @@ class OpenMRSLocationService {
   // Fast path: read directly from the OpenMRS MySQL database (same server).
   // The `pageSize` argument is kept for backward compatibility with existing
   // callers but is unused by the DB sync.
-  static async syncLocations(_pageSize) {
-    return await OpenMRSLocationService.syncLocationsFromDb();
+  static async syncLocations(_pageSize, onProgress) {
+    return await OpenMRSLocationService.syncLocationsFromDb(onProgress);
   }
 
   // Fast OpenMRS location sync: mirror the OpenMRS MySQL location tree straight
   // into the local flat `openmrs_location` table, then refresh the hierarchy
   // view. Orders of magnitude faster than the REST-based sync.
-  static async syncLocationsFromDb() {
+  static async syncLocationsFromDb(onProgress) {
     let connection;
+    let lastLoggedBucket = -1;
+    const emit = (payload) => {
+      if (typeof onProgress !== "function") return;
+      try {
+        onProgress(payload);
+      } catch (error) {
+        console.warn("⚠️ Location sync progress emit failed:", error.message);
+      }
+    };
+
     try {
-      console.log("🚀 Fast-syncing OpenMRS locations directly from MySQL...");
+      const startLine = "🚀 Fast-syncing OpenMRS locations directly from MySQL...";
+      console.log(startLine);
+      emit({ message: startLine, percent: 2, log: true, level: "info" });
 
       connection = await mysqlClient.getConnection();
       await connection.query("USE openmrs");
@@ -502,7 +514,8 @@ class OpenMRSLocationService {
       // geographic tags produces exactly one row (last tag wins).
       const byUuid = new Map();
 
-      for (const tag of LOCATION_SYNC_TAGS) {
+      for (let index = 0; index < LOCATION_SYNC_TAGS.length; index++) {
+        const tag = LOCATION_SYNC_TAGS[index];
         const [rows] = await connection.query(LOCATIONS_BY_TAG_SQL, [tag]);
         for (const row of rows) {
           if (!row.uuid) continue;
@@ -521,19 +534,48 @@ class OpenMRSLocationService {
             createdAt: row.date_created ? new Date(row.date_created) : new Date(),
           });
         }
-        console.log(`   • ${tag}: ${rows.length} location(s)`);
+        const tagLine = `   • ${tag}: ${rows.length} location(s)`;
+        console.log(tagLine);
+        emit({
+          message: tagLine.trim(),
+          percent: Math.round(((index + 1) / LOCATION_SYNC_TAGS.length) * 15),
+          log: true,
+          level: "info",
+        });
       }
 
       const locations = Array.from(byUuid.values());
-      const count = await OpenMRSLocationRepository.replaceAllLocations(locations);
+      const writingLine = `Writing ${locations.length.toLocaleString()} location(s) into openmrs_location...`;
+      console.log(writingLine);
+      emit({ message: writingLine, percent: 16, log: true, level: "info" });
+
+      const count = await OpenMRSLocationRepository.replaceAllLocations(locations, ({ written, total }) => {
+        const percent = 16 + Math.round((written / Math.max(total, 1)) * 74);
+        const bucket = Math.floor(percent / 10);
+        const writeLine = `Writing locations ${written.toLocaleString()} / ${total.toLocaleString()}`;
+        emit({
+          message: writeLine,
+          percent,
+          log: written === 0 || written === total || bucket !== lastLoggedBucket,
+          level: "info",
+        });
+        lastLoggedBucket = bucket;
+      });
 
       // Refresh the hierarchy view so grouped-location lookups reflect the new
       // data. Non-fatal: a view refresh failure shouldn't fail the whole sync.
+      const refreshLine = "♻️  Refreshing openmrs_location_hierarchy_view...";
+      console.log(refreshLine);
+      emit({ message: refreshLine, percent: 94, log: true, level: "info" });
       try {
         await OpenMRSLocationRepository.refreshLocationHierarchyView();
-        console.log("♻️  Refreshed openmrs_location_hierarchy_view.");
+        const refreshedLine = "♻️  Refreshed openmrs_location_hierarchy_view.";
+        console.log(refreshedLine);
+        emit({ message: refreshedLine, percent: 99, log: true, level: "success" });
       } catch (viewError) {
-        console.warn("⚠️  Location hierarchy view refresh failed:", viewError.message);
+        const warnLine = `⚠️  Location hierarchy view refresh failed: ${viewError.message}`;
+        console.warn(warnLine);
+        emit({ message: warnLine, percent: 99, log: true, level: "error" });
       }
 
       console.log(`✅ Fast location sync complete: ${count} location(s) synced.`);

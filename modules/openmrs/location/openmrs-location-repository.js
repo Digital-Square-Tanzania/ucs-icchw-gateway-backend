@@ -187,19 +187,29 @@ class OpenMRSLocationRepository {
    * single transaction. Used by the fast DB-to-DB sync. Refuses to run with an
    * empty payload so a failed/empty upstream read never wipes existing data.
    */
-  static async replaceAllLocations(rows) {
+  static async replaceAllLocations(rows, onProgress) {
     if (!Array.isArray(rows) || rows.length === 0) {
       throw new CustomError("Refusing to replace locations: no rows fetched from OpenMRS database.");
     }
 
     const chunkSize = 1000;
+    const report = (written) => {
+      if (typeof onProgress !== "function") return;
+      try {
+        onProgress({ written, total: rows.length });
+      } catch (error) {
+        console.warn("⚠️ Location replace progress failed:", error.message);
+      }
+    };
 
     await prisma.$transaction(
       async (tx) => {
         await tx.openMRSLocation.deleteMany({});
+        report(0);
         for (let i = 0; i < rows.length; i += chunkSize) {
           const chunk = rows.slice(i, i + chunkSize);
           await tx.openMRSLocation.createMany({ data: chunk, skipDuplicates: true });
+          report(Math.min(i + chunk.length, rows.length));
         }
       },
       { timeout: 180000, maxWait: 30000 }

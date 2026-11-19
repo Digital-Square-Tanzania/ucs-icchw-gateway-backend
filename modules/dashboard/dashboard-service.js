@@ -42,6 +42,14 @@ class DashboardService {
     }
   }
 
+  static publish(path, event) {
+    WebSocketService.broadcast({
+      ...event,
+      path,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
   // Sync dashboard data (MOH_ADMIN and UCS_DEVELOPER roles)
   static async syncDashboard(path) {
     switch (path) {
@@ -60,36 +68,73 @@ class DashboardService {
 
   // Sync DHIS2 users
   static async syncDhis2Users() {
-    await DHIS2UserService.syncUsers();
-    WebSocketService.broadcast({
-      type: "sync-complete",
-      path: "dhis2",
-      timestamp: new Date().toISOString(),
-    });
+    const path = "dhis2";
+    try {
+      DashboardService.publish(path, {
+        type: "sync-progress",
+        message: "Syncing DHIS2 users…",
+        percent: 10,
+        log: true,
+        level: "info",
+      });
+      await DHIS2UserService.syncUsers();
+      DashboardService.publish(path, {
+        type: "sync-complete",
+        status: "complete",
+        synced: true,
+        percent: 100,
+        message: "DHIS2 user sync completed.",
+        level: "success",
+      });
+      return { synced: true };
+    } catch (error) {
+      DashboardService.publish(path, {
+        type: "sync-error",
+        status: "error",
+        message: error.message || "DHIS2 user sync failed.",
+        level: "error",
+        log: true,
+      });
+      throw error;
+    }
+  }
 
-    return { synced: true };
+  static async syncLocationPath(path) {
+    try {
+      const result = await OpenMRSLocationService.syncLocations(1000, (progress) => {
+        DashboardService.publish(path, { type: "sync-progress", ...progress });
+      });
+      const count = Number(result?.synced) || 0;
+      DashboardService.publish(path, {
+        type: "sync-complete",
+        status: "complete",
+        synced: true,
+        count,
+        percent: 100,
+        level: "success",
+        message: `Sync completed: ${count.toLocaleString()} location(s) synced.`,
+      });
+      return { synced: true, count };
+    } catch (error) {
+      DashboardService.publish(path, {
+        type: "sync-error",
+        status: "error",
+        message: error.message || "OpenMRS location sync failed.",
+        level: "error",
+        log: true,
+      });
+      throw error;
+    }
   }
 
   // Sync Villages
   static async syncVillages() {
-    await OpenMRSLocationService.syncLocations(1000);
-    WebSocketService.broadcast({
-      type: "sync-complete",
-      path: "villages",
-      timestamp: new Date().toISOString(),
-    });
-    return { synced: true };
+    return this.syncLocationPath("villages");
   }
 
-  // Sync Facilities
+  // Sync Facilities (OpenMRS location sync from Settings > Maintenance)
   static async syncFacilities() {
-    await OpenMRSLocationService.syncLocations(1000);
-    WebSocketService.broadcast({
-      type: "sync-complete",
-      path: "facilities",
-      timestamp: new Date().toISOString(),
-    });
-    return { synced: true };
+    return this.syncLocationPath("facilities");
   }
 
   static async getHrhisRegisterTimeseries(days, scope = {}) {

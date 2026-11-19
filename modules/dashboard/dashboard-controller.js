@@ -32,7 +32,11 @@ class DashboardController {
 
       const result = await DashboardService.syncDashboard(path);
       console.log(`✅ Sync complete for ${path}`);
-      return BaseResponse.success(res, `Sync for ${path} completed`, { synced: true, path, ...result });
+      return BaseResponse.success(res, `Sync for ${path} completed`, {
+        ...(result || {}),
+        path,
+        synced: true,
+      });
     } catch (error) {
       next(error);
     }
