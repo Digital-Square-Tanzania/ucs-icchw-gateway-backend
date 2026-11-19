@@ -42,6 +42,16 @@ function parseJsonField(value, fallback = null) {
   return fallback;
 }
 
+function hfrCodeFrom(row, chw) {
+  return String(row?.hfr_code || chw?.hfrCode || "").trim();
+}
+
+function payloadFacilityName(chw) {
+  const raw = chw?.facilityName || chw?.facility || chw?.healthFacilityName;
+  const name = String(raw || "").trim();
+  return name || null;
+}
+
 function formatFieldChanges(fieldChanges, chw, updatedFields = []) {
   const parsed = parseJsonField(fieldChanges, null);
   if (parsed && typeof parsed === "object" && Object.keys(parsed).length > 0) {
@@ -56,6 +66,39 @@ function formatFieldChanges(fieldChanges, chw, updatedFields = []) {
 }
 
 class HrhisCouncilAnalyticsService {
+  /**
+   * Facility display names keyed by HFR code. Facility-tagged rows win when
+   * more than one location shares a code.
+   */
+  static async facilityNamesByHfr(rows) {
+    const codes = [
+      ...new Set(
+        (rows || [])
+          .map((row) => hfrCodeFrom(row, extractChwFromRequest(row?.request)))
+          .filter(Boolean)
+      ),
+    ];
+    if (!codes.length) return new Map();
+
+    const locations = await prisma.openMRSLocation.findMany({
+      where: { hfrCode: { in: codes }, retired: false },
+      select: { hfrCode: true, name: true, type: true },
+    });
+
+    const names = new Map();
+    for (const location of locations) {
+      const code = String(location.hfrCode || "").trim();
+      const name = String(location.name || "").trim();
+      if (!code || !name) continue;
+      const current = names.get(code);
+      if (!current || (location.type === "Facility" && current.type !== "Facility")) {
+        names.set(code, { name, type: location.type || null });
+      }
+    }
+
+    return new Map([...names.entries()].map(([code, value]) => [code, value.name]));
+  }
+
   /**
    * Council-scoped HRHIS /chw/register analytics from api_logs.
    * Uses GatewayResponder envelope rows for HTTP outcomes (one row per attempt)
@@ -163,6 +206,13 @@ class HrhisCouncilAnalyticsService {
     const duplicateSubmissions = [...ninCounts.values()].filter((c) => c > 1).reduce((a, c) => a + (c - 1), 0);
     const uniqueNins = ninCounts.size;
 
+    const namesByHfr = await HrhisCouncilAnalyticsService.facilityNamesByHfr([
+      ...scopedEnvelope,
+      ...scopedInternal,
+    ]);
+    const facilityNameFor = (row, chw) =>
+      payloadFacilityName(chw) || namesByHfr.get(hfrCodeFrom(row, chw)) || null;
+
     const accepted = succeeded.slice(0, MAX_TABLE_ROWS).map((row) => {
       const chw = extractChwFromRequest(row.request);
       return {
@@ -172,6 +222,7 @@ class HrhisCouncilAnalyticsService {
         nin: row.nin,
         name: chwDisplayName(chw),
         locationCode: row.location_code,
+        facilityName: facilityNameFor(row, chw),
         hfrCode: row.hfr_code || chw.hfrCode || null,
         httpStatus: Number(row.http_status) || null,
         kind: row.http_status === 201 ? "create" : row.http_status === 200 ? "update" : "success",
@@ -188,6 +239,7 @@ class HrhisCouncilAnalyticsService {
         nin: row.nin,
         name: chwDisplayName(chw),
         locationCode: row.location_code,
+        facilityName: facilityNameFor(row, chw),
         hfrCode: row.hfr_code || chw.hfrCode || null,
         httpStatus: Number(row.http_status) || null,
         errorMessage: row.err_msg || "Unknown error",
@@ -221,6 +273,7 @@ class HrhisCouncilAnalyticsService {
           nin,
           name: chwDisplayName(chw),
           locationCode: row.location_code,
+          facilityName: facilityNameFor(row, chw),
           action: row.action,
           updateNumber: index + 1,
           totalUpdatesForNin: sorted.length,
@@ -247,11 +300,16 @@ class HrhisCouncilAnalyticsService {
           .sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
         const openCount = rows.filter((r) => !r.resolved_at).length;
         const resolvedCount = rows.length - openCount;
+        const facilityNames = [
+          ...new Set(rows.map((row) => facilityNameFor(row, extractChwFromRequest(row.request))).filter(Boolean)),
+        ];
         return {
           nin,
           submissionCount,
           openCount,
           resolvedCount,
+          facilityName: facilityNames[0] || null,
+          facilityNames,
           firstAt: rows[0]?.createdAt || null,
           lastAt: rows[rows.length - 1]?.createdAt || null,
         };
