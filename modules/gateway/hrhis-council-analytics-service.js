@@ -198,11 +198,31 @@ class HrhisCouncilAnalyticsService {
     const updatedViaRegister = succeeded.filter((r) => r.http_status === 200);
 
     const ninCounts = new Map();
+    const acceptedPeerNins = new Set();
+    const rejectedPeerNins = new Set();
+    const classifyPeer = (row, { recovered = false } = {}) => {
+      const nin = String(row.nin || "").trim();
+      if (!nin) return;
+      const accepted = recovered || Boolean(row.recovered_at) || isSuccess(row);
+      if (accepted) {
+        acceptedPeerNins.add(nin);
+        rejectedPeerNins.delete(nin);
+        return;
+      }
+      if (isFailure(row) && !acceptedPeerNins.has(nin)) {
+        rejectedPeerNins.add(nin);
+      }
+    };
     for (const row of liveRows) {
       const nin = String(row.nin || "").trim();
       if (!nin) continue;
       ninCounts.set(nin, (ninCounts.get(nin) || 0) + 1);
+      classifyPeer(row);
     }
+    for (const row of recovered) classifyPeer(row, { recovered: true });
+    const peersAccepted = acceptedPeerNins.size;
+    const peersRejected = rejectedPeerNins.size;
+    const peersSubmitted = peersAccepted + peersRejected;
     const duplicateSubmissions = [...ninCounts.values()].filter((c) => c > 1).reduce((a, c) => a + (c - 1), 0);
     const uniqueNins = ninCounts.size;
 
@@ -338,6 +358,9 @@ class HrhisCouncilAnalyticsService {
         updated: updatedViaRegister.length,
         internalUpdateLogs: scopedInternal.length,
         recoveryRetries: recoveryRows.length,
+        peersSubmitted,
+        peersAccepted,
+        peersRejected,
       },
       accepted,
       rejected,
