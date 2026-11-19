@@ -9,9 +9,25 @@ import PermissionMiddleware from "../../middlewares/permission-middleware.js";
 const router = Router();
 
 // Public User Routes (Require Authentication Only)
+const managerView = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireUserTab("manager", "view"),
+];
+const managerCreate = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireUserTab("manager", "create"),
+];
+const openMrsCreate = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireUserTab("openmrs", "create"),
+];
+
 router.get(
   "/",
-  AuthMiddleware.authenticate,
+  ...managerView,
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "MOH_USER", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   searchUserRateLimiter,
   UserController.getAllUsers,
@@ -19,7 +35,7 @@ router.get(
 
 router.get(
   "/roles",
-  AuthMiddleware.authenticate,
+  ...managerCreate,
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   UserController.getManagerRoles,
 );
@@ -29,7 +45,7 @@ router.get("/:id", AuthMiddleware.authenticate, UserController.getUserById);
 // Create CHW Route: UCS_DEVELOPER, MOH_ADMIN, and COUNCIL_COORDINATOR can create CHW users
 router.post(
   "/chw",
-  AuthMiddleware.authenticate,
+  ...openMrsCreate,
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   createUserRateLimiter,
   ...ValidationMiddleware.sanitizeUserInputs(), // Spread the array of sanitization middleware
@@ -40,8 +56,8 @@ router.post(
 // Create Route: MOH_ADMIN, COUNCIL_COORDINATOR, and FACILITY_PROVIDER can create users
 router.post(
   "/",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
+  ...managerCreate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   createUserRateLimiter,
   ...ValidationMiddleware.sanitizeUserInputs(), // Spread the array of sanitization middleware
   ValidationMiddleware.validate(UserValidation.createUserSchema()), // Joi validation

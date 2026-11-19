@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import prisma from "../../config/prisma.js";
 import { RoleType } from "@prisma/client";
 import { SETTINGS_TAB_PERMISSIONS } from "../../utils/settings-tab-permissions.js";
+import { USER_TAB_PERMISSIONS } from "../../utils/user-tab-permissions.js";
 
 const PERMISSION_META = {
   "settings:manage": "Full Settings access (all tabs)",
@@ -14,6 +15,12 @@ const PERMISSION_META = {
   "activations:schedule": "Edit activation resend scheduler",
   "menu:dashboard": "Nav: Dashboard",
   "menu:users": "Nav: Users",
+  "users:tab:openmrs:view": "Users tab: OpenMRS view",
+  "users:tab:openmrs:create": "Users tab: OpenMRS create",
+  "users:tab:dhis2:view": "Users tab: DHIS2 view",
+  "users:tab:dhis2:create": "Users tab: DHIS2 create",
+  "users:tab:manager:view": "Users tab: Manager view",
+  "users:tab:manager:create": "Users tab: Manager create",
   "menu:settings": "Nav: Settings",
   "menu:analytics": "Nav: Analytics",
 };
@@ -55,7 +62,7 @@ class PermissionSeeder {
     console.log("🔐 Seeding permissions, menus, and role assignments…");
 
     const permissions = [];
-    for (const code of SETTINGS_TAB_PERMISSIONS) {
+    for (const code of [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS]) {
       permissions.push(await upsertPermission(code));
     }
 
@@ -93,10 +100,9 @@ class PermissionSeeder {
     }
 
     if (mohAdmin) {
-      const manage = permissions.find((p) => p.code === "settings:manage");
-      if (manage) {
-        await assignAllPermissions(mohAdmin.id, [manage.id]);
-      }
+      const mohCodes = ["settings:manage", ...USER_TAB_PERMISSIONS];
+      const mohPermIds = permissions.filter((p) => mohCodes.includes(p.code)).map((p) => p.id);
+      await assignAllPermissions(mohAdmin.id, mohPermIds);
       for (const menu of menus) {
         await prisma.roleMenu.upsert({
           where: { roleId_menuId: { roleId: mohAdmin.id, menuId: menu.id } },
@@ -107,7 +113,14 @@ class PermissionSeeder {
     }
 
     if (mohUser) {
-      const codes = ["menu:dashboard", "menu:users", "menu:analytics"];
+      const codes = [
+        "menu:dashboard",
+        "menu:users",
+        "menu:analytics",
+        "users:tab:openmrs:view",
+        "users:tab:dhis2:view",
+        "users:tab:manager:view",
+      ];
       const viewPermIds = permissions.filter((p) => codes.includes(p.code)).map((p) => p.id);
       await assignAllPermissions(mohUser.id, viewPermIds);
       const viewMenus = menus.filter((m) => ["/dashboard", "/users", "/analytics"].includes(m.path));
@@ -127,6 +140,10 @@ class PermissionSeeder {
         "activations:resend",
         "menu:analytics",
         "menu:settings",
+        "users:tab:openmrs:view",
+        "users:tab:openmrs:create",
+        "users:tab:manager:view",
+        "users:tab:manager:create",
       ];
       const coordPermIds = permissions.filter((p) => codes.includes(p.code)).map((p) => p.id);
       await assignAllPermissions(councilCoord.id, coordPermIds);

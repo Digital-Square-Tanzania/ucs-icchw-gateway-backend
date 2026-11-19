@@ -1,3 +1,5 @@
+import { USER_TAB_PERMISSIONS } from "./user-tab-permissions.js";
+
 /** Granular Settings page tab permissions. `settings:manage` grants all tabs. */
 export const SETTINGS_TAB_PERMISSIONS = [
   "settings:manage",
@@ -58,9 +60,16 @@ export function defaultPermissionsForRole(roleName) {
   switch (roleName) {
     case "UCS_DEVELOPER":
     case "MOH_ADMIN":
-      return [...SETTINGS_TAB_PERMISSIONS];
+      return [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS];
     case "MOH_USER":
-      return ["menu:dashboard", "menu:users", "menu:analytics"];
+      return [
+        "menu:dashboard",
+        "menu:users",
+        "menu:analytics",
+        "users:tab:openmrs:view",
+        "users:tab:dhis2:view",
+        "users:tab:manager:view",
+      ];
     case "COUNCIL_COORDINATOR":
       return [
         "settings:tab:activations",
@@ -68,6 +77,10 @@ export function defaultPermissionsForRole(roleName) {
         "activations:resend",
         "menu:analytics",
         "menu:settings",
+        "users:tab:openmrs:view",
+        "users:tab:openmrs:create",
+        "users:tab:manager:view",
+        "users:tab:manager:create",
       ];
     default:
       return [];

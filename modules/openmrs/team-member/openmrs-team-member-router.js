@@ -1,6 +1,7 @@
 import { Router } from "express";
 import TeamMemberController from "./openmrs-team-member-controller.js";
 import AuthMiddleware from "../../../middlewares/authentication-middleware.js";
+import PermissionMiddleware from "../../../middlewares/permission-middleware.js";
 import basicAuthMiddleware from "../../../middlewares/basic-auth-middleware.js";
 import multer from "multer";
 
@@ -18,8 +19,19 @@ const fileFilter = (_req, file, cb) => {
 };
 const upload = multer({ storage: storage, fileFilter: fileFilter });
 
-router.get("/", AuthMiddleware.authenticate, TeamMemberController.getTeamMembers);
-router.post("/", AuthMiddleware.authenticate, TeamMemberController.createTeamMember);
+const openMrsView = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireUserTab("openmrs", "view"),
+];
+const openMrsCreate = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireUserTab("openmrs", "create"),
+];
+
+router.get("/", ...openMrsView, TeamMemberController.getTeamMembers);
+router.post("/", ...openMrsCreate, TeamMemberController.createTeamMember);
 router.get("/sync", AuthMiddleware.authenticate, TeamMemberController.syncTeamMembers);
 router.post(
   "/purge-orphans",
@@ -33,15 +45,15 @@ router.post(
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
   TeamMemberController.syncLocalTeamMembersAsync
 );
-router.put("/:uuid", AuthMiddleware.authenticate, TeamMemberController.updateTeamMember);
-router.get("/:uuid", AuthMiddleware.authenticate, TeamMemberController.getTeamMemberByUuid);
+router.put("/:uuid", ...openMrsCreate, TeamMemberController.updateTeamMember);
+router.get("/:uuid", ...openMrsView, TeamMemberController.getTeamMemberByUuid);
 router.delete("/person/:maxPersonId", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER"), TeamMemberController.deletePerson);
 
 // Check for username availability
-router.get("/username/search", AuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), TeamMemberController.checkUsernameAvailability);
+router.get("/username/search", ...openMrsCreate, AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"), TeamMemberController.checkUsernameAvailability);
 
 // Upload CSV file
-router.post("/upload", AuthMiddleware.authenticate, upload.single("file"), TeamMemberController.uploadCsv);
+router.post("/upload", ...openMrsCreate, upload.single("file"), TeamMemberController.uploadCsv);
 
 // INTERNAL ROUTES
 // Get team members by team UUID

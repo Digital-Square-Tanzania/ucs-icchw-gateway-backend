@@ -2,6 +2,7 @@ import BaseResponse from "../responders/base-responder.js";
 import RbacService from "../modules/rbac/rbac-service.js";
 import AuthRepository from "../modules/auth/auth-repository.js";
 import { hasSettingsTabAccess } from "../utils/settings-tab-permissions.js";
+import { hasUserTabAccess } from "../utils/user-tab-permissions.js";
 
 class PermissionMiddleware {
   static async loadUserPermissions(req, res, next) {
@@ -33,6 +34,14 @@ class PermissionMiddleware {
         return next();
       }
       return BaseResponse.error(res, "Access denied. Missing permission.", 403);
+    };
+  }
+
+  static requireUserTab(system, action) {
+    return (req, res, next) => {
+      const permissions = req.userPermissions || [];
+      if (hasUserTabAccess(permissions, system, action)) return next();
+      return BaseResponse.error(res, "Access denied. User tab not permitted.", 403);
     };
   }
 
