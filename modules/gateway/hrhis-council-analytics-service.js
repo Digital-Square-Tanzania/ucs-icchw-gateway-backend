@@ -198,30 +198,35 @@ class HrhisCouncilAnalyticsService {
     const updatedViaRegister = succeeded.filter((r) => r.http_status === 200);
 
     const ninCounts = new Map();
-    const acceptedPeerNins = new Set();
-    const rejectedPeerNins = new Set();
-    const classifyPeer = (row, { recovered = false } = {}) => {
+    // One bucket per NIN, decided by the latest attempt. An earlier success must
+    // not hide a later failure, and a recoveredAt flag alone is not acceptance.
+    const latestPeerByNin = new Map();
+    const notePeerAttempt = (row, { recovered = false } = {}) => {
       const nin = String(row.nin || "").trim();
       if (!nin) return;
-      const accepted = recovered || Boolean(row.recovered_at) || isSuccess(row);
-      if (accepted) {
-        acceptedPeerNins.add(nin);
-        rejectedPeerNins.delete(nin);
-        return;
-      }
-      if (isFailure(row) && !acceptedPeerNins.has(nin)) {
-        rejectedPeerNins.add(nin);
+      const accepted = recovered || isSuccess(row);
+      const failed = isFailure(row);
+      if (!accepted && !failed) return;
+      const at = new Date(row.createdAt).getTime();
+      const when = Number.isFinite(at) ? at : 0;
+      const prev = latestPeerByNin.get(nin);
+      if (!prev || when >= prev.at) {
+        latestPeerByNin.set(nin, { at: when, accepted });
       }
     };
     for (const row of liveRows) {
       const nin = String(row.nin || "").trim();
       if (!nin) continue;
       ninCounts.set(nin, (ninCounts.get(nin) || 0) + 1);
-      classifyPeer(row);
+      notePeerAttempt(row);
     }
-    for (const row of recovered) classifyPeer(row, { recovered: true });
-    const peersAccepted = acceptedPeerNins.size;
-    const peersRejected = rejectedPeerNins.size;
+    for (const row of recovered) notePeerAttempt(row, { recovered: true });
+    let peersAccepted = 0;
+    let peersRejected = 0;
+    for (const peer of latestPeerByNin.values()) {
+      if (peer.accepted) peersAccepted += 1;
+      else peersRejected += 1;
+    }
     const peersSubmitted = peersAccepted + peersRejected;
     const duplicateSubmissions = [...ninCounts.values()].filter((c) => c > 1).reduce((a, c) => a + (c - 1), 0);
     const uniqueNins = ninCounts.size;
