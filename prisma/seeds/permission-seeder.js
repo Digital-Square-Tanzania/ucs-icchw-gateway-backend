@@ -78,6 +78,7 @@ class PermissionSeeder {
 
     const ucsDev = await prisma.role.findUnique({ where: { name: RoleType.UCS_DEVELOPER } });
     const mohAdmin = await prisma.role.findUnique({ where: { name: RoleType.MOH_ADMIN } });
+    const mohUser = await prisma.role.findUnique({ where: { name: RoleType.MOH_USER } });
     const councilCoord = await prisma.role.findUnique({ where: { name: RoleType.COUNCIL_COORDINATOR } });
 
     if (ucsDev) {
@@ -100,6 +101,20 @@ class PermissionSeeder {
         await prisma.roleMenu.upsert({
           where: { roleId_menuId: { roleId: mohAdmin.id, menuId: menu.id } },
           create: { roleId: mohAdmin.id, menuId: menu.id },
+          update: {},
+        });
+      }
+    }
+
+    if (mohUser) {
+      const codes = ["menu:dashboard", "menu:users", "menu:analytics"];
+      const viewPermIds = permissions.filter((p) => codes.includes(p.code)).map((p) => p.id);
+      await assignAllPermissions(mohUser.id, viewPermIds);
+      const viewMenus = menus.filter((m) => ["/dashboard", "/users", "/analytics"].includes(m.path));
+      for (const menu of viewMenus) {
+        await prisma.roleMenu.upsert({
+          where: { roleId_menuId: { roleId: mohUser.id, menuId: menu.id } },
+          create: { roleId: mohUser.id, menuId: menu.id },
           update: {},
         });
       }

@@ -59,6 +59,8 @@ export function defaultPermissionsForRole(roleName) {
     case "UCS_DEVELOPER":
     case "MOH_ADMIN":
       return [...SETTINGS_TAB_PERMISSIONS];
+    case "MOH_USER":
+      return ["menu:dashboard", "menu:users", "menu:analytics"];
     case "COUNCIL_COORDINATOR":
       return [
         "settings:tab:activations",

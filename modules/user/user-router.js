@@ -12,7 +12,7 @@ const router = Router();
 router.get(
   "/",
   AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "MOH_USER", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   searchUserRateLimiter,
   UserController.getAllUsers,
 );

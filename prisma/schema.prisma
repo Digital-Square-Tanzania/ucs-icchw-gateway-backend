@@ -133,6 +133,7 @@ model RequestLog {
 enum RoleType {
   UCS_DEVELOPER
   MOH_ADMIN
+  MOH_USER
   COUNCIL_COORDINATOR
   EXTERNAL_SYSTEM
 }
