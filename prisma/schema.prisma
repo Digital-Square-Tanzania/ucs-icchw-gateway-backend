@@ -481,3 +481,26 @@ model RecoveredAccounts {
 
   @@map("recovered_accounts")
 }
+
+model EmailRuntimeSetting {
+  id           Int      @id @default(1)
+  allowSending Boolean  @default(false) @map("allow_sending")
+  provider     String   @default("gmail")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  updatedBy    String?  @map("updated_by")
+
+  @@map("email_runtime_settings")
+}
+
+model EmailDispatchLog {
+  id        Int      @id @default(autoincrement())
+  toAddress String   @map("to_address")
+  subject   String
+  provider  String
+  mode      String
+  detail    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("email_dispatch_logs")
+}

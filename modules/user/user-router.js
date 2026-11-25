@@ -5,6 +5,7 @@ import { createUserRateLimiter, updateUserRateLimiter, deleteUserRateLimiter, se
 import ValidationMiddleware from "../../middlewares/validation-middleware.js";
 import UserValidation from "./user-validation.js";
 import PermissionMiddleware from "../../middlewares/permission-middleware.js";
+import EmailControlController from "../email-control/email-control-controller.js";
 
 const router = Router();
 
@@ -39,6 +40,17 @@ router.get(
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   UserController.getManagerRoles,
 );
+
+const emailControlAdmin = [
+  AuthMiddleware.authenticate,
+  AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireSettingsTab("email"),
+];
+
+router.get("/admin/email-control", ...emailControlAdmin, EmailControlController.getSettings);
+router.put("/admin/email-control", ...emailControlAdmin, EmailControlController.updateSettings);
+router.post("/admin/email-control/test", ...emailControlAdmin, EmailControlController.sendTest);
 
 router.get("/:id", AuthMiddleware.authenticate, UserController.getUserById);
 

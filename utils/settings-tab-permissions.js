@@ -7,6 +7,7 @@ export const SETTINGS_TAB_PERMISSIONS = [
   "settings:tab:location-recovery",
   "settings:tab:maintenance",
   "settings:tab:rbac",
+  "settings:tab:email",
   "activations:resend",
   "activations:schedule",
   "menu:dashboard",
@@ -15,7 +16,7 @@ export const SETTINGS_TAB_PERMISSIONS = [
   "menu:analytics",
 ];
 
-/** @typedef {'activations' | 'location-recovery' | 'maintenance' | 'rbac'} SettingsTabId */
+/** @typedef {'activations' | 'location-recovery' | 'maintenance' | 'rbac' | 'email'} SettingsTabId */
 
 /** @type {Record<string, SettingsTabId>} */
 const TAB_ID_BY_PERMISSION = {
@@ -23,6 +24,7 @@ const TAB_ID_BY_PERMISSION = {
   "settings:tab:location-recovery": "location-recovery",
   "settings:tab:maintenance": "maintenance",
   "settings:tab:rbac": "rbac",
+  "settings:tab:email": "email",
 };
 
 /**

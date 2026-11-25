@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import dotenv from "dotenv";
 import CustomError from "../utils/custom-error.js";
 import logger from "../utils/logger.js";
+import { getEmailRuntime, recordEmailDispatch } from "./email-runtime-settings.js";
 
 dotenv.config();
 
@@ -184,6 +185,32 @@ class EmailService {
    * tries Gmail if EMAIL_USERNAME and EMAIL_PASSWORD are set (same as ucs-peers-gateway-backend).
    */
   async sendEmail(emailData) {
+    const runtime = await getEmailRuntime();
+    if (runtime.provider && runtime.provider !== this.emailProvider) {
+      this.switchProvider(runtime.provider);
+    }
+    if (!runtime.allowSending) {
+      const providerName = this.emailProvider === "ega" ? "eGA" : "Gmail";
+      logger.info(
+        `[email-service] Sending is off. Simulated ${providerName} mail to ${emailData.to} subject "${emailData.subject}".`,
+      );
+      await recordEmailDispatch({
+        to: emailData.to,
+        subject: emailData.subject,
+        provider: this.emailProvider,
+        mode: "simulated",
+        detail: "Email sending is turned off",
+      });
+      return {
+        messageId: `<simulated-${Date.now()}@ucs-icchw-gateway>`,
+        accepted: [emailData.to],
+        rejected: [],
+        pending: [],
+        response: "250 Email simulated (sending disabled)",
+        simulated: true,
+      };
+    }
+
     try {
       logger.info(
         `Sending email via ${this.emailProvider.toUpperCase()} to ${emailData.to} with subject "${emailData.subject}".`,
@@ -191,7 +218,14 @@ class EmailService {
 
       if (this.emailProvider === "ega") {
         try {
-          return await this.sendEmailViaEGA(emailData);
+          const info = await this.sendEmailViaEGA(emailData);
+          await recordEmailDispatch({
+            to: emailData.to,
+            subject: emailData.subject,
+            provider: "ega",
+            mode: "sent",
+          });
+          return info;
         } catch (egaError) {
           const gmailUser = process.env.EMAIL_USERNAME;
           const gmailPass = process.env.EMAIL_PASSWORD;
@@ -215,20 +249,57 @@ class EmailService {
               };
               const info = await gmailTransporter.sendMail(mailOptions);
               console.log(" > ✉️ Email sent via Gmail fallback to", emailData.to);
+              await recordEmailDispatch({
+                to: emailData.to,
+                subject: emailData.subject,
+                provider: "gmail",
+                mode: "sent",
+                detail: "Sent with Gmail after eGA failed",
+              });
               return info;
             } catch (gmailError) {
               logger.error?.("[email-service] Both eGA and Gmail fallback failed");
+              await recordEmailDispatch({
+                to: emailData.to,
+                subject: emailData.subject,
+                provider: "ega",
+                mode: "failed",
+                detail: `eGA and Gmail fallback failed: ${gmailError?.message || gmailError}`,
+              });
               throw new CustomError(
                 `Failed to send email via eGA: ${egaError?.message || egaError}. Gmail fallback also failed: ${gmailError?.message || gmailError}`,
                 500
               );
             }
           }
+          await recordEmailDispatch({
+            to: emailData.to,
+            subject: emailData.subject,
+            provider: "ega",
+            mode: "failed",
+            detail: egaError?.message || String(egaError),
+          });
           throw egaError;
         }
       }
-      return await this.sendEmailViaGmail(emailData);
+      const info = await this.sendEmailViaGmail(emailData);
+      await recordEmailDispatch({
+        to: emailData.to,
+        subject: emailData.subject,
+        provider: "gmail",
+        mode: "sent",
+      });
+      return info;
     } catch (error) {
+      if (this.emailProvider !== "ega") {
+        await recordEmailDispatch({
+          to: emailData.to,
+          subject: emailData.subject,
+          provider: this.emailProvider,
+          mode: "failed",
+          detail: error?.message || String(error),
+        });
+      }
       throw new CustomError("Failed to send email: " + (error?.message || error), 500);
     }
   }
