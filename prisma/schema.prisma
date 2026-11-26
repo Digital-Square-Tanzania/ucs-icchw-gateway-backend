@@ -363,6 +363,31 @@ model ApiLog {
   @@map("api_logs")
 }
 
+/// One row per inbound FFARS or HRHIS call. Analytics reads this instead of scanning api_logs JSON.
+model PartnerApiCall {
+  id              Int      @id @default(autoincrement())
+  apiLogId        Int      @unique @map("api_log_id")
+  source          String
+  operation       String
+  receivedAt      DateTime @map("received_at")
+  httpStatus      Int      @map("http_status")
+  outcome         String
+  facilityCode    String?  @map("facility_code")
+  facilityName    String?  @map("facility_name")
+  periodMonth     Int?     @map("period_month")
+  periodYear      Int?     @map("period_year")
+  chwCount        Int      @default(0) @map("chw_count")
+  eligibleCount   Int      @default(0) @map("eligible_count")
+  ineligibleCount Int      @default(0) @map("ineligible_count")
+  unknownCount    Int      @default(0) @map("unknown_count")
+  errorMessage    String?  @db.VarChar(500) @map("error_message")
+
+  @@index([source, operation, receivedAt])
+  @@index([receivedAt])
+  @@index([facilityCode])
+  @@map("partner_api_calls")
+}
+
 model ActivationResendConfig {
   id                       Int      @id @default(1)
   enabled                  Boolean  @default(true)

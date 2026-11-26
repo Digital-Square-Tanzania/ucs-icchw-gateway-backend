@@ -260,15 +260,8 @@ class GatewayController {
 
   static async getFfarsEligibilityTimeseries(req, res, next) {
     try {
-      const scope = await resolveCouncilScopeForRequest(req);
-      if (req.user?.role === "COUNCIL_COORDINATOR" && !scope.council) {
-        throw new CustomError("Council coordinator has no assigned council.", 403);
-      }
-      const data = await DashboardService.getFfarsEligibilityTimeseries(req.query?.days, scope);
-      return BaseResponse.success(res, "FFARS eligibility timeseries retrieved successfully", {
-        ...data,
-        scope: scope.council ? scope : null,
-      });
+      const data = await DashboardService.getFfarsEligibilityTimeseries(req.query);
+      return BaseResponse.success(res, "FFARS eligibility timeseries retrieved successfully", data);
     } catch (error) {
       next(error);
     }

@@ -14,7 +14,8 @@
     "generate": "npx prisma generate",
     "postinstall": "prisma generate",
     "deploy:db": "npx prisma migrate deploy && npx prisma generate",
-    "seed": "node prisma/seed.js"
+    "seed": "node prisma/seed.js",
+    "seed:partner-calls": "node prisma/seeds/partner-api-call-seeder.js"
   },
   "repository": {
     "type": "git",

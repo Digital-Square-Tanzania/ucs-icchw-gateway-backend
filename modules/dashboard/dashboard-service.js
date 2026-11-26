@@ -1,4 +1,6 @@
 import DashboardRepository from "./dashboard-repository.js";
+import FfarsAnalyticsRepository from "./ffars-analytics-repository.js";
+import { parseFfarsAnalyticsRange } from "../../utils/ffars-analytics-range.js";
 import CustomError from "../../utils/custom-error.js";
 import WebSocketService from "../../utils/websocket-service.js";
 import DHIS2UserService from "../dhis2/user/dhis2-user-service.js";
@@ -154,19 +156,20 @@ class DashboardService {
     }
   }
 
-  static async getFfarsEligibilityTimeseries(days, scope = {}) {
+  static async getFfarsEligibilityTimeseries(query = {}) {
     try {
-      let councilPrefixes = null;
-      if (scope?.council) {
-        councilPrefixes = await HrhisLocationRecoveryService.resolveCouncilPrefixes(
-          scope.region,
-          scope.district,
-          scope.council,
+      const range = parseFfarsAnalyticsRange(query);
+      return await FfarsAnalyticsRepository.getTimeseries(range);
+    } catch (error) {
+      if (error instanceof CustomError) throw error;
+      const missing = error?.code === "42P01" || /partner_api_calls/.test(String(error?.message || ""));
+      console.error("❌ Error fetching FFARS eligibility timeseries:", error.message);
+      if (missing) {
+        throw new CustomError(
+          "FFARS request table is missing. Run the latest migration, then the partner-call backfill.",
+          400,
         );
       }
-      return await DashboardRepository.getFfarsEligibilityTimeseries(days, councilPrefixes);
-    } catch (error) {
-      console.error("❌ Error fetching FFARS eligibility timeseries:", error.message);
       throw new CustomError("Failed to fetch FFARS eligibility timeseries. " + error.message, 400);
     }
   }

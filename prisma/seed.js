@@ -4,6 +4,7 @@ import UserSeeder from "./seeds/user-seeder.js";
 import RawFileSeeder from "./seeds/raw-file-seeder.js";
 import MaterializedViewSeeder from "./seeds/materialized-view-seeder.js";
 import urlSyncSeeder from "./seeds/url-sync-seeder.js";
+import { backfillPartnerApiCalls } from "./seeds/partner-api-call-seeder.js";
 
 async function main() {
   console.log("🌱 Running database seeders...");
@@ -27,6 +28,8 @@ async function main() {
 
   // Run URL Sync Seeder
   await urlSyncSeeder.seedAll();
+
+  await backfillPartnerApiCalls();
 
   console.log("✅ Seeding completed!");
 }
