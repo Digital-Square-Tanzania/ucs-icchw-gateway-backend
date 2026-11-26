@@ -81,6 +81,39 @@ class UserController {
   /**
    * Update user by ID
    */
+  static async checkOwnEmail(req, res, next) {
+    try {
+      const result = await UserService.emailAvailability(req.query.email, req.user.id);
+      const message = result.reason === "invalid"
+        ? "Enter a valid email address."
+        : result.available
+          ? "Email is available."
+          : "This email is already used for a manager login.";
+      return BaseResponse.success(res, message, result);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  static async updateOwnProfile(req, res, next) {
+    try {
+      const user = await UserService.updateOwnProfile(req.user.id, req.body);
+      return BaseResponse.success(res, "Profile updated.", user);
+    } catch (error) {
+      next(error instanceof CustomError ? error : new CustomError(error.message, error.statusCode || 500));
+    }
+  }
+
+  static async changeOwnPassword(req, res, next) {
+    try {
+      const { currentPassword, newPassword, confirmPassword } = req.body;
+      await UserService.changeOwnPassword(req.user.id, currentPassword, newPassword, confirmPassword);
+      return BaseResponse.success(res, "Password changed.");
+    } catch (error) {
+      next(error instanceof CustomError ? error : new CustomError(error.message, error.statusCode || 500));
+    }
+  }
+
   static async updateManagerAccount(req, res, next) {
     try {
       const result = await UserService.updateManagerAccount(req.params.id, req.body, {

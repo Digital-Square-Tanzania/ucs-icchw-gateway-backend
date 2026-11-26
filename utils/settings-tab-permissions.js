@@ -1,6 +1,6 @@
 import { USER_TAB_PERMISSIONS } from "./user-tab-permissions.js";
 
-/** Granular Settings page tab permissions. `settings:manage` grants all tabs. */
+/** Granular Settings page tab permissions. Each tab code is required on its own. */
 export const SETTINGS_TAB_PERMISSIONS = [
   "settings:manage",
   "settings:tab:activations",
@@ -39,10 +39,6 @@ export function settingsTabPermission(tab) {
  * @param {SettingsTabId} tab
  */
 export function hasSettingsTabAccess(permissions, tab) {
-  if (tab === "email-control") {
-    return permissions.includes("settings:tab:email-control");
-  }
-  if (permissions.includes("settings:manage")) return true;
   return permissions.includes(settingsTabPermission(tab));
 }
 
@@ -50,7 +46,6 @@ export function hasSettingsTabAccess(permissions, tab) {
  * @param {string[]} permissions
  */
 export function hasAnySettingsTabAccess(permissions) {
-  if (permissions.includes("settings:manage")) return true;
   return SETTINGS_TAB_PERMISSIONS.some(
     (code) => code.startsWith("settings:tab:") && permissions.includes(code),
   );
@@ -93,11 +88,7 @@ export function defaultPermissionsForRole(roleName) {
 }
 
 export function visibleSettingsTabs(permissions) {
-  const tabs = permissions.includes("settings:manage")
-    ? Object.values(TAB_ID_BY_PERMISSION)
-    : SETTINGS_TAB_PERMISSIONS.filter((code) => code.startsWith("settings:tab:") && permissions.includes(code))
-        .map((code) => TAB_ID_BY_PERMISSION[code])
-        .filter(Boolean);
-  if (permissions.includes("settings:tab:email-control")) return tabs;
-  return tabs.filter((tab) => tab !== "email-control");
+  return SETTINGS_TAB_PERMISSIONS.filter((code) => code.startsWith("settings:tab:") && permissions.includes(code))
+    .map((code) => TAB_ID_BY_PERMISSION[code])
+    .filter(Boolean);
 }

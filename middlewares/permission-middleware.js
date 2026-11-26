@@ -30,7 +30,7 @@ class PermissionMiddleware {
   static requirePermission(code) {
     return (req, res, next) => {
       const permissions = req.userPermissions || [];
-      if (permissions.includes("settings:manage") || permissions.includes(code)) {
+      if (permissions.includes(code)) {
         return next();
       }
       return BaseResponse.error(res, "Access denied. Missing permission.", 403);

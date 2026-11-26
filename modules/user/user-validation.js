@@ -20,6 +20,26 @@ class UserValidation {
     });
   }
 
+  static ownProfileSchema() {
+    return Joi.object({
+      firstName: Joi.string().trim().min(2).max(50).required(),
+      middleName: Joi.string().trim().max(50).optional().allow(""),
+      lastName: Joi.string().trim().min(2).max(50).required(),
+      email: Joi.string().email().required(),
+      phoneNumber: Joi.string().trim().pattern(/^\+?[0-9]{10,15}$/).optional().allow(""),
+    });
+  }
+
+  static ownPasswordSchema() {
+    return Joi.object({
+      currentPassword: Joi.string().required(),
+      newPassword: Joi.string().min(8).pattern(new RegExp("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*]).+$")).required().messages({
+        "string.pattern.base": "Password must include uppercase, lowercase, number, and special character.",
+      }),
+      confirmPassword: Joi.string().required(),
+    });
+  }
+
   static updateManagerAccountSchema() {
     return Joi.object({
       firstName: Joi.string().trim().min(2).max(50).required(),

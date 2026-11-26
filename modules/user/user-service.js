@@ -375,6 +375,68 @@ class UserService {
     return user;
   }
 
+  static async updateOwnProfile(userId, input) {
+    const current = await prisma.user.findFirst({
+      where: { id: userId, isDeleted: false },
+      select: { id: true, phoneNumber: true },
+    });
+    if (!current) throw new CustomError("User not found.", 404);
+    const trimOrNull = (value) => {
+      const text = typeof value === "string" ? value.trim() : "";
+      return text || null;
+    };
+    const email = UserService.normalizeEmail(input.email);
+    if (!email) throw new CustomError("Email is required.", 400);
+    await UserService.assertLoginEmailAvailable(email, userId);
+    const phoneNumber = trimOrNull(input.phoneNumber);
+    if (phoneNumber && phoneNumber !== current.phoneNumber) {
+      const phoneOwner = await prisma.user.findFirst({
+        where: { phoneNumber, isDeleted: false, NOT: { id: userId } },
+        select: { id: true },
+      });
+      if (phoneOwner) throw new CustomError("Another manager already uses this phone number.", 409);
+    }
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        firstName: String(input.firstName || "").trim(),
+        middleName: trimOrNull(input.middleName),
+        lastName: String(input.lastName || "").trim(),
+        email,
+        phoneNumber,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        email: true,
+        phoneNumber: true,
+        role: { select: { name: true } },
+      },
+    });
+    return { ...updated, role: updated.role?.name || null };
+  }
+
+  static async changeOwnPassword(userId, currentPassword, newPassword, confirmPassword) {
+    if (!currentPassword) throw new CustomError("Current password is required.", 400);
+    if (newPassword !== confirmPassword) throw new CustomError("The two passwords do not match.", 400);
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/.test(newPassword || "");
+    if (!strong) {
+      throw new CustomError("Use at least 8 characters with uppercase, lowercase, a number, and one of !@#$%^&*.", 400);
+    }
+    const user = await prisma.user.findFirst({
+      where: { id: userId, isDeleted: false },
+      select: { password: true },
+    });
+    if (!user) throw new CustomError("User not found.", 404);
+    const matches = await bcrypt.compare(currentPassword, user.password);
+    if (!matches) throw new CustomError("Current password is incorrect.", 400);
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id: userId }, data: { password: hashed } });
+    return { changed: true };
+  }
+
   static async updateManagerAccount(userId, input, actor) {
     const current = await UserService.getManagerAccount(userId);
     const trimOrNull = (value) => {

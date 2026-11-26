@@ -15,11 +15,10 @@ export function hasGranularUserTabs(permissions = []) {
 }
 
 /**
- * `settings:manage` keeps full access. Create includes view.
+ * Create includes view.
  * Until the new codes are seeded, `menu:users` still allows viewing every tab.
  */
 export function hasUserTabAccess(permissions = [], system, action) {
-  if (permissions.includes("settings:manage")) return true;
   if (permissions.includes(userTabPermission(system, action))) return true;
   if (action === "view" && permissions.includes(userTabPermission(system, "create"))) return true;
   if (action === "view" && !hasGranularUserTabs(permissions) && permissions.includes("menu:users")) {

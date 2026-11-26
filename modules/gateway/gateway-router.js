@@ -31,24 +31,27 @@ router.post("/signature/verify-ucs", BasicAuthMiddleware.authenticate, AuthMiddl
 // Sign Message
 router.post("/signature/sign", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.signMessage);
 
+const analyticsAccess = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requirePermission("menu:analytics"),
+];
+
 router.get(
   "/admin/hrhis-duplicate-detail",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "MOH_USER", "UCS_DEVELOPER", "COUNCIL_COORDINATOR"),
+  ...analyticsAccess,
   GatewayController.getHrhisDuplicateDetail
 );
 
 router.post(
   "/admin/hrhis-duplicate-resolve",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "UCS_DEVELOPER"),
+  ...analyticsAccess,
   GatewayController.resolveHrhisDuplicates
 );
 
 router.get(
   "/admin/hrhis-council-analytics",
-  AuthMiddleware.authenticate,
-  AuthMiddleware.authorizeRoles("MOH_ADMIN", "MOH_USER", "UCS_DEVELOPER", "COUNCIL_COORDINATOR"),
+  ...analyticsAccess,
   GatewayController.getHrhisCouncilAnalytics
 );
 

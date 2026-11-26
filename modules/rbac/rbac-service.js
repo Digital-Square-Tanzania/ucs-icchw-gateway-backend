@@ -25,16 +25,6 @@ class RbacService {
 
   static async getMenusForRoleId(roleId) {
     const codes = await RbacService.getPermissionCodesForRoleId(roleId);
-    if (codes.includes("settings:manage")) {
-      const all = await prisma.menu.findMany({ orderBy: { order: "asc" } });
-      return all.map((m) => ({
-        id: m.id,
-        label: m.label,
-        path: m.path,
-        icon: m.icon,
-        order: m.order,
-      }));
-    }
     const paths = menuPathsFromPermissionCodes(codes);
     if (!paths.length) return [];
     const menus = await prisma.menu.findMany({
@@ -51,13 +41,6 @@ class RbacService {
   }
 
   static async syncRoleMenusFromPermissionCodes(roleId, permissionCodes) {
-    if (permissionCodes.includes("settings:manage")) {
-      const all = await prisma.menu.findMany({ orderBy: { order: "asc" } });
-      return RbacService.replaceRoleMenus(
-        roleId,
-        all.map((m) => m.id),
-      );
-    }
     const paths = menuPathsFromPermissionCodes(permissionCodes);
     const menus = paths.length
       ? await prisma.menu.findMany({ where: { path: { in: paths } } })

@@ -34,6 +34,21 @@ router.get(
   UserController.getAllUsers,
 );
 
+router.get("/me/email-available", AuthMiddleware.authenticate, UserController.checkOwnEmail);
+
+router.put(
+  "/me/profile",
+  AuthMiddleware.authenticate,
+  ValidationMiddleware.validate(UserValidation.ownProfileSchema()),
+  UserController.updateOwnProfile,
+);
+router.put(
+  "/me/password",
+  AuthMiddleware.authenticate,
+  ValidationMiddleware.validate(UserValidation.ownPasswordSchema()),
+  UserController.changeOwnPassword,
+);
+
 router.get(
   "/admin/email-available",
   ...managerCreate,

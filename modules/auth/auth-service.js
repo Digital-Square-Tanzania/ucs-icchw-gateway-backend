@@ -76,8 +76,10 @@ class AuthService {
     return {
       id: user.id,
       firstName: user.firstName,
+      middleName: user.middleName,
       lastName: user.lastName,
       email: user.email,
+      phoneNumber: user.phoneNumber,
       role: user.role.name,
       assignedRegion: user.assignedRegion ?? null,
       assignedDistrict: user.assignedDistrict ?? null,
