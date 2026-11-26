@@ -58,22 +58,22 @@ function flagFromValue(value) {
   return null;
 }
 
+function fieldValue(item, names) {
+  const wanted = new Set(names.map((name) => name.toLowerCase()));
+  for (const [key, value] of Object.entries(item)) {
+    if (wanted.has(String(key).toLowerCase())) return value;
+  }
+  return undefined;
+}
+
 function eligibilityFlag(row) {
   const item = asObject(row) || {};
-  const candidates = [
-    item.eligible,
-    item.isEligible,
-    item.is_eligible,
-    item.eligibilityStatus,
-    item.eligibility_status,
-    item.eligibility,
-    item.paymentStatus,
-    item.payment_status,
-    item.paymentEligible,
-    item.payment_eligible,
+  const groups = [
+    ["eligible", "isEligible", "is_eligible", "paymentEligible", "payment_eligible"],
+    ["eligibilityStatus", "eligibility_status", "eligibility", "paymentStatus", "payment_status"],
   ];
-  for (const candidate of candidates) {
-    const flag = flagFromValue(candidate);
+  for (const names of groups) {
+    const flag = flagFromValue(fieldValue(item, names));
     if (flag !== null) return flag;
   }
   return null;
@@ -216,6 +216,32 @@ async function facilityName(code) {
     orderBy: { locationId: "asc" },
   });
   return row?.name || null;
+}
+
+/** Recompute eligible and ineligible counts from the stored FFARS payload. */
+export async function recountFfarsEligibility() {
+  const calls = await prisma.partnerApiCall.findMany({
+    where: { source: "FFARS", operation: "eligibility" },
+    select: { id: true, apiLogId: true },
+  });
+  let updated = 0;
+  for (const call of calls) {
+    const log = await prisma.apiLog.findUnique({ where: { id: call.apiLogId } });
+    const built = buildPartnerApiCall(log);
+    if (!built) continue;
+    await prisma.partnerApiCall.update({
+      where: { id: call.id },
+      data: {
+        chwCount: built.chwCount,
+        eligibleCount: built.eligibleCount,
+        ineligibleCount: built.ineligibleCount,
+        unknownCount: built.unknownCount,
+      },
+    });
+    updated += 1;
+  }
+  console.log(`FFARS eligibility recount updated ${updated} call(s).`);
+  return { updated };
 }
 
 export async function capturePartnerApiCall(apiLog) {

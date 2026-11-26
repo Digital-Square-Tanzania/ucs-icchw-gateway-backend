@@ -1,5 +1,5 @@
 import prisma from "../../config/prisma.js";
-import { buildPartnerApiCall } from "../../utils/partner-api-call.js";
+import { buildPartnerApiCall, recountFfarsEligibility } from "../../utils/partner-api-call.js";
 
 const BATCH = 200;
 
@@ -67,7 +67,8 @@ export async function backfillPartnerApiCalls() {
   }
 
   console.log(`partner api calls backfill done. inserted ${inserted}.`);
-  return { inserted, scanned };
+  const recounted = await recountFfarsEligibility();
+  return { inserted, scanned, recounted };
 }
 
 const isDirectRun = process.argv[1] && process.argv[1].endsWith("partner-api-call-seeder.js");
