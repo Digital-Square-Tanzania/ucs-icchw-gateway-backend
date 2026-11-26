@@ -56,6 +56,26 @@ export function hasAnySettingsTabAccess(permissions) {
  * @param {string[]} permissions
  * @returns {SettingsTabId[]}
  */
+/** Council coordinators can look at OpenMRS and DHIS2 users. They cannot create them, and they have no manager-user access. */
+export const COUNCIL_COORDINATOR_PERMISSIONS = [
+  "settings:tab:activations",
+  "settings:tab:location-recovery",
+  "activations:resend",
+  "menu:analytics",
+  "menu:settings",
+  "users:tab:openmrs:view",
+  "users:tab:dhis2:view",
+];
+
+/** Removed from council coordinators when the permission seeder runs. */
+export const COUNCIL_COORDINATOR_REVOKED_PERMISSIONS = [
+  "users:tab:openmrs:create",
+  "users:tab:dhis2:create",
+  "users:tab:manager:view",
+  "users:tab:manager:create",
+  "users:tab:manager:update",
+];
+
 /** Defaults when role_permissions have not been seeded yet. */
 export function defaultPermissionsForRole(roleName) {
   switch (roleName) {
@@ -73,18 +93,7 @@ export function defaultPermissionsForRole(roleName) {
         "users:tab:manager:view",
       ];
     case "COUNCIL_COORDINATOR":
-      return [
-        "settings:tab:activations",
-        "settings:tab:location-recovery",
-        "activations:resend",
-        "menu:analytics",
-        "menu:settings",
-        "users:tab:openmrs:view",
-        "users:tab:openmrs:create",
-        "users:tab:manager:view",
-        "users:tab:manager:create",
-        "users:tab:manager:update",
-      ];
+      return [...COUNCIL_COORDINATOR_PERMISSIONS];
     default:
       return [];
   }

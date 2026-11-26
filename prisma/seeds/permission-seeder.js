@@ -1,7 +1,11 @@
 import { randomUUID } from "crypto";
 import prisma from "../../config/prisma.js";
 import { RoleType } from "@prisma/client";
-import { SETTINGS_TAB_PERMISSIONS } from "../../utils/settings-tab-permissions.js";
+import {
+  COUNCIL_COORDINATOR_PERMISSIONS,
+  COUNCIL_COORDINATOR_REVOKED_PERMISSIONS,
+  SETTINGS_TAB_PERMISSIONS,
+} from "../../utils/settings-tab-permissions.js";
 import { USER_TAB_PERMISSIONS } from "../../utils/user-tab-permissions.js";
 import { DASHBOARD_SYNC_PERMISSIONS } from "../../utils/dashboard-sync-permissions.js";
 
@@ -60,6 +64,18 @@ async function assignAllPermissions(roleId, permissionIds) {
       update: {},
     });
   }
+}
+
+async function revokePermissions(roleId, codes) {
+  if (!codes.length) return;
+  const permissions = await prisma.permission.findMany({
+    where: { code: { in: codes } },
+    select: { id: true },
+  });
+  if (!permissions.length) return;
+  await prisma.rolePermission.deleteMany({
+    where: { roleId, permissionId: { in: permissions.map((permission) => permission.id) } },
+  });
 }
 
 class PermissionSeeder {
@@ -139,20 +155,9 @@ class PermissionSeeder {
     }
 
     if (councilCoord) {
-      const codes = [
-        "settings:tab:activations",
-        "settings:tab:location-recovery",
-        "activations:resend",
-        "menu:analytics",
-        "menu:settings",
-        "users:tab:openmrs:view",
-        "users:tab:openmrs:create",
-        "users:tab:manager:view",
-        "users:tab:manager:create",
-        "users:tab:manager:update",
-      ];
-      const coordPermIds = permissions.filter((p) => codes.includes(p.code)).map((p) => p.id);
+      const coordPermIds = permissions.filter((p) => COUNCIL_COORDINATOR_PERMISSIONS.includes(p.code)).map((p) => p.id);
       await assignAllPermissions(councilCoord.id, coordPermIds);
+      await revokePermissions(councilCoord.id, COUNCIL_COORDINATOR_REVOKED_PERMISSIONS);
       const coordMenus = menus.filter((m) => ["/analytics", "/settings"].includes(m.path));
       for (const menu of coordMenus) {
         await prisma.roleMenu.upsert({
