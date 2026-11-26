@@ -81,6 +81,7 @@ export function defaultPermissionsForRole(roleName) {
         "users:tab:openmrs:create",
         "users:tab:manager:view",
         "users:tab:manager:create",
+        "users:tab:manager:update",
       ];
     default:
       return [];

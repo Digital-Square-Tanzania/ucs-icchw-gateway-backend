@@ -1,10 +1,13 @@
-/** View and create permissions for the Users page tabs. */
+/** View and create permissions for the Users page tabs, plus manager update. */
 export const USER_SYSTEMS = ["openmrs", "dhis2", "manager"];
 
-export const USER_TAB_PERMISSIONS = USER_SYSTEMS.flatMap((system) => [
-  `users:tab:${system}:view`,
-  `users:tab:${system}:create`,
-]);
+export const USER_TAB_PERMISSIONS = [
+  ...USER_SYSTEMS.flatMap((system) => [
+    `users:tab:${system}:view`,
+    `users:tab:${system}:create`,
+  ]),
+  "users:tab:manager:update",
+];
 
 export function userTabPermission(system, action) {
   return `users:tab:${system}:${action}`;
@@ -16,7 +19,7 @@ export function hasGranularUserTabs(permissions = []) {
 
 /**
  * Create and update include view.
- * Until the new codes are seeded, `menu:users` still allows viewing every tab.
+ * Until granular codes are seeded, `menu:users` still allows viewing every tab.
  * Manager update is `users:tab:manager:update` and is not implied by create.
  */
 export function hasUserTabAccess(permissions = [], system, action) {

@@ -22,6 +22,7 @@ const PERMISSION_META = {
   "users:tab:dhis2:create": "Users tab: DHIS2 create",
   "users:tab:manager:view": "Users tab: Manager view",
   "users:tab:manager:create": "Users tab: Manager create",
+  "users:tab:manager:update": "Users tab: Manager update",
   "menu:settings": "Nav: Settings",
   "menu:analytics": "Nav: Analytics",
 };
@@ -145,6 +146,7 @@ class PermissionSeeder {
         "users:tab:openmrs:create",
         "users:tab:manager:view",
         "users:tab:manager:create",
+        "users:tab:manager:update",
       ];
       const coordPermIds = permissions.filter((p) => codes.includes(p.code)).map((p) => p.id);
       await assignAllPermissions(councilCoord.id, coordPermIds);
