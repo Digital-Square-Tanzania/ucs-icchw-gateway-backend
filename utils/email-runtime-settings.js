@@ -111,36 +111,39 @@ export async function recordEmailDispatch({ to, subject, provider, mode, detail 
         detail: detail ? String(detail).slice(0, 500) : null,
       },
     });
-    const oldestKept = await prisma.emailDispatchLog.findMany({
-      orderBy: { id: "desc" },
-      skip: 49,
-      take: 1,
-      select: { id: true },
-    });
-    if (oldestKept[0]) {
-      await prisma.emailDispatchLog.deleteMany({ where: { id: { lt: oldestKept[0].id } } });
-    }
   } catch (error) {
     logger.warn?.(`[email-runtime] Could not record dispatch: ${error?.message || error}`);
   }
 }
 
-export async function recentEmailDispatches(limit = 20) {
+export async function recentEmailDispatches({ page = 1, pageSize = 20 } = {}) {
+  const size = Math.min(100, Math.max(1, Number(pageSize) || 20));
+  const requested = Math.max(1, Number(page) || 1);
   try {
+    const total = await prisma.emailDispatchLog.count();
+    const totalPages = Math.max(1, Math.ceil(total / size));
+    const current = Math.min(requested, totalPages);
     const rows = await prisma.emailDispatchLog.findMany({
       orderBy: { createdAt: "desc" },
-      take: limit,
+      skip: (current - 1) * size,
+      take: size,
     });
-    return rows.map((row) => ({
-      id: row.id,
-      to: row.toAddress,
-      subject: row.subject,
-      provider: row.provider,
-      mode: row.mode,
-      detail: row.detail,
-      createdAt: row.createdAt,
-    }));
+    return {
+      rows: rows.map((row) => ({
+        id: row.id,
+        to: row.toAddress,
+        subject: row.subject,
+        provider: row.provider,
+        mode: row.mode,
+        detail: row.detail,
+        createdAt: row.createdAt,
+      })),
+      page: current,
+      pageSize: size,
+      total,
+      totalPages,
+    };
   } catch {
-    return [];
+    return { rows: [], page: 1, pageSize: size, total: 0, totalPages: 1 };
   }
 }

@@ -39,14 +39,20 @@ class EmailControlController {
     try {
       const [runtime, activity, stats] = await Promise.all([
         getEmailRuntime(),
-        recentEmailDispatches(20),
+        recentEmailDispatches({ page: req.query?.page, pageSize: req.query?.pageSize }),
         activationSnapshot(),
       ]);
       return BaseResponse.success(res, "Email control loaded", {
         ...runtime,
         health: emailProviderHealth(),
         stats,
-        activity,
+        activity: activity.rows,
+        activityPage: {
+          page: activity.page,
+          pageSize: activity.pageSize,
+          total: activity.total,
+          totalPages: activity.totalPages,
+        },
       });
     } catch (error) {
       next(error instanceof CustomError ? error : new CustomError(error.message, 500));
