@@ -20,9 +20,15 @@ const dashboardAccess = [
  */
 router.get("/stats", ...dashboardAccess, DashboardController.getDashboardStats);
 
+const analyticsChartAccess = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requirePermission("menu:analytics"),
+];
+
 router.get(
   "/hrhis-register-timeseries",
-  ...dashboardAccess,
+  ...analyticsChartAccess,
   DashboardController.getHrhisRegisterTimeseries
 );
 
