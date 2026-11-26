@@ -1,4 +1,5 @@
 import { USER_TAB_PERMISSIONS } from "./user-tab-permissions.js";
+import { DASHBOARD_SYNC_PERMISSIONS } from "./dashboard-sync-permissions.js";
 
 /** Granular Settings page tab permissions. Each tab code is required on its own. */
 export const SETTINGS_TAB_PERMISSIONS = [
@@ -59,8 +60,9 @@ export function hasAnySettingsTabAccess(permissions) {
 export function defaultPermissionsForRole(roleName) {
   switch (roleName) {
     case "UCS_DEVELOPER":
+      return [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, ...DASHBOARD_SYNC_PERMISSIONS];
     case "MOH_ADMIN":
-      return [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS];
+      return [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, "dashboard:sync:dhis2"];
     case "MOH_USER":
       return [
         "menu:dashboard",

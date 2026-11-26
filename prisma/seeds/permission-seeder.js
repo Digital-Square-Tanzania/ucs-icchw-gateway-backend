@@ -3,6 +3,7 @@ import prisma from "../../config/prisma.js";
 import { RoleType } from "@prisma/client";
 import { SETTINGS_TAB_PERMISSIONS } from "../../utils/settings-tab-permissions.js";
 import { USER_TAB_PERMISSIONS } from "../../utils/user-tab-permissions.js";
+import { DASHBOARD_SYNC_PERMISSIONS } from "../../utils/dashboard-sync-permissions.js";
 
 const PERMISSION_META = {
   "settings:manage": "Full Settings access (all tabs)",
@@ -15,6 +16,8 @@ const PERMISSION_META = {
   "activations:resend": "Resend individual or batch activation emails",
   "activations:schedule": "Edit activation resend scheduler",
   "menu:dashboard": "Nav: Dashboard",
+  "dashboard:sync:dhis2": "Dashboard: Sync DHIS2",
+  "dashboard:sync:openmrs": "Dashboard: Sync OpenMRS",
   "menu:users": "Nav: Users",
   "users:tab:openmrs:view": "Users tab: OpenMRS view",
   "users:tab:openmrs:create": "Users tab: OpenMRS create",
@@ -64,7 +67,7 @@ class PermissionSeeder {
     console.log("🔐 Seeding permissions, menus, and role assignments…");
 
     const permissions = [];
-    for (const code of [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS]) {
+    for (const code of [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, ...DASHBOARD_SYNC_PERMISSIONS]) {
       permissions.push(await upsertPermission(code));
     }
 
@@ -102,7 +105,7 @@ class PermissionSeeder {
     }
 
     if (mohAdmin) {
-      const mohCodes = ["settings:manage", "settings:tab:email-control", ...USER_TAB_PERMISSIONS];
+      const mohCodes = ["settings:manage", "settings:tab:email-control", "dashboard:sync:dhis2", ...USER_TAB_PERMISSIONS];
       const mohPermIds = permissions.filter((p) => mohCodes.includes(p.code)).map((p) => p.id);
       await assignAllPermissions(mohAdmin.id, mohPermIds);
       for (const menu of menus) {
