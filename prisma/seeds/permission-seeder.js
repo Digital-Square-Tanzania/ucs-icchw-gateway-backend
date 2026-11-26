@@ -11,7 +11,7 @@ const PERMISSION_META = {
   "settings:tab:location-recovery": "Settings tab: HRHIS location recovery",
   "settings:tab:maintenance": "Settings tab: Maintenance & sync",
   "settings:tab:rbac": "Settings tab: Roles, permissions & menus",
-  "settings:tab:email": "Settings tab: Email control",
+  "settings:tab:email-control": "Settings tab: Email control",
   "activations:resend": "Resend individual or batch activation emails",
   "activations:schedule": "Edit activation resend scheduler",
   "menu:dashboard": "Nav: Dashboard",
@@ -101,7 +101,7 @@ class PermissionSeeder {
     }
 
     if (mohAdmin) {
-      const mohCodes = ["settings:manage", ...USER_TAB_PERMISSIONS];
+      const mohCodes = ["settings:manage", "settings:tab:email-control", ...USER_TAB_PERMISSIONS];
       const mohPermIds = permissions.filter((p) => mohCodes.includes(p.code)).map((p) => p.id);
       await assignAllPermissions(mohAdmin.id, mohPermIds);
       for (const menu of menus) {

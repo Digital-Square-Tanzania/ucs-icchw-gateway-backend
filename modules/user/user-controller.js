@@ -67,6 +67,57 @@ class UserController {
   /**
    * Update user by ID
    */
+  static async updateManagerAccount(req, res, next) {
+    try {
+      const result = await UserService.updateManagerAccount(req.params.id, req.body, {
+        email: req.user?.email,
+        name: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" "),
+      });
+      const detail = result.changes.length
+        ? result.simulated
+          ? "Details saved. Email delivery is off, so the notice was not sent."
+          : "Details saved and the user was notified."
+        : "No changes to save.";
+      return BaseResponse.success(res, detail, result);
+    } catch (error) {
+      next(error instanceof CustomError ? error : new CustomError(error.message, error.statusCode || 500));
+    }
+  }
+
+  static async requestManagerPasswordReset(req, res, next) {
+    try {
+      const result = await UserService.requestManagerPasswordReset(req.params.id, {
+        email: req.user?.email,
+        name: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" "),
+      });
+      const message = result.simulated
+        ? "Reset link created, but email delivery is off so it was not sent."
+        : `Password reset link sent to ${result.email}.`;
+      return BaseResponse.success(res, message, result);
+    } catch (error) {
+      next(error instanceof CustomError ? error : new CustomError(error.message, error.statusCode || 500));
+    }
+  }
+
+  static async renderManagerReset(req, res, next) {
+    try {
+      const result = await UserService.renderManagerReset(req.params.slug);
+      return res.render("manager-reset-password", result);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
+  static async completeManagerReset(req, res, next) {
+    try {
+      const { password, confirmPassword } = req.body;
+      const result = await UserService.completeManagerReset(req.params.slug, password, confirmPassword);
+      return res.render("manager-reset-password", result);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
   static async updateUser(req, res, next) {
     try {
       const updatedUser = await UserService.updateUser(req.params.id, req.body);

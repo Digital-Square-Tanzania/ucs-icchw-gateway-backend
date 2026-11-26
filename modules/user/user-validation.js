@@ -20,6 +20,20 @@ class UserValidation {
     });
   }
 
+  static updateManagerAccountSchema() {
+    return Joi.object({
+      firstName: Joi.string().trim().min(2).max(50).required(),
+      middleName: Joi.string().trim().max(50).optional().allow(""),
+      lastName: Joi.string().trim().min(2).max(50).required(),
+      email: Joi.string().email().required(),
+      phoneNumber: Joi.string().trim().pattern(/^\+?[0-9]{10,15}$/).optional().allow(""),
+      roleId: Joi.number().integer().required(),
+      assignedRegion: Joi.string().trim().max(120).optional().allow(""),
+      assignedDistrict: Joi.string().trim().max(120).optional().allow(""),
+      assignedCouncil: Joi.string().trim().max(120).optional().allow(""),
+    });
+  }
+
   static updateUserSchema() {
     return Joi.object({
       firstName: Joi.string().trim().min(2).max(50).optional(),

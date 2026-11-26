@@ -31,6 +31,7 @@ model User {
   lastLogin        DateTime?          @map("last_login")
   BlacklistedToken BlacklistedToken[]
   UserToken        UserToken?
+  passwordResets   ManagerPasswordReset[]
   role             Role               @relation(fields: [roleId], references: [id])
 
   @@index([email])
@@ -503,4 +504,17 @@ model EmailDispatchLog {
 
   @@index([createdAt])
   @@map("email_dispatch_logs")
+}
+
+model ManagerPasswordReset {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  slug      String    @unique
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("manager_password_resets")
 }

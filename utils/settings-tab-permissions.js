@@ -7,7 +7,7 @@ export const SETTINGS_TAB_PERMISSIONS = [
   "settings:tab:location-recovery",
   "settings:tab:maintenance",
   "settings:tab:rbac",
-  "settings:tab:email",
+  "settings:tab:email-control",
   "activations:resend",
   "activations:schedule",
   "menu:dashboard",
@@ -16,7 +16,7 @@ export const SETTINGS_TAB_PERMISSIONS = [
   "menu:analytics",
 ];
 
-/** @typedef {'activations' | 'location-recovery' | 'maintenance' | 'rbac' | 'email'} SettingsTabId */
+/** @typedef {'activations' | 'location-recovery' | 'maintenance' | 'rbac' | 'email-control'} SettingsTabId */
 
 /** @type {Record<string, SettingsTabId>} */
 const TAB_ID_BY_PERMISSION = {
@@ -24,7 +24,7 @@ const TAB_ID_BY_PERMISSION = {
   "settings:tab:location-recovery": "location-recovery",
   "settings:tab:maintenance": "maintenance",
   "settings:tab:rbac": "rbac",
-  "settings:tab:email": "email",
+  "settings:tab:email-control": "email-control",
 };
 
 /**
@@ -39,6 +39,9 @@ export function settingsTabPermission(tab) {
  * @param {SettingsTabId} tab
  */
 export function hasSettingsTabAccess(permissions, tab) {
+  if (tab === "email-control") {
+    return permissions.includes("settings:tab:email-control");
+  }
   if (permissions.includes("settings:manage")) return true;
   return permissions.includes(settingsTabPermission(tab));
 }
@@ -90,10 +93,11 @@ export function defaultPermissionsForRole(roleName) {
 }
 
 export function visibleSettingsTabs(permissions) {
-  if (permissions.includes("settings:manage")) {
-    return Object.values(TAB_ID_BY_PERMISSION);
-  }
-  return SETTINGS_TAB_PERMISSIONS.filter((code) => code.startsWith("settings:tab:") && permissions.includes(code))
-    .map((code) => TAB_ID_BY_PERMISSION[code])
-    .filter(Boolean);
+  const tabs = permissions.includes("settings:manage")
+    ? Object.values(TAB_ID_BY_PERMISSION)
+    : SETTINGS_TAB_PERMISSIONS.filter((code) => code.startsWith("settings:tab:") && permissions.includes(code))
+        .map((code) => TAB_ID_BY_PERMISSION[code])
+        .filter(Boolean);
+  if (permissions.includes("settings:tab:email-control")) return tabs;
+  return tabs.filter((tab) => tab !== "email-control");
 }

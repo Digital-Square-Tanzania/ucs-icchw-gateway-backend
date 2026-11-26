@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import UserRepository from "./user-repository.js";
 import CustomError from "../../utils/custom-error.js";
@@ -320,6 +321,230 @@ class UserService {
     const updatedUser = await UserRepository.updateUser(userId, userData);
     const { password, ...safeUserData } = updatedUser;
     return safeUserData;
+  }
+
+  static managerAccountSelect() {
+    return {
+      id: true,
+      firstName: true,
+      middleName: true,
+      lastName: true,
+      email: true,
+      phoneNumber: true,
+      status: true,
+      joinDate: true,
+      lastLogin: true,
+      assignedRegion: true,
+      assignedDistrict: true,
+      assignedCouncil: true,
+      role: { select: { id: true, name: true, description: true } },
+    };
+  }
+
+  static async getManagerAccount(userId) {
+    const user = await prisma.user.findFirst({
+      where: { id: userId, isDeleted: false },
+      select: UserService.managerAccountSelect(),
+    });
+    if (!user) throw new CustomError("User not found.", 404);
+    return user;
+  }
+
+  static async updateManagerAccount(userId, input, actor) {
+    const current = await UserService.getManagerAccount(userId);
+    const trimOrNull = (value) => {
+      const text = typeof value === "string" ? value.trim() : "";
+      return text || null;
+    };
+    const role = await prisma.role.findUnique({ where: { id: Number(input.roleId) } });
+    if (!role) throw new CustomError("Invalid role.", 400);
+
+    const email = String(input.email || "").trim().toLowerCase();
+    if (!email) throw new CustomError("Email is required.", 400);
+    const emailOwner = await prisma.user.findFirst({
+      where: { email, isDeleted: false, NOT: { id: userId } },
+      select: { id: true },
+    });
+    if (emailOwner) throw new CustomError("Another manager already uses this email.", 409);
+
+    const phoneNumber = trimOrNull(input.phoneNumber);
+    if (phoneNumber) {
+      const phoneOwner = await prisma.user.findFirst({
+        where: { phoneNumber, isDeleted: false, NOT: { id: userId } },
+        select: { id: true },
+      });
+      if (phoneOwner) throw new CustomError("Another manager already uses this phone number.", 409);
+    }
+
+    let assignedRegion = null;
+    let assignedDistrict = null;
+    let assignedCouncil = null;
+    if (role.name === "COUNCIL_COORDINATOR") {
+      assignedRegion = trimOrNull(input.assignedRegion);
+      assignedDistrict = trimOrNull(input.assignedDistrict);
+      assignedCouncil = trimOrNull(input.assignedCouncil);
+      if (!assignedRegion || !assignedDistrict || !assignedCouncil) {
+        throw new CustomError("Region, district, and council are required for a council coordinator.", 400);
+      }
+    }
+
+    const next = {
+      firstName: String(input.firstName || "").trim(),
+      middleName: trimOrNull(input.middleName),
+      lastName: String(input.lastName || "").trim(),
+      email,
+      phoneNumber,
+      roleId: role.id,
+      assignedRegion,
+      assignedDistrict,
+      assignedCouncil,
+    };
+
+    const before = {
+      firstName: current.firstName,
+      middleName: current.middleName,
+      lastName: current.lastName,
+      email: current.email,
+      phoneNumber: current.phoneNumber,
+      role: current.role?.name || "",
+      assignedRegion: current.assignedRegion,
+      assignedDistrict: current.assignedDistrict,
+      assignedCouncil: current.assignedCouncil,
+    };
+    const after = { ...next, role: role.name };
+    const labels = {
+      firstName: "First name",
+      middleName: "Middle name",
+      lastName: "Last name",
+      email: "Email",
+      phoneNumber: "Phone",
+      role: "Role",
+      assignedRegion: "Region",
+      assignedDistrict: "District",
+      assignedCouncil: "Council",
+    };
+    const changes = Object.keys(labels)
+      .filter((key) => String(before[key] || "") !== String(after[key] || ""))
+      .map((key) => ({
+        label: labels[key],
+        from: before[key] || "—",
+        to: after[key] || "—",
+      }));
+
+    if (!changes.length) {
+      return { user: current, changes: [], notified: false };
+    }
+
+    const updated = await prisma.user.update({
+      where: { id: userId },
+      data: next,
+      select: UserService.managerAccountSelect(),
+    });
+
+    const recipients = [...new Set([current.email, updated.email].filter(Boolean))];
+    const actorLabel = actor?.email || actor?.name || "an administrator";
+    const rows = changes
+      .map(
+        (change) =>
+          `<tr><td style="padding:6px 10px;border:1px solid #e5e7eb;">${change.label}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;">${change.from}</td><td style="padding:6px 10px;border:1px solid #e5e7eb;">${change.to}</td></tr>`,
+      )
+      .join("");
+    const text = [
+      `Your UCS manager account was updated by ${actorLabel}.`,
+      ...changes.map((change) => `${change.label}: ${change.from} → ${change.to}`),
+      "If you did not expect this change, contact your administrator.",
+    ].join("\n");
+    let simulated = false;
+    for (const to of recipients) {
+      const info = await EmailService.sendEmail({
+        to,
+        subject: "Your UCS manager account was updated",
+        text,
+        html: `<p>Your UCS manager account was updated by <strong>${actorLabel}</strong>.</p>
+          <table style="border-collapse:collapse;font-size:14px;"><thead><tr><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:left;">Field</th><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:left;">Previous</th><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:left;">Now</th></tr></thead><tbody>${rows}</tbody></table>
+          <p>If you did not expect this change, contact your administrator.</p>`,
+      });
+      simulated = simulated || Boolean(info?.simulated);
+    }
+
+    return { user: updated, changes, notified: !simulated, simulated };
+  }
+
+  static async requestManagerPasswordReset(userId, actor) {
+    const user = await UserService.getManagerAccount(userId);
+    const now = new Date();
+    await prisma.managerPasswordReset.updateMany({
+      where: { userId, usedAt: null, expiresAt: { gt: now } },
+      data: { usedAt: now },
+    });
+    const slug = crypto.randomBytes(32).toString("base64url");
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24);
+    await prisma.managerPasswordReset.create({
+      data: { userId, slug, expiresAt },
+    });
+    const resetUrl = `${backendUrl}/api/v1/user/manager/reset/${slug}`;
+    const actorLabel = actor?.email || actor?.name || "an administrator";
+    const info = await EmailService.sendEmail({
+      to: user.email,
+      subject: "Reset your UCS manager password",
+      text: `${actorLabel} requested a password reset for your UCS manager account. Create a new password within 24 hours: ${resetUrl}`,
+      html: `<p><strong>${actorLabel}</strong> requested a password reset for your UCS manager account.</p>
+        <p><a href="${resetUrl}">Create a new password</a>. This link expires in 24 hours and can be used once.</p>
+        <p>If you did not expect this, contact your administrator. Your current password stays active until you finish the reset.</p>`,
+    });
+    return { email: user.email, expiresAt, simulated: Boolean(info?.simulated) };
+  }
+
+  static async renderManagerReset(slug) {
+    const reset = await prisma.managerPasswordReset.findUnique({
+      where: { slug },
+      include: { user: { select: { email: true, isDeleted: true } } },
+    });
+    if (!reset || reset.user?.isDeleted) {
+      return { alert: true, login: false, message: "This reset link is not valid." };
+    }
+    if (reset.usedAt) {
+      return { alert: true, login: false, message: "This reset link has already been used." };
+    }
+    if (reset.expiresAt.getTime() < Date.now()) {
+      return { alert: true, login: false, message: "This reset link has expired. Ask an administrator to send a new one." };
+    }
+    return { alert: false, login: true, slug, email: reset.user.email, message: "" };
+  }
+
+  static async completeManagerReset(slug, password, confirmPassword) {
+    const page = await UserService.renderManagerReset(slug);
+    if (!page.login) return page;
+    if (password !== confirmPassword) {
+      return { ...page, alert: true, message: "The two passwords do not match." };
+    }
+    const strong = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*]).{8,}$/.test(password || "");
+    if (!strong) {
+      return {
+        ...page,
+        alert: true,
+        message: "Use at least 8 characters with uppercase, lowercase, a number, and one of !@#$%^&*.",
+      };
+    }
+    const reset = await prisma.managerPasswordReset.findUnique({ where: { slug } });
+    const hashed = await bcrypt.hash(password, 10);
+    await prisma.$transaction([
+      prisma.user.update({ where: { id: reset.userId }, data: { password: hashed } }),
+      prisma.managerPasswordReset.update({ where: { slug }, data: { usedAt: new Date() } }),
+    ]);
+    const info = await EmailService.sendEmail({
+      to: page.email,
+      subject: "Your UCS manager password was changed",
+      text: "Your UCS manager password was just changed. If you did not do this, contact an administrator immediately.",
+      html: "<p>Your UCS manager password was just changed.</p><p>If you did not do this, contact an administrator immediately.</p>",
+    });
+    return {
+      alert: false,
+      login: false,
+      message: info?.simulated
+        ? "Your password was saved. Email delivery is off, so the confirmation was not sent."
+        : "Your password was saved. A confirmation was sent to your email. You can close this page and sign in.",
+    };
   }
 
   /**

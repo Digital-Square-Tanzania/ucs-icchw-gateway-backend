@@ -45,8 +45,23 @@ const emailControlAdmin = [
   AuthMiddleware.authenticate,
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN"),
   PermissionMiddleware.loadUserPermissions,
-  PermissionMiddleware.requireSettingsTab("email"),
+  PermissionMiddleware.requireSettingsTab("email-control"),
 ];
+
+router.put(
+  "/admin/manager/:id",
+  ...managerCreate,
+  ValidationMiddleware.validate(UserValidation.updateManagerAccountSchema()),
+  UserController.updateManagerAccount,
+);
+router.post(
+  "/admin/manager/:id/password-reset",
+  ...managerCreate,
+  UserController.requestManagerPasswordReset,
+);
+
+router.get("/manager/reset/:slug", UserController.renderManagerReset);
+router.post("/manager/reset/:slug", UserController.completeManagerReset);
 
 router.get("/admin/email-control", ...emailControlAdmin, EmailControlController.getSettings);
 router.put("/admin/email-control", ...emailControlAdmin, EmailControlController.updateSettings);
