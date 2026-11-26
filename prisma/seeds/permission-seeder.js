@@ -8,6 +8,7 @@ import {
 } from "../../utils/settings-tab-permissions.js";
 import { USER_TAB_PERMISSIONS } from "../../utils/user-tab-permissions.js";
 import { DASHBOARD_SYNC_PERMISSIONS } from "../../utils/dashboard-sync-permissions.js";
+import { ANALYTICS_TAB_PERMISSIONS } from "../../utils/analytics-tab-permissions.js";
 
 const PERMISSION_META = {
   "settings:manage": "Full Settings access (all tabs)",
@@ -32,6 +33,8 @@ const PERMISSION_META = {
   "users:tab:manager:update": "Users tab: Manager update",
   "menu:settings": "Nav: Settings",
   "menu:analytics": "Nav: Analytics",
+  "analytics:tab:hrhis": "Analytics tab: HRHIS",
+  "analytics:tab:ffars": "Analytics tab: FFARS",
 };
 
 const DEFAULT_MENUS = [
@@ -83,7 +86,7 @@ class PermissionSeeder {
     console.log("🔐 Seeding permissions, menus, and role assignments…");
 
     const permissions = [];
-    for (const code of [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, ...DASHBOARD_SYNC_PERMISSIONS]) {
+    for (const code of [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, ...DASHBOARD_SYNC_PERMISSIONS, ...ANALYTICS_TAB_PERMISSIONS]) {
       permissions.push(await upsertPermission(code));
     }
 
@@ -121,7 +124,7 @@ class PermissionSeeder {
     }
 
     if (mohAdmin) {
-      const mohCodes = ["settings:manage", "settings:tab:email-control", "dashboard:sync:dhis2", ...USER_TAB_PERMISSIONS];
+      const mohCodes = ["settings:manage", "settings:tab:email-control", "dashboard:sync:dhis2", ...ANALYTICS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS];
       const mohPermIds = permissions.filter((p) => mohCodes.includes(p.code)).map((p) => p.id);
       await assignAllPermissions(mohAdmin.id, mohPermIds);
       for (const menu of menus) {
@@ -138,6 +141,7 @@ class PermissionSeeder {
         "menu:dashboard",
         "menu:users",
         "menu:analytics",
+        ...ANALYTICS_TAB_PERMISSIONS,
         "users:tab:openmrs:view",
         "users:tab:dhis2:view",
         "users:tab:manager:view",

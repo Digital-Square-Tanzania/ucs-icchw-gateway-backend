@@ -260,8 +260,12 @@ class GatewayController {
 
   static async getFfarsEligibilityTimeseries(req, res, next) {
     try {
-      const data = await DashboardService.getFfarsEligibilityTimeseries(req.query);
-      return BaseResponse.success(res, "FFARS eligibility timeseries retrieved successfully", data);
+      const scope = await resolveCouncilScopeForRequest(req);
+      const data = await DashboardService.getFfarsEligibilityTimeseries(req.query, scope);
+      return BaseResponse.success(res, "FFARS eligibility timeseries retrieved successfully", {
+        ...data,
+        scope: scope.council ? scope : null,
+      });
     } catch (error) {
       next(error);
     }

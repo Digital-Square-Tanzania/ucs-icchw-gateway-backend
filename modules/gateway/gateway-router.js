@@ -31,33 +31,39 @@ router.post("/signature/verify-ucs", BasicAuthMiddleware.authenticate, AuthMiddl
 // Sign Message
 router.post("/signature/sign", BasicAuthMiddleware.authenticate, AuthMiddleware.authorizeRoles("EXTERNAL_SYSTEM"), GatewayController.signMessage);
 
-const analyticsAccess = [
+const hrhisAnalyticsAccess = [
   AuthMiddleware.authenticate,
   PermissionMiddleware.loadUserPermissions,
-  PermissionMiddleware.requirePermission("menu:analytics"),
+  PermissionMiddleware.requireAnalyticsTab("hrhis"),
+];
+
+const ffarsAnalyticsAccess = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireAnalyticsTab("ffars"),
 ];
 
 router.get(
   "/admin/hrhis-duplicate-detail",
-  ...analyticsAccess,
+  ...hrhisAnalyticsAccess,
   GatewayController.getHrhisDuplicateDetail
 );
 
 router.post(
   "/admin/hrhis-duplicate-resolve",
-  ...analyticsAccess,
+  ...hrhisAnalyticsAccess,
   GatewayController.resolveHrhisDuplicates
 );
 
 router.get(
   "/admin/hrhis-council-analytics",
-  ...analyticsAccess,
+  ...hrhisAnalyticsAccess,
   GatewayController.getHrhisCouncilAnalytics
 );
 
 router.get(
   "/admin/ffars-eligibility-timeseries",
-  ...analyticsAccess,
+  ...ffarsAnalyticsAccess,
   GatewayController.getFfarsEligibilityTimeseries
 );
 

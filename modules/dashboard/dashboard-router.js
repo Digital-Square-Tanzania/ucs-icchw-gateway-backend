@@ -23,7 +23,7 @@ router.get("/stats", ...dashboardAccess, DashboardController.getDashboardStats);
 const analyticsChartAccess = [
   AuthMiddleware.authenticate,
   PermissionMiddleware.loadUserPermissions,
-  PermissionMiddleware.requirePermission("menu:analytics"),
+  PermissionMiddleware.requireAnalyticsTab("hrhis"),
 ];
 
 router.get(

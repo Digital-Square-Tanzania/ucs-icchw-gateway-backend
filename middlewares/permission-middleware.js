@@ -3,6 +3,7 @@ import RbacService from "../modules/rbac/rbac-service.js";
 import AuthRepository from "../modules/auth/auth-repository.js";
 import { hasSettingsTabAccess } from "../utils/settings-tab-permissions.js";
 import { hasUserTabAccess } from "../utils/user-tab-permissions.js";
+import { hasAnalyticsTabAccess } from "../utils/analytics-tab-permissions.js";
 
 class PermissionMiddleware {
   static async loadUserPermissions(req, res, next) {
@@ -50,6 +51,14 @@ class PermissionMiddleware {
       const permissions = req.userPermissions || [];
       if (actions.some((action) => hasUserTabAccess(permissions, system, action))) return next();
       return BaseResponse.error(res, "Access denied. User tab not permitted.", 403);
+    };
+  }
+
+  static requireAnalyticsTab(tab) {
+    return (req, res, next) => {
+      const permissions = req.userPermissions || [];
+      if (hasAnalyticsTabAccess(permissions, tab)) return next();
+      return BaseResponse.error(res, "Access denied. Missing permission.", 403);
     };
   }
 

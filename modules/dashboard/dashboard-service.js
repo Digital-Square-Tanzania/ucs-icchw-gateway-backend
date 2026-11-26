@@ -156,10 +156,18 @@ class DashboardService {
     }
   }
 
-  static async getFfarsEligibilityTimeseries(query = {}) {
+  static async getFfarsEligibilityTimeseries(query = {}, scope = {}) {
     try {
       const range = parseFfarsAnalyticsRange(query);
-      return await FfarsAnalyticsRepository.getTimeseries(range);
+      let councilPrefixes = null;
+      if (scope?.council) {
+        councilPrefixes = await HrhisLocationRecoveryService.resolveCouncilPrefixes(
+          scope.region,
+          scope.district,
+          scope.council,
+        );
+      }
+      return await FfarsAnalyticsRepository.getTimeseries(range, councilPrefixes);
     } catch (error) {
       if (error instanceof CustomError) throw error;
       const missing = error?.code === "42P01" || /partner_api_calls/.test(String(error?.message || ""));

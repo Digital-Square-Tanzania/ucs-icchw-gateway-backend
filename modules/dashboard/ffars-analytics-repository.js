@@ -1,11 +1,28 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../config/prisma.js";
 import { iterBucketKeys } from "../../utils/ffars-analytics-range.js";
 
+function councilFacilitySql(councilPrefixes) {
+  if (councilPrefixes === null) return Prisma.sql`TRUE`;
+  if (!Array.isArray(councilPrefixes) || councilPrefixes.length === 0) return Prisma.sql`FALSE`;
+  const conditions = councilPrefixes.map(
+    (prefix) => Prisma.sql`(loc.location_code = ${prefix} OR loc.location_code ILIKE ${`${prefix}.%`})`,
+  );
+  return Prisma.sql`EXISTS (
+    SELECT 1
+    FROM openmrs_location loc
+    WHERE loc.retired = false
+      AND TRIM(loc.hfr_code) = TRIM(partner_api_calls.facility_code)
+      AND (${Prisma.join(conditions, " OR ")})
+  )`;
+}
+
 class FfarsAnalyticsRepository {
   /**
-   * Eligibility traffic from partner_api_calls. One indexed range, no api_logs JSON scan.
+   * Eligibility traffic from partner_api_calls.
+   * councilPrefixes null means every council. An empty list matches nothing.
    */
-  static async getTimeseries(range) {
+  static async getTimeseries(range, councilPrefixes = null) {
     const { from, to, bucket, label, preset } = range;
     const [summaryRows, bucketRows, recentRows] = await Promise.all([
       prisma.$queryRaw`
@@ -23,6 +40,7 @@ class FfarsAnalyticsRepository {
           AND operation = 'eligibility'
           AND received_at >= (${from}::timestamptz AT TIME ZONE 'UTC')
           AND received_at < (${to}::timestamptz AT TIME ZONE 'UTC')
+          AND ${councilFacilitySql(councilPrefixes)}
       `,
       prisma.$queryRaw`
         SELECT
@@ -38,18 +56,34 @@ class FfarsAnalyticsRepository {
           AND operation = 'eligibility'
           AND received_at >= (${from}::timestamptz AT TIME ZONE 'UTC')
           AND received_at < (${to}::timestamptz AT TIME ZONE 'UTC')
+          AND ${councilFacilitySql(councilPrefixes)}
         GROUP BY 1
         ORDER BY 1
       `,
-      prisma.partnerApiCall.findMany({
-        where: {
-          source: "FFARS",
-          operation: "eligibility",
-          receivedAt: { gte: from, lt: to },
-        },
-        orderBy: { receivedAt: "desc" },
-        take: 50,
-      }),
+      prisma.$queryRaw`
+        SELECT
+          id,
+          received_at,
+          facility_code,
+          facility_name,
+          period_month,
+          period_year,
+          chw_count,
+          eligible_count,
+          ineligible_count,
+          unknown_count,
+          http_status,
+          outcome,
+          error_message
+        FROM partner_api_calls
+        WHERE source = 'FFARS'
+          AND operation = 'eligibility'
+          AND received_at >= (${from}::timestamptz AT TIME ZONE 'UTC')
+          AND received_at < (${to}::timestamptz AT TIME ZONE 'UTC')
+          AND ${councilFacilitySql(councilPrefixes)}
+        ORDER BY received_at DESC
+        LIMIT 50
+      `,
     ]);
 
     const summary = Array.isArray(summaryRows) ? summaryRows[0] || {} : {};
@@ -92,20 +126,20 @@ class FfarsAnalyticsRepository {
         unclassified: Number(summary.unclassified) || 0,
         chwCount: Number(summary.chw_count) || 0,
       },
-      recent: recentRows.map((row) => ({
-        id: row.id,
-        createdAt: row.receivedAt.toISOString(),
-        facilityCode: row.facilityCode || "",
-        facilityName: row.facilityName || "",
-        month: row.periodMonth ? String(row.periodMonth) : "",
-        year: row.periodYear ? String(row.periodYear) : "",
-        chwCount: row.chwCount,
-        eligibleCount: row.eligibleCount,
-        ineligibleCount: row.ineligibleCount,
-        unknownCount: row.unknownCount,
-        httpStatus: row.httpStatus,
+      recent: (Array.isArray(recentRows) ? recentRows : []).map((row) => ({
+        id: Number(row.id),
+        createdAt: row.received_at instanceof Date ? row.received_at.toISOString() : String(row.received_at),
+        facilityCode: row.facility_code || "",
+        facilityName: row.facility_name || "",
+        month: row.period_month ? String(row.period_month) : "",
+        year: row.period_year ? String(row.period_year) : "",
+        chwCount: Number(row.chw_count) || 0,
+        eligibleCount: Number(row.eligible_count) || 0,
+        ineligibleCount: Number(row.ineligible_count) || 0,
+        unknownCount: Number(row.unknown_count) || 0,
+        httpStatus: Number(row.http_status) || 0,
         outcome: row.outcome === "failed" ? "failed" : "succeeded",
-        errorMessage: row.errorMessage || "",
+        errorMessage: row.error_message || "",
       })),
     };
   }

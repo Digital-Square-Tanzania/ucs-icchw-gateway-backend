@@ -1,5 +1,6 @@
 import { USER_TAB_PERMISSIONS } from "./user-tab-permissions.js";
 import { DASHBOARD_SYNC_PERMISSIONS } from "./dashboard-sync-permissions.js";
+import { ANALYTICS_TAB_PERMISSIONS } from "./analytics-tab-permissions.js";
 
 /** Granular Settings page tab permissions. Each tab code is required on its own. */
 export const SETTINGS_TAB_PERMISSIONS = [
@@ -63,6 +64,7 @@ export const COUNCIL_COORDINATOR_PERMISSIONS = [
   "activations:resend",
   "menu:analytics",
   "menu:settings",
+  ...ANALYTICS_TAB_PERMISSIONS,
   "users:tab:openmrs:view",
   "users:tab:dhis2:view",
 ];
@@ -80,14 +82,15 @@ export const COUNCIL_COORDINATOR_REVOKED_PERMISSIONS = [
 export function defaultPermissionsForRole(roleName) {
   switch (roleName) {
     case "UCS_DEVELOPER":
-      return [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, ...DASHBOARD_SYNC_PERMISSIONS];
+      return [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, ...DASHBOARD_SYNC_PERMISSIONS, ...ANALYTICS_TAB_PERMISSIONS];
     case "MOH_ADMIN":
-      return [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, "dashboard:sync:dhis2"];
+      return [...SETTINGS_TAB_PERMISSIONS, ...USER_TAB_PERMISSIONS, ...ANALYTICS_TAB_PERMISSIONS, "dashboard:sync:dhis2"];
     case "MOH_USER":
       return [
         "menu:dashboard",
         "menu:users",
         "menu:analytics",
+        ...ANALYTICS_TAB_PERMISSIONS,
         "users:tab:openmrs:view",
         "users:tab:dhis2:view",
         "users:tab:manager:view",
