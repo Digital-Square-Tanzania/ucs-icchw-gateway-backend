@@ -24,6 +24,20 @@ class UserController {
     }
   }
 
+  static async checkManagerEmail(req, res, next) {
+    try {
+      const result = await UserService.emailAvailability(req.query.email, req.query.excludeId || null);
+      const message = result.reason === "invalid"
+        ? "Enter a valid email address."
+        : result.available
+          ? "Email is available."
+          : "This email is already used for a manager login.";
+      return BaseResponse.success(res, message, result);
+    } catch (error) {
+      next(new CustomError(error.message, 500));
+    }
+  }
+
   static async getManagerRoles(req, res, next) {
     try {
       const roles = await UserService.getManagerRoles();
@@ -73,11 +87,15 @@ class UserController {
         email: req.user?.email,
         name: [req.user?.firstName, req.user?.lastName].filter(Boolean).join(" "),
       });
-      const detail = result.changes.length
-        ? result.simulated
-          ? "Details saved. Email delivery is off, so the notice was not sent."
-          : "Details saved and the user was notified."
-        : "No changes to save.";
+      const detail = !result.changes.length
+        ? "No changes to save."
+        : result.invalidDomain && !result.notified
+          ? "Details saved. The email domain is not valid, so no notice was sent."
+          : result.invalidDomain
+            ? "Details saved. Addresses on example.com were not emailed because that domain is not valid."
+            : result.simulated
+              ? "Details saved. Email delivery is off, so the notice was not sent."
+              : "Details saved and the user was notified.";
       return BaseResponse.success(res, detail, result);
     } catch (error) {
       next(error instanceof CustomError ? error : new CustomError(error.message, error.statusCode || 500));

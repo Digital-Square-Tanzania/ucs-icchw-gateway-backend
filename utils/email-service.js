@@ -6,6 +6,16 @@ import { getEmailRuntime, recordEmailDispatch } from "./email-runtime-settings.j
 
 dotenv.config();
 
+export function isExampleDomain(address) {
+  const domain = String(address || "").trim().toLowerCase().split("@").pop();
+  return domain === "example.com";
+}
+
+function splitRecipients(to) {
+  const raw = Array.isArray(to) ? to : String(to || "").split(",");
+  return raw.map((item) => String(item).trim()).filter(Boolean);
+}
+
 // Track whether we've already printed the eGA SMTP config in this process
 let hasLoggedEgaConfigOnce = false;
 
@@ -185,6 +195,24 @@ class EmailService {
    * tries Gmail if EMAIL_USERNAME and EMAIL_PASSWORD are set (same as ucs-peers-gateway-backend).
    */
   async sendEmail(emailData) {
+    const recipients = splitRecipients(emailData.to);
+    const allowed = recipients.filter((address) => !isExampleDomain(address));
+    if (!allowed.length) {
+      logger.info(
+        `[email-service] Not sending to ${recipients.join(", ") || emailData.to}: example.com is not a valid domain.`,
+      );
+      return {
+        accepted: [],
+        rejected: recipients,
+        skipped: true,
+        invalidDomain: true,
+        simulated: false,
+      };
+    }
+    if (allowed.length !== recipients.length) {
+      emailData = { ...emailData, to: allowed.join(", ") };
+    }
+
     const runtime = await getEmailRuntime();
     if (runtime.provider && runtime.provider !== this.emailProvider) {
       this.switchProvider(runtime.provider);

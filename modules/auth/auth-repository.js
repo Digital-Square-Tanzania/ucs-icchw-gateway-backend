@@ -2,8 +2,13 @@ import prisma from "../../config/prisma.js";
 
 class AuthRepository {
   static async findUserByEmail(email) {
-    return prisma.user.findUnique({
-      where: { email },
+    const normalized = String(email || "").trim();
+    if (!normalized) return null;
+    return prisma.user.findFirst({
+      where: {
+        email: { equals: normalized, mode: "insensitive" },
+        isDeleted: false,
+      },
       include: { role: true },
     });
   }

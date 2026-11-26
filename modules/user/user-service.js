@@ -5,7 +5,7 @@ import CustomError from "../../utils/custom-error.js";
 import prisma from "../../config/prisma.js";
 import ApiLogger from "../../utils/api-logger.js";
 import openmrsApiClient from "../../utils/openmrs-api-client.js";
-import EmailService from "../../utils/email-service.js";
+import EmailService, { isExampleDomain } from "../../utils/email-service.js";
 import GenerateActivationSlug from "../../utils/generate-activation-slug.js";
 import OpenMRSPersonHelper from "../openmrs/helpers/openmrs-person-helper.js";
 import OpenMRSUserHelper from "../openmrs/helpers/openmrs-user-helper.js";
@@ -208,6 +208,38 @@ class UserService {
     }
     return [...prefixes];
   }
+  static normalizeEmail(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  static async findLoginEmailOwner(email, excludeId = null) {
+    const normalized = UserService.normalizeEmail(email);
+    if (!normalized) return null;
+    return prisma.user.findFirst({
+      where: {
+        email: { equals: normalized, mode: "insensitive" },
+        ...(excludeId ? { NOT: { id: excludeId } } : {}),
+      },
+      select: { id: true, email: true },
+    });
+  }
+
+  static async assertLoginEmailAvailable(email, excludeId = null) {
+    const owner = await UserService.findLoginEmailOwner(email, excludeId);
+    if (owner) {
+      throw new CustomError("This email is already used for a manager login.", 409);
+    }
+  }
+
+  static async emailAvailability(email, excludeId = null) {
+    const normalized = UserService.normalizeEmail(email);
+    if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      return { available: false, reason: "invalid", email: normalized };
+    }
+    const owner = await UserService.findLoginEmailOwner(normalized, excludeId);
+    return { available: !owner, email: normalized };
+  }
+
   static async createUser(userData) {
     const role = await prisma.role.findUnique({ where: { id: userData.roleId } });
     if (!role) {
@@ -235,19 +267,12 @@ class UserService {
       userData.assignedCouncil = null;
     }
 
-    userData.email = trimOrNull(userData.email);
+    userData.email = UserService.normalizeEmail(userData.email);
     if (!userData.email) {
       throw new CustomError("Email is required.", 400);
     }
+    await UserService.assertLoginEmailAvailable(userData.email);
     userData.phoneNumber = trimOrNull(userData.phoneNumber);
-
-    const existingEmail = await prisma.user.findFirst({
-      where: { email: userData.email, isDeleted: false },
-      select: { email: true },
-    });
-    if (existingEmail) {
-      throw new CustomError("A user with this email already exists.", 409);
-    }
 
     if (userData.phoneNumber) {
       const existingPhone = await prisma.user.findFirst({
@@ -359,13 +384,9 @@ class UserService {
     const role = await prisma.role.findUnique({ where: { id: Number(input.roleId) } });
     if (!role) throw new CustomError("Invalid role.", 400);
 
-    const email = String(input.email || "").trim().toLowerCase();
+    const email = UserService.normalizeEmail(input.email);
     if (!email) throw new CustomError("Email is required.", 400);
-    const emailOwner = await prisma.user.findFirst({
-      where: { email, isDeleted: false, NOT: { id: userId } },
-      select: { id: true },
-    });
-    if (emailOwner) throw new CustomError("Another manager already uses this email.", 409);
+    await UserService.assertLoginEmailAvailable(email, userId);
 
     const phoneNumber = trimOrNull(input.phoneNumber);
     if (phoneNumber) {
@@ -455,6 +476,8 @@ class UserService {
       "If you did not expect this change, contact your administrator.",
     ].join("\n");
     let simulated = false;
+    let invalidDomain = false;
+    let delivered = 0;
     for (const to of recipients) {
       const info = await EmailService.sendEmail({
         to,
@@ -464,14 +487,19 @@ class UserService {
           <table style="border-collapse:collapse;font-size:14px;"><thead><tr><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:left;">Field</th><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:left;">Previous</th><th style="padding:6px 10px;border:1px solid #e5e7eb;text-align:left;">Now</th></tr></thead><tbody>${rows}</tbody></table>
           <p>If you did not expect this change, contact your administrator.</p>`,
       });
-      simulated = simulated || Boolean(info?.simulated);
+      if (info?.invalidDomain) invalidDomain = true;
+      else if (info?.simulated) simulated = true;
+      else delivered += 1;
     }
 
-    return { user: updated, changes, notified: !simulated, simulated };
+    return { user: updated, changes, notified: delivered > 0, simulated, invalidDomain };
   }
 
   static async requestManagerPasswordReset(userId, actor) {
     const user = await UserService.getManagerAccount(userId);
+    if (isExampleDomain(user.email)) {
+      throw new CustomError("The email domain is not valid, so the password reset was not sent.", 400);
+    }
     const now = new Date();
     await prisma.managerPasswordReset.updateMany({
       where: { userId, usedAt: null, expiresAt: { gt: now } },
@@ -532,6 +560,13 @@ class UserService {
       prisma.user.update({ where: { id: reset.userId }, data: { password: hashed } }),
       prisma.managerPasswordReset.update({ where: { slug }, data: { usedAt: new Date() } }),
     ]);
+    if (isExampleDomain(page.email)) {
+      return {
+        alert: true,
+        login: false,
+        message: "Your password was saved. The email domain is not valid, so no confirmation was sent.",
+      };
+    }
     const info = await EmailService.sendEmail({
       to: page.email,
       subject: "Your UCS manager password was changed",

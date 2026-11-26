@@ -35,6 +35,12 @@ router.get(
 );
 
 router.get(
+  "/admin/email-available",
+  ...managerCreate,
+  UserController.checkManagerEmail,
+);
+
+router.get(
   "/roles",
   ...managerCreate,
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
