@@ -1,4 +1,5 @@
 import GatewayService from "./gateway-service.js";
+import DashboardService from "../dashboard/dashboard-service.js";
 import HrhisLocationRecoveryService from "./hrhis-location-recovery-service.js";
 import HrhisCouncilAnalyticsService from "./hrhis-council-analytics-service.js";
 import HrhisDuplicateResolutionService from "./hrhis-duplicate-resolution-service.js";
@@ -252,6 +253,22 @@ class GatewayController {
         `Recovery finished: ${data.recovered} recovered, ${data.stillFailed} still failed, ${data.skipped} skipped.`,
         data
       );
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  static async getFfarsEligibilityTimeseries(req, res, next) {
+    try {
+      const scope = await resolveCouncilScopeForRequest(req);
+      if (req.user?.role === "COUNCIL_COORDINATOR" && !scope.council) {
+        throw new CustomError("Council coordinator has no assigned council.", 403);
+      }
+      const data = await DashboardService.getFfarsEligibilityTimeseries(req.query?.days, scope);
+      return BaseResponse.success(res, "FFARS eligibility timeseries retrieved successfully", {
+        ...data,
+        scope: scope.council ? scope : null,
+      });
     } catch (error) {
       next(error);
     }

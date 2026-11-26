@@ -153,6 +153,23 @@ class DashboardService {
       throw new CustomError("Failed to fetch HRHIS register timeseries. " + error.message, 400);
     }
   }
+
+  static async getFfarsEligibilityTimeseries(days, scope = {}) {
+    try {
+      let councilPrefixes = null;
+      if (scope?.council) {
+        councilPrefixes = await HrhisLocationRecoveryService.resolveCouncilPrefixes(
+          scope.region,
+          scope.district,
+          scope.council,
+        );
+      }
+      return await DashboardRepository.getFfarsEligibilityTimeseries(days, councilPrefixes);
+    } catch (error) {
+      console.error("❌ Error fetching FFARS eligibility timeseries:", error.message);
+      throw new CustomError("Failed to fetch FFARS eligibility timeseries. " + error.message, 400);
+    }
+  }
 }
 
 export default DashboardService;

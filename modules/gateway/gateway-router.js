@@ -55,6 +55,12 @@ router.get(
   GatewayController.getHrhisCouncilAnalytics
 );
 
+router.get(
+  "/admin/ffars-eligibility-timeseries",
+  ...analyticsAccess,
+  GatewayController.getFfarsEligibilityTimeseries
+);
+
 const locationRecoveryAdmin = [
   AuthMiddleware.authenticate,
   PermissionMiddleware.loadUserPermissions,
