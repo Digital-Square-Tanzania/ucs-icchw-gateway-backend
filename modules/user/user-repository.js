@@ -110,7 +110,11 @@ class UserRepository {
   static async deleteUser(id) {
     return prisma.user.update({
       where: { id },
-      data: { isDeleted: true },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        status: "INACTIVE",
+      },
     });
   }
 

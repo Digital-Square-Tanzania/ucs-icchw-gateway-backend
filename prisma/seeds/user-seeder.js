@@ -100,11 +100,10 @@ class UserSeeder {
 
       // Insert or update users
       for (const user of users) {
-        await prisma.user.upsert({
-          where: { email: user.email },
-          update: {},
-          create: user,
-        });
+        const existing = await prisma.user.findFirst({ where: { email: user.email } });
+        if (!existing) {
+          await prisma.user.create({ data: user });
+        }
       }
 
       console.log("✅ Users seeded successfully.");

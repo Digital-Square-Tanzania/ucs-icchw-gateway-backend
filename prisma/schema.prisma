@@ -13,8 +13,9 @@ model User {
   firstName        String             @map("first_name")
   middleName       String?            @map("middle_name")
   lastName         String             @map("last_name")
-  email            String             @unique
-  phoneNumber      String?            @unique @map("phone_number")
+  /// Active accounts only. Partial unique indexes live in SQL.
+  email            String
+  phoneNumber      String?            @map("phone_number")
   avatar           String?
   status           UserStatus         @default(ACTIVE)
   createdAt        DateTime           @default(now()) @map("created_at")

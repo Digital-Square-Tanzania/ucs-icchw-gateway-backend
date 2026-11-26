@@ -104,6 +104,24 @@ class UserController {
     }
   }
 
+  static async deactivateOwnAccount(req, res, next) {
+    try {
+      const user = await UserService.deactivateUser(req.user.id);
+      return BaseResponse.success(res, "Account deactivated. This email can be used again.", user);
+    } catch (error) {
+      next(error instanceof CustomError ? error : new CustomError(error.message, error.statusCode || 500));
+    }
+  }
+
+  static async deactivateManager(req, res, next) {
+    try {
+      const user = await UserService.deactivateUser(req.params.id);
+      return BaseResponse.success(res, "Account deactivated. This email can be used again.", user);
+    } catch (error) {
+      next(error instanceof CustomError ? error : new CustomError(error.message, error.statusCode || 500));
+    }
+  }
+
   static async changeOwnPassword(req, res, next) {
     try {
       const { currentPassword, newPassword, confirmPassword } = req.body;

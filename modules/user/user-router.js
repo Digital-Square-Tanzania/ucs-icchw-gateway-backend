@@ -58,6 +58,7 @@ router.put(
   ValidationMiddleware.validate(UserValidation.ownPasswordSchema()),
   UserController.changeOwnPassword,
 );
+router.post("/me/deactivate", AuthMiddleware.authenticate, deleteUserRateLimiter, UserController.deactivateOwnAccount);
 
 router.get(
   "/admin/email-available",
@@ -89,6 +90,12 @@ router.post(
   "/admin/manager/:id/password-reset",
   ...managerUpdate,
   UserController.requestManagerPasswordReset,
+);
+router.post(
+  "/admin/manager/:id/deactivate",
+  ...managerUpdate,
+  deleteUserRateLimiter,
+  UserController.deactivateManager,
 );
 
 router.get("/manager/reset/:slug", UserController.renderManagerReset);

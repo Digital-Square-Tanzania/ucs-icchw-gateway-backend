@@ -218,6 +218,7 @@ class UserService {
     return prisma.user.findFirst({
       where: {
         email: { equals: normalized, mode: "insensitive" },
+        isDeleted: false,
         ...(excludeId ? { NOT: { id: excludeId } } : {}),
       },
       select: { id: true, email: true },
@@ -651,8 +652,34 @@ class UserService {
    * @throws {Error} - Throws an error if the user is not found or if there is an issue with deletion
    * @description This method deletes a user by their ID. It first checks if the user exists, and if so, it deletes the user from the database.
    */
+  static async deactivateUser(userId) {
+    const user = await prisma.user.findFirst({
+      where: { id: userId, isDeleted: false },
+      select: { id: true, email: true },
+    });
+    if (!user) {
+      throw new CustomError("User not found.", 404);
+    }
+
+    const deletedAt = new Date();
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          isDeleted: true,
+          deletedAt,
+          status: "INACTIVE",
+        },
+      }),
+      prisma.userToken.deleteMany({ where: { userId } }),
+      prisma.managerPasswordReset.deleteMany({ where: { userId, usedAt: null } }),
+    ]);
+
+    return { id: user.id, email: user.email, isDeleted: true, deletedAt };
+  }
+
   static async deleteUser(userId) {
-    return UserRepository.deleteUser(userId);
+    return UserService.deactivateUser(userId);
   }
 
   /**
