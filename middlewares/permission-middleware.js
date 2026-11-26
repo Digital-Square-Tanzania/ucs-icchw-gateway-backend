@@ -45,6 +45,14 @@ class PermissionMiddleware {
     };
   }
 
+  static requireAnyUserTab(system, actions) {
+    return (req, res, next) => {
+      const permissions = req.userPermissions || [];
+      if (actions.some((action) => hasUserTabAccess(permissions, system, action))) return next();
+      return BaseResponse.error(res, "Access denied. User tab not permitted.", 403);
+    };
+  }
+
   static requireSettingsTab(tab) {
     return (req, res, next) => {
       const permissions = req.userPermissions || [];

@@ -20,6 +20,16 @@ const managerCreate = [
   PermissionMiddleware.loadUserPermissions,
   PermissionMiddleware.requireUserTab("manager", "create"),
 ];
+const managerUpdate = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireUserTab("manager", "update"),
+];
+const managerWrite = [
+  AuthMiddleware.authenticate,
+  PermissionMiddleware.loadUserPermissions,
+  PermissionMiddleware.requireAnyUserTab("manager", ["create", "update"]),
+];
 const openMrsCreate = [
   AuthMiddleware.authenticate,
   PermissionMiddleware.loadUserPermissions,
@@ -51,13 +61,13 @@ router.put(
 
 router.get(
   "/admin/email-available",
-  ...managerCreate,
+  ...managerWrite,
   UserController.checkManagerEmail,
 );
 
 router.get(
   "/roles",
-  ...managerCreate,
+  ...managerWrite,
   AuthMiddleware.authorizeRoles("UCS_DEVELOPER", "MOH_ADMIN", "COUNCIL_COORDINATOR", "FACILITY_PROVIDER"),
   UserController.getManagerRoles,
 );
@@ -71,13 +81,13 @@ const emailControlAdmin = [
 
 router.put(
   "/admin/manager/:id",
-  ...managerCreate,
+  ...managerUpdate,
   ValidationMiddleware.validate(UserValidation.updateManagerAccountSchema()),
   UserController.updateManagerAccount,
 );
 router.post(
   "/admin/manager/:id/password-reset",
-  ...managerCreate,
+  ...managerUpdate,
   UserController.requestManagerPasswordReset,
 );
 

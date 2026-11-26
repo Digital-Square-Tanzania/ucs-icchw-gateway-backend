@@ -15,12 +15,19 @@ export function hasGranularUserTabs(permissions = []) {
 }
 
 /**
- * Create includes view.
+ * Create and update include view.
  * Until the new codes are seeded, `menu:users` still allows viewing every tab.
+ * Manager update is `users:tab:manager:update` and is not implied by create.
  */
 export function hasUserTabAccess(permissions = [], system, action) {
   if (permissions.includes(userTabPermission(system, action))) return true;
-  if (action === "view" && permissions.includes(userTabPermission(system, "create"))) return true;
+  if (
+    action === "view" &&
+    (permissions.includes(userTabPermission(system, "create")) ||
+      permissions.includes(userTabPermission(system, "update")))
+  ) {
+    return true;
+  }
   if (action === "view" && !hasGranularUserTabs(permissions) && permissions.includes("menu:users")) {
     return true;
   }
